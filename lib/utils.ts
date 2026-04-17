@@ -60,6 +60,11 @@ export function buildProductUrl(slug: string, origin?: string) {
   return buildAbsoluteUrl(buildProductPath(slug), origin);
 }
 
+export function buildPublicProductUrl(slug: string, currentOrigin?: string) {
+  const preferredOrigin = process.env.NEXT_PUBLIC_APP_URL?.trim() || currentOrigin;
+  return buildProductUrl(slug, preferredOrigin);
+}
+
 export function parseFirebaseDate(value: unknown): Date | null {
   if (!value) {
     return null;

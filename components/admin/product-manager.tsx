@@ -3,10 +3,11 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import QRCode from "qrcode";
 import { removeProduct, subscribeToProducts } from "@/lib/firebase/firestore";
 import { getTeamContactById } from "@/lib/team-contacts";
 import { Product } from "@/lib/types";
-import { buildProductPath, buildProductUrl, formatCurrency, formatDate } from "@/lib/utils";
+import { buildProductPath, buildPublicProductUrl, formatCurrency, formatDate } from "@/lib/utils";
 
 type ProductManagerProps = {
   actor: {
@@ -26,6 +27,10 @@ export function ProductManager({ actor }: ProductManagerProps) {
   const [featuredOnly, setFeaturedOnly] = useState(false);
   const [sortBy, setSortBy] = useState("updated_newest");
   const [copiedProductId, setCopiedProductId] = useState<string | null>(null);
+  const [qrProduct, setQrProduct] = useState<Product | null>(null);
+  const [qrCodeDataUrl, setQrCodeDataUrl] = useState("");
+  const [qrCodeLoading, setQrCodeLoading] = useState(false);
+  const [qrCodeError, setQrCodeError] = useState("");
 
   useEffect(() => {
     try {
@@ -103,7 +108,7 @@ export function ProductManager({ actor }: ProductManagerProps) {
 
   async function handleCopyLink(product: Product) {
     try {
-      const url = buildProductUrl(product.slug, window.location.origin);
+      const url = buildPublicProductUrl(product.slug, window.location.origin);
       await navigator.clipboard.writeText(url);
       setCopiedProductId(product.id);
       window.setTimeout(() => {
@@ -113,6 +118,61 @@ export function ProductManager({ actor }: ProductManagerProps) {
       const message = err instanceof Error ? err.message : "Unable to copy product link.";
       setError(message);
     }
+  }
+
+  useEffect(() => {
+    if (!qrProduct) {
+      setQrCodeDataUrl("");
+      setQrCodeError("");
+      setQrCodeLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+    const qrUrl = buildPublicProductUrl(qrProduct.slug, window.location.origin);
+
+    setQrCodeLoading(true);
+    setQrCodeError("");
+
+    QRCode.toDataURL(qrUrl, {
+      errorCorrectionLevel: "M",
+      margin: 2,
+      width: 320,
+      color: {
+        dark: "#1f1a14",
+        light: "#fffdf8"
+      }
+    })
+      .then((dataUrl) => {
+        if (!cancelled) {
+          setQrCodeDataUrl(dataUrl);
+        }
+      })
+      .catch((err: Error) => {
+        if (!cancelled) {
+          setQrCodeError(err.message || "Unable to generate QR code.");
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setQrCodeLoading(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [qrProduct]);
+
+  function handleDownloadQr() {
+    if (!qrProduct || !qrCodeDataUrl) {
+      return;
+    }
+
+    const link = document.createElement("a");
+    link.href = qrCodeDataUrl;
+    link.download = `${qrProduct.slug}-qr.png`;
+    link.click();
   }
 
   const preferredContact = selectedProduct
@@ -269,6 +329,9 @@ export function ProductManager({ actor }: ProductManagerProps) {
                         <button className="actions-menu-item" type="button" onClick={() => handleCopyLink(product)}>
                           {copiedProductId === product.id ? "Copied link" : "Copy link"}
                         </button>
+                        <button className="actions-menu-item" type="button" onClick={() => setQrProduct(product)}>
+                          Generate QR
+                        </button>
                         <button className="actions-menu-item actions-menu-item-danger" type="button" onClick={() => handleDelete(product)}>
                           Delete
                         </button>
@@ -380,6 +443,61 @@ export function ProductManager({ actor }: ProductManagerProps) {
               </Link>
               <button className="primary-button" type="button" onClick={() => setSelectedProduct(null)}>
                 Close
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {qrProduct ? (
+        <div className="contact-modal-backdrop" role="presentation" onClick={() => setQrProduct(null)}>
+          <div
+            className="product-qr-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="product-qr-title"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="contact-modal-header">
+              <div>
+                <p className="eyebrow">Product QR</p>
+                <h3 id="product-qr-title">{qrProduct.name}</h3>
+                <p>Generate a shareable QR code that opens the live public product page.</p>
+              </div>
+              <button
+                className="contact-modal-close"
+                type="button"
+                aria-label="Close product QR modal"
+                onClick={() => setQrProduct(null)}
+              >
+                ×
+              </button>
+            </div>
+            <div className="product-qr-layout">
+              <div className="product-qr-preview">
+                {qrCodeLoading ? <div className="product-qr-placeholder">Generating QR code...</div> : null}
+                {!qrCodeLoading && qrCodeError ? <div className="inline-error">{qrCodeError}</div> : null}
+                {!qrCodeLoading && !qrCodeError && qrCodeDataUrl ? (
+                  <Image src={qrCodeDataUrl} alt={`QR code for ${qrProduct.name}`} width={320} height={320} className="product-qr-image" />
+                ) : null}
+              </div>
+              <div className="product-qr-details">
+                <div className="product-view-row">
+                  <span>Public product URL</span>
+                  <strong className="product-qr-url">{buildPublicProductUrl(qrProduct.slug, window.location.origin)}</strong>
+                </div>
+                <div className="product-view-row">
+                  <span>Suggested use</span>
+                  <strong>Place it on WhatsApp Status banners, product posters, or quick-scan story images.</strong>
+                </div>
+              </div>
+            </div>
+            <div className="form-actions">
+              <button className="secondary-button" type="button" onClick={() => handleCopyLink(qrProduct)}>
+                {copiedProductId === qrProduct.id ? "Copied link" : "Copy link"}
+              </button>
+              <button className="primary-button" type="button" onClick={handleDownloadQr} disabled={!qrCodeDataUrl || qrCodeLoading}>
+                Download QR
               </button>
             </div>
           </div>
