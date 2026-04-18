@@ -16,6 +16,26 @@ const AuthContext = createContext<AuthContextValue>({
   loading: true
 });
 
+const ADMIN_ACCESS_TIMEOUT_MS = 8000;
+
+function withAccessTimeout<T>(promise: Promise<T>) {
+  return new Promise<T>((resolve, reject) => {
+    const timeoutId = window.setTimeout(() => {
+      reject(new Error("Admin access check timed out."));
+    }, ADMIN_ACCESS_TIMEOUT_MS);
+
+    promise
+      .then((value) => {
+        window.clearTimeout(timeoutId);
+        resolve(value);
+      })
+      .catch((error) => {
+        window.clearTimeout(timeoutId);
+        reject(error);
+      });
+  });
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
@@ -32,7 +52,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       setLoading(true);
 
-      hasAdminAccess(nextUser)
+      withAccessTimeout(hasAdminAccess(nextUser))
         .then(async (allowed) => {
           if (!allowed) {
             await logoutUser();

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import QRCode from "qrcode";
 import { removeProduct, subscribeToProducts } from "@/lib/firebase/firestore";
+import { generateMinimalStatusImage } from "@/lib/status-image-minimal";
 import { getTeamContactById } from "@/lib/team-contacts";
 import { Product } from "@/lib/types";
 import { buildProductPath, buildPublicProductUrl, formatCurrency, formatDate } from "@/lib/utils";
@@ -31,6 +32,12 @@ export function ProductManager({ actor }: ProductManagerProps) {
   const [qrCodeDataUrl, setQrCodeDataUrl] = useState("");
   const [qrCodeLoading, setQrCodeLoading] = useState(false);
   const [qrCodeError, setQrCodeError] = useState("");
+  const [statusImageProduct, setStatusImageProduct] = useState<Product | null>(null);
+  const [statusImageDataUrl, setStatusImageDataUrl] = useState("");
+  const [statusImageLoading, setStatusImageLoading] = useState(false);
+  const [statusImageError, setStatusImageError] = useState("");
+  const [statusImageRequestId, setStatusImageRequestId] = useState(0);
+  const [statusImageRenderId, setStatusImageRenderId] = useState("");
 
   useEffect(() => {
     try {
@@ -173,6 +180,68 @@ export function ProductManager({ actor }: ProductManagerProps) {
     link.href = qrCodeDataUrl;
     link.download = `${qrProduct.slug}-qr.png`;
     link.click();
+  }
+
+  useEffect(() => {
+    if (!statusImageProduct || !statusImageRequestId) {
+      setStatusImageDataUrl("");
+      setStatusImageError("");
+      setStatusImageLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+    const productUrl = buildPublicProductUrl(statusImageProduct.slug, window.location.origin);
+
+    setStatusImageLoading(true);
+    setStatusImageError("");
+    setStatusImageDataUrl("");
+
+    generateMinimalStatusImage(statusImageProduct, productUrl, window.location.origin)
+      .then((dataUrl) => {
+        if (!cancelled) {
+          setStatusImageDataUrl(dataUrl);
+          setStatusImageRenderId(`${statusImageProduct.slug}-${Date.now()}`);
+        }
+      })
+      .catch((err: Error) => {
+        if (!cancelled) {
+          setStatusImageError(err.message || "Unable to generate the status image.");
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setStatusImageLoading(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [statusImageProduct, statusImageRequestId]);
+
+  function handleDownloadStatusImage() {
+    if (!statusImageProduct || !statusImageDataUrl) {
+      return;
+    }
+
+    const link = document.createElement("a");
+    link.href = statusImageDataUrl;
+    link.download = `${statusImageProduct.slug}-status.png`;
+    link.click();
+  }
+
+  function handleOpenStatusImage(product: Product) {
+    if (!product?.id || !product?.slug || !product?.name) {
+      setStatusImageError("Unable to generate the status image for this product.");
+      return;
+    }
+
+    setStatusImageError("");
+    setStatusImageDataUrl("");
+    setStatusImageRenderId("");
+    setStatusImageRequestId(Date.now());
+    setStatusImageProduct(product);
   }
 
   const preferredContact = selectedProduct
@@ -331,6 +400,9 @@ export function ProductManager({ actor }: ProductManagerProps) {
                         </button>
                         <button className="actions-menu-item" type="button" onClick={() => setQrProduct(product)}>
                           Generate QR
+                        </button>
+                        <button className="actions-menu-item" type="button" onClick={() => handleOpenStatusImage(product)}>
+                          Download status image
                         </button>
                         <button className="actions-menu-item actions-menu-item-danger" type="button" onClick={() => handleDelete(product)}>
                           Delete
@@ -498,6 +570,73 @@ export function ProductManager({ actor }: ProductManagerProps) {
               </button>
               <button className="primary-button" type="button" onClick={handleDownloadQr} disabled={!qrCodeDataUrl || qrCodeLoading}>
                 Download QR
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {statusImageProduct ? (
+        <div className="contact-modal-backdrop" role="presentation" onClick={() => setStatusImageProduct(null)}>
+          <div
+            className="product-status-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="product-status-title"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="contact-modal-header">
+              <div>
+                <p className="eyebrow">Status-ready image</p>
+                <h3 id="product-status-title">{statusImageProduct.name}</h3>
+                <p>Generate a ready-made 9:16 WhatsApp Status image with the product QR already placed.</p>
+              </div>
+              <button
+                className="contact-modal-close"
+                type="button"
+                aria-label="Close status image modal"
+                onClick={() => setStatusImageProduct(null)}
+              >
+                ×
+              </button>
+            </div>
+            <div className="product-status-layout">
+              <div className="product-status-preview">
+                {statusImageLoading ? <div className="product-qr-placeholder">Generating status image...</div> : null}
+                {!statusImageLoading && statusImageError ? <div className="inline-error">{statusImageError}</div> : null}
+                {!statusImageLoading && !statusImageError && statusImageDataUrl ? (
+                  <Image
+                    key={statusImageRenderId || statusImageDataUrl}
+                    src={statusImageDataUrl}
+                    alt={`Status-ready image for ${statusImageProduct.name}`}
+                    width={324}
+                    height={576}
+                    className="product-status-image"
+                    unoptimized
+                  />
+                ) : null}
+              </div>
+              <div className="product-qr-details">
+                <div className="product-view-row">
+                  <span>Public product URL</span>
+                  <strong className="product-qr-url">{buildPublicProductUrl(statusImageProduct.slug, window.location.origin)}</strong>
+                </div>
+                <div className="product-view-row">
+                  <span>Layout format</span>
+                  <strong>9:16 WhatsApp Status image with QR in a quiet white panel for clean scanning.</strong>
+                </div>
+                <div className="product-view-row">
+                  <span>Included content</span>
+                  <strong>Product image, name, price, brand/category, CTA text, and the live product QR code.</strong>
+                </div>
+              </div>
+            </div>
+            <div className="form-actions">
+              <button className="secondary-button" type="button" onClick={() => handleCopyLink(statusImageProduct)}>
+                {copiedProductId === statusImageProduct.id ? "Copied link" : "Copy link"}
+              </button>
+              <button className="primary-button" type="button" onClick={handleDownloadStatusImage} disabled={!statusImageDataUrl || statusImageLoading}>
+                Download status image
               </button>
             </div>
           </div>

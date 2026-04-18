@@ -1367,7 +1367,27 @@ textarea {
   box-shadow: 0 24px 60px rgba(31, 26, 20, 0.2);
 }
 
+.product-status-modal {
+  width: min(860px, 100%);
+  display: grid;
+  gap: 18px;
+  padding: 20px;
+  max-height: min(90vh, 920px);
+  overflow-y: auto;
+  border-radius: var(--radius-card);
+  border: 1px solid rgba(233, 220, 203, 0.9);
+  background:
+    linear-gradient(180deg, rgba(255, 253, 248, 1), rgba(255, 248, 239, 0.98)),
+    radial-gradient(circle at top right, rgba(241, 177, 77, 0.08), transparent 38%);
+  box-shadow: 0 24px 60px rgba(31, 26, 20, 0.2);
+}
+
 .product-qr-layout {
+  display: grid;
+  gap: 16px;
+}
+
+.product-status-layout {
   display: grid;
   gap: 16px;
 }
@@ -1395,9 +1415,37 @@ textarea {
   background: #fffdf8;
 }
 
+.product-status-preview {
+  display: grid;
+  place-items: center;
+  min-height: 420px;
+  padding: 16px;
+  border-radius: var(--radius-panel);
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.76);
+}
+
+.product-status-image {
+  width: min(324px, 100%);
+  height: auto;
+  max-height: 62vh;
+  object-fit: contain;
+  border-radius: 24px;
+  border: 1px solid var(--border);
+  background: #fffdf8;
+  box-shadow: 0 18px 36px rgba(31, 26, 20, 0.12);
+}
+
 .product-qr-details {
   display: grid;
   gap: 12px;
+}
+
+.product-status-modal .form-actions {
+  position: sticky;
+  bottom: 0;
+  padding-top: 8px;
+  background: linear-gradient(180deg, rgba(255, 248, 239, 0), rgba(255, 248, 239, 0.96) 26%, rgba(255, 248, 239, 1) 100%);
 }
 
 .product-qr-url {
@@ -1732,8 +1780,9 @@ textarea {
   }
 
   .hero-section {
-    grid-template-columns: 1.3fr 0.7fr;
-    align-items: stretch;
+    width: min(920px, 100%);
+    margin: 0 auto;
+    gap: 18px;
   }
 
   .brand-grid {
@@ -1792,6 +1841,11 @@ textarea {
 
   .product-qr-layout {
     grid-template-columns: minmax(280px, 320px) minmax(0, 1fr);
+    align-items: start;
+  }
+
+  .product-status-layout {
+    grid-template-columns: minmax(320px, 360px) minmax(0, 1fr);
     align-items: start;
   }
 }
