@@ -1,0 +1,137 @@
+.list {
+  display: grid;
+  gap: 5px;
+}
+
+.card {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) auto;
+  align-items: center;
+  column-gap: 10px;
+  min-height: 46px;
+  padding: 5px 10px;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.92);
+  text-align: left;
+}
+
+.card:hover {
+  border-color: rgba(31, 143, 88, 0.22);
+  background: rgba(255, 255, 255, 0.98);
+}
+
+.card:focus-visible {
+  outline: 2px solid rgba(31, 143, 88, 0.22);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px rgba(31, 143, 88, 0.1);
+}
+
+.avatar {
+  width: 34px;
+  height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background:
+    linear-gradient(180deg, rgba(31, 143, 88, 0.14), rgba(31, 143, 88, 0.08)),
+    rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(31, 143, 88, 0.12);
+  color: var(--brand-dark);
+  font-size: 0.74rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+
+.copy {
+  min-width: 0;
+  display: grid;
+  gap: 0;
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+
+.name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.9rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  line-height: 1.08;
+}
+
+.badge {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: rgba(31, 143, 88, 0.12);
+  color: var(--brand-dark);
+  font-size: 0.5rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  line-height: 1;
+}
+
+.role {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--muted);
+  font-size: 0.72rem;
+  line-height: 1.05;
+}
+
+.action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  justify-self: end;
+}
+
+.actionButton {
+  min-height: 21px;
+  min-width: 38px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 5px;
+  border-radius: 999px;
+  border: 1px solid rgba(31, 143, 88, 0.14);
+  background: rgba(31, 143, 88, 0.06);
+  color: var(--muted);
+  font-size: 0.64rem;
+  font-weight: 700;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+@media (min-width: 700px) {
+  .card {
+    min-height: 44px;
+    padding: 5px 9px;
+  }
+}
+
+@media (max-width: 699px) {
+  .list {
+    gap: 4px;
+  }
+
+  .card {
+    column-gap: 9px;
+    padding: 5px 9px;
+  }
+}

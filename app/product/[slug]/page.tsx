@@ -3,6 +3,9 @@ import { ProductDetailClient } from "@/components/product-detail-client";
 import { fetchProductMetadataBySlug } from "@/lib/firebase/firestore-server";
 import { buildMetadataUrl, buildProductMetaDescription } from "@/lib/metadata";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 type ProductPageProps = {
   params: Promise<{
     slug: string;

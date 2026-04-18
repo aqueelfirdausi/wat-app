@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { User } from "firebase/auth";
 import { hasAdminAccess, logoutUser, subscribeToAuth } from "@/lib/firebase/auth";
 
@@ -40,10 +40,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
+  const accessCheckIdRef = useRef(0);
 
   useEffect(() => {
+    let active = true;
+
     const unsubscribe = subscribeToAuth((nextUser) => {
+      const accessCheckId = accessCheckIdRef.current + 1;
+      accessCheckIdRef.current = accessCheckId;
+
       if (!nextUser) {
+        if (!active) {
+          return;
+        }
+
         setUser(null);
         setIsAdmin(false);
         setLoading(false);
@@ -54,8 +64,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       withAccessTimeout(hasAdminAccess(nextUser))
         .then(async (allowed) => {
+          if (!active || accessCheckIdRef.current !== accessCheckId) {
+            return;
+          }
+
           if (!allowed) {
             await logoutUser();
+            if (!active || accessCheckIdRef.current !== accessCheckId) {
+              return;
+            }
+
             setUser(null);
             setIsAdmin(false);
             setLoading(false);
@@ -67,13 +85,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setLoading(false);
         })
         .catch(() => {
+          if (!active || accessCheckIdRef.current !== accessCheckId) {
+            return;
+          }
+
           setUser(null);
           setIsAdmin(false);
           setLoading(false);
         });
     });
 
-    return unsubscribe;
+    return () => {
+      active = false;
+      unsubscribe();
+    };
   }, []);
 
   const value = useMemo(

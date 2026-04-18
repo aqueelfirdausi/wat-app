@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { WhatsAppChooserButton } from "@/components/whatsapp-chooser-button";
+import { WhatsAppChooserButton } from "@/components/whatsapp-contact-chooser";
 import { getStoreBrandById, resolveProductBrand } from "@/lib/brands";
 import { fetchProductBySlug } from "@/lib/firebase/firestore";
 import { Product } from "@/lib/types";

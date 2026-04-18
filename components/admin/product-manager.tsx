@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import QRCode from "qrcode";
 import { removeProduct, subscribeToProducts } from "@/lib/firebase/firestore";
 import { generateMinimalStatusImage } from "@/lib/status-image-minimal";
@@ -38,6 +38,7 @@ export function ProductManager({ actor }: ProductManagerProps) {
   const [statusImageError, setStatusImageError] = useState("");
   const [statusImageRequestId, setStatusImageRequestId] = useState(0);
   const [statusImageRenderId, setStatusImageRenderId] = useState("");
+  const copyResetTimeoutRef = useRef<number | null>(null);
 
   useEffect(() => {
     try {
@@ -117,8 +118,13 @@ export function ProductManager({ actor }: ProductManagerProps) {
     try {
       const url = buildPublicProductUrl(product.slug, window.location.origin);
       await navigator.clipboard.writeText(url);
+
+      if (copyResetTimeoutRef.current) {
+        window.clearTimeout(copyResetTimeoutRef.current);
+      }
+
       setCopiedProductId(product.id);
-      window.setTimeout(() => {
+      copyResetTimeoutRef.current = window.setTimeout(() => {
         setCopiedProductId((current) => (current === product.id ? null : current));
       }, 2000);
     } catch (err) {
@@ -126,6 +132,14 @@ export function ProductManager({ actor }: ProductManagerProps) {
       setError(message);
     }
   }
+
+  useEffect(() => {
+    return () => {
+      if (copyResetTimeoutRef.current) {
+        window.clearTimeout(copyResetTimeoutRef.current);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     if (!qrProduct) {
@@ -257,6 +271,7 @@ export function ProductManager({ actor }: ProductManagerProps) {
           <div>
             <p className="eyebrow">Inventory</p>
             <h1>Product inventory</h1>
+            <p>Search stock, review item status, and open the daily share/export tools from one place.</p>
           </div>
           <Link href="/admin/products/new" className="primary-link">
             Add product
@@ -589,7 +604,7 @@ export function ProductManager({ actor }: ProductManagerProps) {
               <div>
                 <p className="eyebrow">Status-ready image</p>
                 <h3 id="product-status-title">{statusImageProduct.name}</h3>
-                <p>Generate a ready-made 9:16 WhatsApp Status image with the product QR already placed.</p>
+                <p>Review the 9:16 preview, then export a ready-made WhatsApp Status image with the QR already placed.</p>
               </div>
               <button
                 className="contact-modal-close"
@@ -629,6 +644,7 @@ export function ProductManager({ actor }: ProductManagerProps) {
                   <span>Included content</span>
                   <strong>Product image, name, price, brand/category, CTA text, and the live product QR code.</strong>
                 </div>
+                <p className="product-status-note">Use Copy link for quick sharing, or export the final PNG once the preview looks right.</p>
               </div>
             </div>
             <div className="form-actions">

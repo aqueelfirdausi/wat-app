@@ -2,6 +2,8 @@ import { ImageResponse } from "next/og";
 import { fetchProductMetadataBySlug } from "@/lib/firebase/firestore-server";
 import { buildProductMetaDescription } from "@/lib/metadata";
 
+export const dynamic = "force-dynamic";
+
 export const size = {
   width: 1200,
   height: 630
