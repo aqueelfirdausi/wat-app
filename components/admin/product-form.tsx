@@ -68,14 +68,14 @@ export function ProductForm({ mode, actor, initialProduct }: ProductFormProps) {
   function getSaveFeedback() {
     if (isReadyForPosting) {
       return {
-        message: "Saved — ready for posting",
-        hint: "You can now shortlist it, feature it, or use it for today’s posting."
+        message: "Saved - ready for posting",
+        hint: "You can now shortlist it, feature it, or use it for today's posting."
       };
     }
 
     const nextIncomplete = checklistItems.find((item) => !item.complete)?.label ?? "Details";
     return {
-      message: "Saved — still needs details",
+      message: "Saved - still needs details",
       hint: `Next: add ${nextIncomplete.toLowerCase()}.`
     };
   }

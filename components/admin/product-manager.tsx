@@ -1040,7 +1040,7 @@ export function ProductManager({ actor }: ProductManagerProps) {
                 aria-label="Close product preview"
                 onClick={() => setSelectedProduct(null)}
               >
-                ×
+                &times;
               </button>
             </div>
             <div className="product-view-grid">
@@ -1131,7 +1131,7 @@ export function ProductManager({ actor }: ProductManagerProps) {
                 aria-label="Close product QR modal"
                 onClick={() => setQrProduct(null)}
               >
-                ×
+                &times;
               </button>
             </div>
             <div className="product-qr-layout">
@@ -1186,7 +1186,7 @@ export function ProductManager({ actor }: ProductManagerProps) {
                 aria-label="Close status image modal"
                 onClick={() => setStatusImageProduct(null)}
               >
-                ×
+                &times;
               </button>
             </div>
             <div className="product-status-layout">

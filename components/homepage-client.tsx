@@ -353,7 +353,7 @@ export function HomepageClient() {
           <h2>{featuredProducts.length || freshProducts.length ? "More live items" : "Live stock today"}</h2>
           <p>
             {featuredProducts.length || freshProducts.length
-              ? "The rest of today’s live stock, still ordered to keep the most important items near the top."
+              ? "The rest of today's live stock, still ordered to keep the most important items near the top."
               : "Fresh stock from across the WAT App stores, ready for WhatsApp conversations now."}
           </p>
         </div>

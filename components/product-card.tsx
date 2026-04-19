@@ -41,15 +41,17 @@ export function ProductCard({ product }: ProductCardProps) {
             {storeBrand ? <span className="product-brand-line">{storeBrand.name}</span> : null}
             <span className="product-category-line">{product.categoryName}</span>
           </div>
-          <h3>{product.name}</h3>
-          <p className="product-price">{formatCurrency(product.price, product.currency)}</p>
-          <div className="product-tags">
-            {isFreshToday ? <span className="product-tag product-tag-fresh">Fresh today</span> : null}
-            {!isFreshToday && isRecentlyAdded ? <span className="product-tag product-tag-new">New</span> : null}
-            <span className="product-tag product-tag-condition">{product.condition}</span>
-            <span className={`product-tag ${product.featured ? "product-tag-featured" : "product-tag-availability"}`}>
-              {product.featured ? "Featured" : "Ready today"}
-            </span>
+          <h3 className="product-card-title">{product.name}</h3>
+          <div className="product-card-footer">
+            <p className="product-price">{formatCurrency(product.price, product.currency)}</p>
+            <div className="product-tags">
+              {isFreshToday ? <span className="product-tag product-tag-fresh">Fresh today</span> : null}
+              {!isFreshToday && isRecentlyAdded ? <span className="product-tag product-tag-new">New</span> : null}
+              <span className="product-tag product-tag-condition">{product.condition}</span>
+              <span className={`product-tag ${product.featured ? "product-tag-featured" : "product-tag-availability"}`}>
+                {product.featured ? "Featured" : "Ready today"}
+              </span>
+            </div>
           </div>
         </div>
       </Link>

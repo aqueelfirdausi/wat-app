@@ -94,7 +94,7 @@ export function WhatsAppChooserButton({
             <div className="contact-modal-product">{product.name}</div>
           </div>
           <button type="button" className="contact-modal-close" onClick={() => setIsContactModalOpen(false)} aria-label="Close contact chooser">
-            ×
+            &times;
           </button>
         </div>
         <div className={styles.list}>
