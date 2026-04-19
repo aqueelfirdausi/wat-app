@@ -15,30 +15,28 @@ const CARD_RADIUS = 36;
 const LABEL_X = 108;
 const LABEL_Y = 118;
 
-const IMAGE_X = 136;
+const IMAGE_X = 120;
 const IMAGE_Y = 168;
-const IMAGE_WIDTH = 808;
-const IMAGE_HEIGHT = 940;
+const IMAGE_WIDTH = 840;
+const IMAGE_HEIGHT = 900;
 const IMAGE_RADIUS = 28;
 
 const TITLE_X = 108;
-const TITLE_Y = 1168;
-const TITLE_MAX_WIDTH = 760;
-const TITLE_MAX_LINES = 3;
-const TITLE_LINE_HEIGHT = 58;
+const TITLE_Y = 1128;
+const TITLE_MAX_WIDTH = 560;
+const TITLE_MAX_LINES = 4;
+const TITLE_LINE_HEIGHT = 54;
 
 const PRICE_GAP = 24;
-const CHIPS_GAP = 24;
-const CHIP_HEIGHT = 46;
-const CHIP_HORIZONTAL_PADDING = 20;
-const CHIP_GAP = 12;
+const SUPPORT_GAP = 18;
+const SUPPORT_MAX_WIDTH = 560;
 
-const QR_CARD_X = 700;
-const QR_CARD_Y = 1310;
+const QR_CARD_X = 724;
+const QR_CARD_Y = 1450;
 const QR_CARD_WIDTH = 220;
-const QR_CARD_HEIGHT = 260;
-const QR_CARD_RADIUS = 26;
-const QR_SIZE = 150;
+const QR_CARD_HEIGHT = 252;
+const QR_CARD_RADIUS = 24;
+const QR_SIZE = 148;
 
 function isEventLike(value: unknown) {
   return typeof value === "object" && value !== null && "preventDefault" in value && "stopPropagation" in value;
@@ -95,8 +93,22 @@ function wrapText(
   const lines: string[] = [];
   let currentLine = "";
 
+  function fitToken(token: string) {
+    if (context.measureText(token).width <= maxWidth) {
+      return token;
+    }
+
+    let fitted = token;
+    while (fitted.length > 1 && context.measureText(`${fitted}…`).width > maxWidth) {
+      fitted = fitted.slice(0, -1);
+    }
+
+    return `${fitted}…`;
+  }
+
   for (const word of words) {
-    const candidate = currentLine ? `${currentLine} ${word}` : word;
+    const safeWord = fitToken(word);
+    const candidate = currentLine ? `${currentLine} ${safeWord}` : safeWord;
 
     if (context.measureText(candidate).width <= maxWidth) {
       currentLine = candidate;
@@ -105,9 +117,9 @@ function wrapText(
 
     if (currentLine) {
       lines.push(currentLine);
-      currentLine = word;
+      currentLine = safeWord;
     } else {
-      lines.push(word);
+      lines.push(safeWord);
     }
 
     if (lines.length === maxLines) {
@@ -203,24 +215,6 @@ function drawContainedImage(
   context.restore();
 }
 
-function drawChip(
-  context: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  text: string,
-  fillColor: string,
-  textColor: string
-) {
-  context.save();
-  context.font = "700 20px sans-serif";
-  const chipWidth = Math.ceil(context.measureText(text).width) + CHIP_HORIZONTAL_PADDING * 2;
-  fillRoundRect(context, x, y, chipWidth, CHIP_HEIGHT, 999, fillColor);
-  context.fillStyle = textColor;
-  context.fillText(text, x + CHIP_HORIZONTAL_PADDING, y + 30);
-  context.restore();
-  return chipWidth;
-}
-
 export async function generateMinimalStatusImage(product: Product, productUrl: string, appOrigin?: string) {
   assertRenderableProduct(product);
 
@@ -258,15 +252,16 @@ export async function generateMinimalStatusImage(product: Product, productUrl: s
   const brandName = brand?.name ?? "WAT App";
   const labelText = `${brandName} | ${product.categoryName}`;
 
-  context.fillStyle = "#efe9df";
+  context.fillStyle = "#f2ece2";
   context.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
 
-  fillRoundRect(context, CARD_X, CARD_Y, CARD_WIDTH, CARD_HEIGHT, CARD_RADIUS, "#faf7f2");
+  fillRoundRect(context, CARD_X, CARD_Y, CARD_WIDTH, CARD_HEIGHT, CARD_RADIUS, "#fbf8f3");
 
-  context.fillStyle = "#146c43";
-  context.font = "700 24px sans-serif";
+  context.fillStyle = "#3d6f56";
+  context.font = "700 23px sans-serif";
   context.fillText(labelText, LABEL_X, LABEL_Y, 840);
 
+  fillRoundRect(context, IMAGE_X, IMAGE_Y, IMAGE_WIDTH, IMAGE_HEIGHT, IMAGE_RADIUS, "#f4ede2");
   if (productImage) {
     drawContainedImage(context, productImage, IMAGE_X, IMAGE_Y, IMAGE_WIDTH, IMAGE_HEIGHT, IMAGE_RADIUS);
   } else {
@@ -279,7 +274,7 @@ export async function generateMinimalStatusImage(product: Product, productUrl: s
   }
 
   context.fillStyle = "#1f1a14";
-  context.font = "900 50px sans-serif";
+  context.font = "900 48px sans-serif";
   const titleLines = wrapText(context, product.name, TITLE_MAX_WIDTH, TITLE_MAX_LINES);
 
   titleLines.forEach((line, index) => {
@@ -287,44 +282,36 @@ export async function generateMinimalStatusImage(product: Product, productUrl: s
   });
 
   const titleBottom = TITLE_Y + titleLines.length * TITLE_LINE_HEIGHT;
-  let chipsY = titleBottom + CHIPS_GAP;
+  let supportY = titleBottom + SUPPORT_GAP;
 
   if (Number.isFinite(product.price) && product.price > 0) {
     const priceY = titleBottom + PRICE_GAP + 58;
-    context.font = "900 64px sans-serif";
+    context.font = "900 60px sans-serif";
     context.fillStyle = "#1f1a14";
     context.fillText(formatCurrency(product.price, product.currency), TITLE_X, priceY);
-    chipsY = priceY + CHIPS_GAP;
+    supportY = priceY + SUPPORT_GAP;
   }
 
-  let nextChipX = TITLE_X;
-  nextChipX += drawChip(context, nextChipX, chipsY, product.condition, "#efe6d8", "#1f1a14") + CHIP_GAP;
-  drawChip(
-    context,
-    nextChipX,
-    chipsY,
-    product.stockStatus,
-    product.stockStatus === "In Stock"
-      ? "rgba(20, 108, 67, 0.12)"
-      : product.stockStatus === "Low Stock"
-        ? "rgba(241, 177, 77, 0.22)"
-        : "rgba(185, 66, 66, 0.12)",
-    product.stockStatus === "In Stock" ? "#146c43" : product.stockStatus === "Low Stock" ? "#8a5d16" : "#b94242"
-  );
+  const supportLine = [product.condition, product.stockStatus].filter(Boolean).join(" • ");
+  if (supportLine) {
+    context.fillStyle = "#6d6253";
+    context.font = "600 24px sans-serif";
+    context.fillText(supportLine, TITLE_X, supportY, SUPPORT_MAX_WIDTH);
+  }
 
   fillRoundRect(context, QR_CARD_X, QR_CARD_Y, QR_CARD_WIDTH, QR_CARD_HEIGHT, QR_CARD_RADIUS, "#ffffff");
 
   const qrX = QR_CARD_X + (QR_CARD_WIDTH - QR_SIZE) / 2;
-  const qrY = QR_CARD_Y + 24;
+  const qrY = QR_CARD_Y + 22;
   context.drawImage(qrImage, qrX, qrY, QR_SIZE, QR_SIZE);
 
   context.textAlign = "center";
   context.fillStyle = "#1f1a14";
   context.font = "700 20px sans-serif";
-  context.fillText("Scan for details", QR_CARD_X + QR_CARD_WIDTH / 2, QR_CARD_Y + 202);
+  context.fillText("Scan for details", QR_CARD_X + QR_CARD_WIDTH / 2, QR_CARD_Y + 198);
   context.fillStyle = "#6d6253";
   context.font = "600 17px sans-serif";
-  context.fillText("Reply to order", QR_CARD_X + QR_CARD_WIDTH / 2, QR_CARD_Y + 230);
+  context.fillText("Open live stock", QR_CARD_X + QR_CARD_WIDTH / 2, QR_CARD_Y + 224);
   context.textAlign = "left";
 
   return canvas.toDataURL("image/png");

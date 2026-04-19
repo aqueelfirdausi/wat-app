@@ -2,13 +2,14 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import QRCode from "qrcode";
 import { removeProduct, subscribeToProducts } from "@/lib/firebase/firestore";
 import { generateMinimalStatusImage } from "@/lib/status-image-minimal";
 import { getTeamContactById } from "@/lib/team-contacts";
 import { Product } from "@/lib/types";
-import { buildProductPath, buildPublicProductUrl, formatCurrency, formatDate } from "@/lib/utils";
+import { buildProductPath, buildPublicProductUrl, compareProductsForStorefront, formatCurrency, formatDate, isNewArrival, isNewToday } from "@/lib/utils";
 
 type ProductManagerProps = {
   actor: {
@@ -18,15 +19,43 @@ type ProductManagerProps = {
   };
 };
 
+const SAVE_FEEDBACK_STORAGE_KEY = "watapp-admin-save-feedback";
+const DUPLICATE_DRAFT_STORAGE_KEY = "watapp-admin-duplicate-draft";
+const INVENTORY_SESSION_STATE_KEY = "watapp-admin-inventory-session";
+
+type InventorySessionState = {
+  shortlistedIds?: string[];
+  selectedIds?: string[];
+  chosenProductId?: string | null;
+  shortlistedOnly?: boolean;
+  needsAttentionOnly?: boolean;
+  featuredOnly?: boolean;
+  sortBy?: string;
+  categoryFilter?: string;
+  stockFilter?: string;
+  searchQuery?: string;
+};
+
 export function ProductManager({ actor }: ProductManagerProps) {
+  const router = useRouter();
   const [products, setProducts] = useState<Product[]>([]);
+  const [hasLoadedInventory, setHasLoadedInventory] = useState(false);
   const [error, setError] = useState("");
+  const [saveFeedback, setSaveFeedback] = useState<{ message: string; hint: string } | null>(null);
+  const [restoredStateNotice, setRestoredStateNotice] = useState(false);
+  const [freshStartNotice, setFreshStartNotice] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [stockFilter, setStockFilter] = useState("all");
   const [featuredOnly, setFeaturedOnly] = useState(false);
-  const [sortBy, setSortBy] = useState("updated_newest");
+  const [shortlistedOnly, setShortlistedOnly] = useState(false);
+  const [needsAttentionOnly, setNeedsAttentionOnly] = useState(false);
+  const [sortBy, setSortBy] = useState("storefront_order");
+  const [shortlistedIds, setShortlistedIds] = useState<string[]>([]);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [chosenProductId, setChosenProductId] = useState<string | null>(null);
+  const [openActionsMenuId, setOpenActionsMenuId] = useState<string | null>(null);
   const [copiedProductId, setCopiedProductId] = useState<string | null>(null);
   const [qrProduct, setQrProduct] = useState<Product | null>(null);
   const [qrCodeDataUrl, setQrCodeDataUrl] = useState("");
@@ -39,16 +68,205 @@ export function ProductManager({ actor }: ProductManagerProps) {
   const [statusImageRequestId, setStatusImageRequestId] = useState(0);
   const [statusImageRenderId, setStatusImageRenderId] = useState("");
   const copyResetTimeoutRef = useRef<number | null>(null);
+  const inventorySessionRef = useRef<InventorySessionState | null>(null);
+  const activeActionsMenuRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     try {
-      return subscribeToProducts(setProducts);
+      return subscribeToProducts((nextProducts) => {
+        setProducts(nextProducts);
+        setHasLoadedInventory(true);
+      });
     } catch (err) {
       const message = err instanceof Error ? err.message : "Unable to load products.";
       setError(message);
+      setHasLoadedInventory(true);
       return () => undefined;
     }
   }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const raw = window.sessionStorage.getItem(SAVE_FEEDBACK_STORAGE_KEY);
+    if (!raw) {
+      return;
+    }
+
+    try {
+      const parsed = JSON.parse(raw) as { message?: string; hint?: string };
+      if (parsed?.message && parsed?.hint) {
+        setSaveFeedback({ message: parsed.message, hint: parsed.hint });
+      }
+    } catch {
+      // Ignore malformed transient feedback.
+    } finally {
+      window.sessionStorage.removeItem(SAVE_FEEDBACK_STORAGE_KEY);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const raw = window.sessionStorage.getItem(INVENTORY_SESSION_STATE_KEY);
+    if (!raw) {
+      return;
+    }
+
+    try {
+      inventorySessionRef.current = JSON.parse(raw) as InventorySessionState;
+    } catch {
+      inventorySessionRef.current = null;
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!hasLoadedInventory || !inventorySessionRef.current) {
+      return;
+    }
+
+    const restored = inventorySessionRef.current;
+    const validIds = new Set(products.map((product) => product.id));
+    const validCategories = new Set(products.map((product) => product.categoryName).filter(Boolean));
+    const validSortValues = new Set(["storefront_order", "updated_newest", "updated_oldest", "price_low", "price_high"]);
+    const validStockValues = new Set(["all", "In Stock", "Low Stock", "Out of Stock"]);
+
+    setShortlistedIds((restored.shortlistedIds ?? []).filter((id) => validIds.has(id)));
+    setSelectedIds((restored.selectedIds ?? []).filter((id) => validIds.has(id)));
+    setChosenProductId(restored.chosenProductId && validIds.has(restored.chosenProductId) ? restored.chosenProductId : null);
+    setShortlistedOnly(Boolean(restored.shortlistedOnly));
+    setNeedsAttentionOnly(Boolean(restored.needsAttentionOnly));
+    setFeaturedOnly(Boolean(restored.featuredOnly));
+    setSortBy(validSortValues.has(restored.sortBy ?? "") ? restored.sortBy ?? "storefront_order" : "storefront_order");
+    setCategoryFilter(validCategories.has(restored.categoryFilter ?? "") ? restored.categoryFilter ?? "all" : "all");
+    setStockFilter(validStockValues.has(restored.stockFilter ?? "") ? restored.stockFilter ?? "all" : "all");
+    setSearchQuery(restored.searchQuery ?? "");
+    setRestoredStateNotice(true);
+    inventorySessionRef.current = null;
+  }, [hasLoadedInventory, products]);
+
+  useEffect(() => {
+    if (typeof window === "undefined" || !hasLoadedInventory) {
+      return;
+    }
+
+    const isDefaultState =
+      shortlistedIds.length === 0 &&
+      selectedIds.length === 0 &&
+      chosenProductId === null &&
+      !shortlistedOnly &&
+      !needsAttentionOnly &&
+      !featuredOnly &&
+      sortBy === "storefront_order" &&
+      categoryFilter === "all" &&
+      stockFilter === "all" &&
+      searchQuery.trim().length === 0;
+
+    if (isDefaultState) {
+      window.sessionStorage.removeItem(INVENTORY_SESSION_STATE_KEY);
+      return;
+    }
+
+    const payload: InventorySessionState = {
+      shortlistedIds,
+      selectedIds,
+      chosenProductId,
+      shortlistedOnly,
+      needsAttentionOnly,
+      featuredOnly,
+      sortBy,
+      categoryFilter,
+      stockFilter,
+      searchQuery
+    };
+
+    window.sessionStorage.setItem(INVENTORY_SESSION_STATE_KEY, JSON.stringify(payload));
+  }, [
+    categoryFilter,
+    chosenProductId,
+    featuredOnly,
+    hasLoadedInventory,
+    needsAttentionOnly,
+    searchQuery,
+    selectedIds,
+    shortlistedIds,
+    shortlistedOnly,
+    sortBy,
+    stockFilter
+  ]);
+
+  useEffect(() => {
+    if (!restoredStateNotice && !freshStartNotice) {
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      setRestoredStateNotice(false);
+      setFreshStartNotice(false);
+    }, 3200);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [freshStartNotice, restoredStateNotice]);
+
+  useEffect(() => {
+    if (!openActionsMenuId) {
+      return;
+    }
+
+    function handlePointerDown(event: PointerEvent) {
+      if (activeActionsMenuRef.current?.contains(event.target as Node)) {
+        return;
+      }
+
+      setOpenActionsMenuId(null);
+    }
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setOpenActionsMenuId(null);
+      }
+    }
+
+    document.addEventListener("pointerdown", handlePointerDown);
+    document.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.removeEventListener("pointerdown", handlePointerDown);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [openActionsMenuId]);
+
+  useEffect(() => {
+    if (!selectedProduct || typeof window === "undefined") {
+      return;
+    }
+
+    const previousBodyOverflow = document.body.style.overflow;
+    const previousHtmlOverflow = document.documentElement.style.overflow;
+
+    document.body.style.overflow = "hidden";
+    document.documentElement.style.overflow = "hidden";
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setSelectedProduct(null);
+      }
+    }
+
+    document.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.body.style.overflow = previousBodyOverflow;
+      document.documentElement.style.overflow = previousHtmlOverflow;
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [selectedProduct]);
 
   async function handleDelete(product: Product) {
     const confirmed = window.confirm(`Delete ${product.name}?`);
@@ -80,11 +298,17 @@ export function ProductManager({ actor }: ProductManagerProps) {
       const matchesCategory = categoryFilter === "all" || product.categoryName === categoryFilter;
       const matchesStock = stockFilter === "all" || product.stockStatus === stockFilter;
       const matchesFeatured = !featuredOnly || product.featured;
+      const matchesShortlist = !shortlistedOnly || shortlistedIds.includes(product.id);
+      const matchesNeedsAttention = !needsAttentionOnly || !getReadinessState(product).ready;
 
-      return matchesQuery && matchesCategory && matchesStock && matchesFeatured;
+      return matchesQuery && matchesCategory && matchesStock && matchesFeatured && matchesShortlist && matchesNeedsAttention;
     });
 
     nextProducts.sort((first, second) => {
+      if (sortBy === "storefront_order") {
+        return compareProductsForStorefront(first, second);
+      }
+
       if (sortBy === "updated_oldest") {
         return (first.updatedAt?.getTime() ?? 0) - (second.updatedAt?.getTime() ?? 0);
       }
@@ -101,17 +325,102 @@ export function ProductManager({ actor }: ProductManagerProps) {
     });
 
     return nextProducts;
-  }, [categoryFilter, featuredOnly, products, searchQuery, sortBy, stockFilter]);
+  }, [categoryFilter, featuredOnly, needsAttentionOnly, products, searchQuery, shortlistedIds, shortlistedOnly, sortBy, stockFilter]);
 
   const hasActiveFilters =
-    searchQuery.trim().length > 0 || categoryFilter !== "all" || stockFilter !== "all" || featuredOnly || sortBy !== "updated_newest";
+    searchQuery.trim().length > 0 ||
+    categoryFilter !== "all" ||
+    stockFilter !== "all" ||
+    featuredOnly ||
+    shortlistedOnly ||
+    needsAttentionOnly ||
+    sortBy !== "storefront_order";
 
   function clearFilters() {
     setSearchQuery("");
     setCategoryFilter("all");
     setStockFilter("all");
     setFeaturedOnly(false);
-    setSortBy("updated_newest");
+    setShortlistedOnly(false);
+    setNeedsAttentionOnly(false);
+    setSortBy("storefront_order");
+  }
+
+  function toggleShortlist(productId: string) {
+    setShortlistedIds((current) => (current.includes(productId) ? current.filter((id) => id !== productId) : [...current, productId]));
+  }
+
+  function toggleSelected(productId: string) {
+    setSelectedIds((current) => (current.includes(productId) ? current.filter((id) => id !== productId) : [...current, productId]));
+  }
+
+  function shortlistSelected() {
+    setShortlistedIds((current) => Array.from(new Set([...current, ...selectedIds])));
+  }
+
+  function removeSelectedFromShortlist() {
+    setShortlistedIds((current) => current.filter((id) => !selectedIds.includes(id)));
+  }
+
+  function clearSelection() {
+    setSelectedIds([]);
+  }
+
+  function toggleChosen(productId: string) {
+    setChosenProductId((current) => (current === productId ? null : productId));
+  }
+
+  function toggleActionsMenu(productId: string) {
+    setOpenActionsMenuId((current) => (current === productId ? null : productId));
+  }
+
+  function closeActionsMenu() {
+    setOpenActionsMenuId(null);
+  }
+
+  function handleStartFresh() {
+    if (typeof window !== "undefined") {
+      window.sessionStorage.removeItem(INVENTORY_SESSION_STATE_KEY);
+    }
+
+    inventorySessionRef.current = null;
+    setSearchQuery("");
+    setCategoryFilter("all");
+    setStockFilter("all");
+    setFeaturedOnly(false);
+    setShortlistedOnly(false);
+    setNeedsAttentionOnly(false);
+    setSortBy("storefront_order");
+    setShortlistedIds([]);
+    setSelectedIds([]);
+    setChosenProductId(null);
+    setRestoredStateNotice(false);
+    setFreshStartNotice(true);
+  }
+
+  function handleDuplicate(product: Product) {
+    if (typeof window !== "undefined") {
+      window.sessionStorage.setItem(
+        DUPLICATE_DRAFT_STORAGE_KEY,
+        JSON.stringify({
+          sourceName: product.name,
+          values: {
+            name: `${product.name} (Copy)`,
+            description: product.description,
+            brand: product.brand ?? "",
+            preferredContactId: product.preferredContactId ?? product.assignedContactId ?? product.contactId ?? "",
+            categoryName: product.categoryName,
+            price: product.price ? String(product.price) : "",
+            condition: product.condition,
+            stockStatus: product.stockStatus,
+            featured: product.featured,
+            sortPriority: String(product.sortPriority ?? 0)
+          }
+        })
+      );
+    }
+
+    router.push("/admin/products/new?duplicate=1");
   }
 
   async function handleCopyLink(product: Product) {
@@ -264,6 +573,48 @@ export function ProductManager({ actor }: ProductManagerProps) {
       )
     : undefined;
 
+  function getReadinessState(product: Product) {
+    const missing: string[] = [];
+
+    if (!product.imageUrl?.trim()) {
+      missing.push("image");
+    }
+
+    if (!Number.isFinite(product.price) || product.price <= 0) {
+      missing.push("price");
+    }
+
+    if (!product.description?.trim()) {
+      missing.push("details");
+    }
+
+    return {
+      ready: missing.length === 0,
+      missing
+    };
+  }
+
+  const visibleFeaturedCount = useMemo(() => filteredProducts.filter((product) => product.featured).length, [filteredProducts]);
+  const visibleProductIds = useMemo(() => filteredProducts.map((product) => product.id), [filteredProducts]);
+  const selectedVisibleCount = useMemo(() => selectedIds.filter((id) => visibleProductIds.includes(id)).length, [selectedIds, visibleProductIds]);
+  const visibleShortlistedCount = useMemo(
+    () => filteredProducts.filter((product) => shortlistedIds.includes(product.id)).length,
+    [filteredProducts, shortlistedIds]
+  );
+  const visibleReadyCount = useMemo(
+    () => filteredProducts.filter((product) => getReadinessState(product).ready).length,
+    [filteredProducts]
+  );
+  const visibleNeedsAttentionCount = useMemo(
+    () => filteredProducts.filter((product) => !getReadinessState(product).ready).length,
+    [filteredProducts]
+  );
+  const hasWorkingState =
+    shortlistedIds.length > 0 ||
+    selectedIds.length > 0 ||
+    chosenProductId !== null ||
+    hasActiveFilters;
+
   return (
     <>
       <section className="panel-card">
@@ -272,11 +623,30 @@ export function ProductManager({ actor }: ProductManagerProps) {
             <p className="eyebrow">Inventory</p>
             <h1>Product inventory</h1>
             <p>Search stock, review item status, and open the daily share/export tools from one place.</p>
+            {shortlistedIds.length ? <p className="panel-shortlist-count">Shortlisted: {shortlistedIds.length}</p> : null}
           </div>
           <Link href="/admin/products/new" className="primary-link">
             Add product
           </Link>
         </div>
+        {saveFeedback ? (
+          <div className="notice-banner notice-banner-success" role="status" aria-live="polite">
+            <strong>{saveFeedback.message}</strong>
+            <span>{saveFeedback.hint}</span>
+          </div>
+        ) : null}
+        {restoredStateNotice ? (
+          <div className="notice-banner notice-banner-muted" role="status" aria-live="polite">
+            <strong>Restored today&apos;s working state</strong>
+            <span>Your shortlist, selection, and decision filters are back for this session.</span>
+          </div>
+        ) : null}
+        {freshStartNotice ? (
+          <div className="notice-banner notice-banner-muted" role="status" aria-live="polite">
+            <strong>Started fresh</strong>
+            <span>Your shortlist, selection, and inventory filters are back to the default working view.</span>
+          </div>
+        ) : null}
         {error ? <div className="inline-error">{error}</div> : null}
         <div className="manager-controls">
           <label className="manager-search">
@@ -312,6 +682,7 @@ export function ProductManager({ actor }: ProductManagerProps) {
             <label>
               <span>Sort</span>
               <select value={sortBy} onChange={(event) => setSortBy(event.target.value)}>
+                <option value="storefront_order">Storefront order</option>
                 <option value="updated_newest">Updated newest</option>
                 <option value="updated_oldest">Updated oldest</option>
                 <option value="price_low">Price low to high</option>
@@ -326,12 +697,71 @@ export function ProductManager({ actor }: ProductManagerProps) {
               />
               <span>Featured only</span>
             </label>
+            <label className="checkbox-row manager-checkbox">
+              <input
+                type="checkbox"
+                checked={shortlistedOnly}
+                onChange={(event) => setShortlistedOnly(event.target.checked)}
+              />
+              <span>Shortlisted only</span>
+            </label>
+            <label className="checkbox-row manager-checkbox">
+              <input
+                type="checkbox"
+                checked={needsAttentionOnly}
+                onChange={(event) => setNeedsAttentionOnly(event.target.checked)}
+              />
+              <span>Needs attention</span>
+            </label>
             {hasActiveFilters ? (
               <button className="secondary-button manager-clear" type="button" onClick={clearFilters}>
                 Clear filters
               </button>
             ) : null}
           </div>
+        </div>
+        <div className="manager-state-row">
+          <p className="manager-tip">Tip: storefront order is the default so you can review what customers are most likely to notice first today.</p>
+          {hasWorkingState ? (
+            <button className="secondary-link manager-start-fresh" type="button" onClick={handleStartFresh}>
+              Start fresh
+            </button>
+          ) : null}
+        </div>
+        {selectedIds.length ? (
+          <div className="batch-actions-strip" aria-label="Batch shortlist actions">
+            <span>
+              <strong>{selectedVisibleCount || selectedIds.length}</strong> selected
+            </span>
+            <button className="secondary-link" type="button" onClick={shortlistSelected}>
+              Shortlist selected
+            </button>
+            <button className="secondary-link" type="button" onClick={removeSelectedFromShortlist}>
+              Remove from shortlist
+            </button>
+            <button className="secondary-link" type="button" onClick={clearSelection}>
+              Clear selection
+            </button>
+          </div>
+        ) : null}
+        <div className="today-picks-strip" aria-label="Today picks summary">
+          <span>
+            <strong>{visibleFeaturedCount}</strong> featured today
+          </span>
+          <span>
+            <strong>{visibleShortlistedCount}</strong> shortlisted
+          </span>
+          <span>
+            <strong>{visibleReadyCount}</strong> ready
+          </span>
+          <span>
+            <strong>{visibleNeedsAttentionCount}</strong> needs attention
+          </span>
+          {chosenProductId ? (
+            <span>
+              <strong>1</strong> chosen for today
+            </span>
+          ) : null}
         </div>
         <div className="inventory-list">
           <div className="inventory-head" aria-hidden="true">
@@ -342,10 +772,35 @@ export function ProductManager({ actor }: ProductManagerProps) {
             <span>Actions</span>
           </div>
 
-          {filteredProducts.map((product) => (
-            <article key={product.id} className="inventory-row-card">
+          {filteredProducts.map((product) => {
+            const isBrandNewToday = isNewToday(product);
+            const isRecentlyAdded = !isBrandNewToday && isNewArrival(product);
+            const readiness = getReadinessState(product);
+            const missingSummary = readiness.missing.slice(0, 2).join(" + ");
+            const isShortlisted = shortlistedIds.includes(product.id);
+            const isTopPick = readiness.ready && (product.featured || isShortlisted);
+            const isChosen = chosenProductId === product.id;
+
+            return (
+            <article
+              key={product.id}
+              className={
+                isChosen
+                  ? "inventory-row-card inventory-row-card-chosen"
+                  : isTopPick
+                    ? "inventory-row-card inventory-row-card-top-pick"
+                    : "inventory-row-card"
+              }
+            >
                 <div className="inventory-product-cell">
                   <div className="product-row-main">
+                    <label className="row-select-toggle" aria-label={`Select ${product.name}`}>
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.includes(product.id)}
+                        onChange={() => toggleSelected(product.id)}
+                      />
+                    </label>
                     <div className="product-row-thumb">
                       {product.imageUrl ? (
                         <Image
@@ -360,11 +815,20 @@ export function ProductManager({ actor }: ProductManagerProps) {
                       )}
                     </div>
                     <div className="product-row-copy">
-                      <div className="product-row-title">
-                        <strong>{product.name}</strong>
+                      <strong className="product-row-name">{product.name}</strong>
+                      <div className="product-row-badges">
                         {product.featured ? <span className="table-badge">Featured</span> : null}
+                        {(product.sortPriority ?? 0) > 0 ? <span className="table-badge">Priority {product.sortPriority}</span> : null}
+                        {isBrandNewToday ? <span className="table-badge table-badge-fresh">New today</span> : null}
+                        {isRecentlyAdded ? <span className="table-badge table-badge-fresh">New</span> : null}
+                        <span className={readiness.ready ? "table-badge table-badge-ready" : "table-badge table-badge-needs"}>
+                          {readiness.ready ? "Ready" : "Needs details"}
+                        </span>
+                        {isTopPick ? <span className="table-badge table-badge-top-pick">Top pick</span> : null}
+                        {isChosen ? <span className="table-badge table-badge-chosen">Chosen for today</span> : null}
                       </div>
                       <span>{product.categoryName}</span>
+                      {!readiness.ready ? <span className="inventory-readiness-hint">Missing {missingSummary}</span> : null}
                     </div>
                   </div>
                 </div>
@@ -395,39 +859,145 @@ export function ProductManager({ actor }: ProductManagerProps) {
                 </div>
 
                 <div className="inventory-actions-cell">
-                  <div className="actions-inline">
-                    <button className="secondary-link" type="button" onClick={() => setSelectedProduct(product)}>
-                      View
+                  <div className="actions-menu actions-inline" ref={openActionsMenuId === product.id ? activeActionsMenuRef : null}>
+                    <button
+                      className="actions-menu-trigger actions-menu-trigger-label"
+                      type="button"
+                      aria-label={`Open actions for ${product.name}`}
+                      aria-haspopup="menu"
+                      aria-expanded={openActionsMenuId === product.id}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        toggleActionsMenu(product.id);
+                      }}
+                    >
+                      <span>Actions</span>
                     </button>
-                    <Link href={`/admin/products/${product.id}`} className="secondary-link">
-                      Edit
-                    </Link>
-                    <details className="actions-menu">
-                      <summary className="actions-menu-trigger" aria-label={`More actions for ${product.name}`}>
-                        <span aria-hidden="true">•••</span>
-                      </summary>
-                      <div className="actions-menu-popover">
-                        <Link href={buildProductPath(product.slug)} className="actions-menu-item" target="_blank" rel="noreferrer">
+                    {openActionsMenuId === product.id ? (
+                      <div className="actions-menu-popover" role="menu">
+                        <button
+                          className="actions-menu-item"
+                          type="button"
+                          role="menuitem"
+                          onClick={() => {
+                            closeActionsMenu();
+                            setSelectedProduct(product);
+                          }}
+                        >
+                          View details
+                        </button>
+                        <Link
+                          href={`/admin/products/${product.id}`}
+                          className="actions-menu-item"
+                          role="menuitem"
+                          onClick={closeActionsMenu}
+                        >
+                          Edit product
+                        </Link>
+                        {!readiness.ready ? (
+                          <Link
+                            href={`/admin/products/${product.id}`}
+                            className="actions-menu-item"
+                            role="menuitem"
+                            onClick={closeActionsMenu}
+                          >
+                            Fix now
+                          </Link>
+                        ) : null}
+                        <Link
+                          href={buildProductPath(product.slug)}
+                          className="actions-menu-item"
+                          target="_blank"
+                          rel="noreferrer"
+                          role="menuitem"
+                          onClick={closeActionsMenu}
+                        >
                           View product
                         </Link>
-                        <button className="actions-menu-item" type="button" onClick={() => handleCopyLink(product)}>
+                        <button
+                          className="actions-menu-item"
+                          type="button"
+                          role="menuitem"
+                          onClick={() => {
+                            closeActionsMenu();
+                            toggleChosen(product.id);
+                          }}
+                        >
+                          {isChosen ? "Clear chosen" : "Choose for today"}
+                        </button>
+                        <button
+                          className="actions-menu-item"
+                          type="button"
+                          role="menuitem"
+                          onClick={() => {
+                            closeActionsMenu();
+                            toggleShortlist(product.id);
+                          }}
+                        >
+                          {isShortlisted ? "Remove from shortlist" : "Shortlist"}
+                        </button>
+                        <button
+                          className="actions-menu-item"
+                          type="button"
+                          role="menuitem"
+                          onClick={() => {
+                            closeActionsMenu();
+                            handleCopyLink(product);
+                          }}
+                        >
                           {copiedProductId === product.id ? "Copied link" : "Copy link"}
                         </button>
-                        <button className="actions-menu-item" type="button" onClick={() => setQrProduct(product)}>
+                        <button
+                          className="actions-menu-item"
+                          type="button"
+                          role="menuitem"
+                          onClick={() => {
+                            closeActionsMenu();
+                            handleDuplicate(product);
+                          }}
+                        >
+                          Duplicate
+                        </button>
+                        <button
+                          className="actions-menu-item"
+                          type="button"
+                          role="menuitem"
+                          onClick={() => {
+                            closeActionsMenu();
+                            setQrProduct(product);
+                          }}
+                        >
                           Generate QR
                         </button>
-                        <button className="actions-menu-item" type="button" onClick={() => handleOpenStatusImage(product)}>
+                        <button
+                          className="actions-menu-item"
+                          type="button"
+                          role="menuitem"
+                          onClick={() => {
+                            closeActionsMenu();
+                            handleOpenStatusImage(product);
+                          }}
+                        >
                           Download status image
                         </button>
-                        <button className="actions-menu-item actions-menu-item-danger" type="button" onClick={() => handleDelete(product)}>
+                        <button
+                          className="actions-menu-item actions-menu-item-danger"
+                          type="button"
+                          role="menuitem"
+                          onClick={() => {
+                            closeActionsMenu();
+                            handleDelete(product);
+                          }}
+                        >
                           Delete
                         </button>
                       </div>
-                    </details>
+                    ) : null}
                   </div>
                 </div>
               </article>
-          ))}
+            );
+          })}
 
           {!products.length ? (
             <div className="empty-state">No products added yet. Your uploaded stock will appear here.</div>
@@ -507,6 +1077,10 @@ export function ProductManager({ actor }: ProductManagerProps) {
                 <div className="product-view-row">
                   <span>Featured</span>
                   <strong>{selectedProduct.featured ? "Yes" : "No"}</strong>
+                </div>
+                <div className="product-view-row">
+                  <span>Priority</span>
+                  <strong>{selectedProduct.sortPriority ?? 0}</strong>
                 </div>
                 <div className="product-view-row">
                   <span>Preferred WhatsApp contact</span>

@@ -110,9 +110,7 @@ export function WhatsAppChooserButton({
                 </span>
                 <span className={styles.role}>{contact.label}</span>
               </span>
-              <span className={styles.action}>
-                <span className={styles.actionButton}>Open</span>
-              </span>
+              <span className={styles.actionButton}>Open</span>
             </button>
           ))}
         </div>

@@ -106,6 +106,7 @@ function mapProduct(id: string, data: Record<string, unknown>): Product {
     condition: (data.condition as Product["condition"]) ?? "Used",
     stockStatus: (data.stockStatus as Product["stockStatus"]) ?? "In Stock",
     featured: Boolean(data.featured),
+    sortPriority: Number(data.sortPriority ?? 0),
     imageUrl: String(data.imageUrl ?? ""),
     imagePath: data.imagePath ? String(data.imagePath) : undefined,
     createdAt: parseFirebaseDate(data.createdAt),
@@ -227,6 +228,7 @@ export async function createProduct(values: ProductFormValues, actor: Actor, fil
   const brand = values.brand || inferBrandFromCategory(category.categoryName);
   const preferredContact = getTeamContactById(values.preferredContactId);
   const image = file ? await uploadProductImage(file, slug) : { imageUrl: "", imagePath: "" };
+  const sortPriority = Math.max(0, Math.trunc(Number(values.sortPriority) || 0));
 
   const productRef = await addDoc(collection(firestore, "products"), {
     name: values.name.trim(),
@@ -245,6 +247,7 @@ export async function createProduct(values: ProductFormValues, actor: Actor, fil
     condition: values.condition,
     stockStatus: values.stockStatus,
     featured: values.featured,
+    sortPriority,
     imageUrl: image.imageUrl,
     imagePath: image.imagePath,
     createdAt: serverTimestamp(),
@@ -280,6 +283,7 @@ export async function updateProduct(
   const slug = slugify(values.name);
   const brand = values.brand || inferBrandFromCategory(category.categoryName);
   const preferredContact = getTeamContactById(values.preferredContactId);
+  const sortPriority = Math.max(0, Math.trunc(Number(values.sortPriority) || 0));
   let imagePayload: { imageUrl?: string; imagePath?: string } = {};
 
   if (file) {
@@ -307,6 +311,7 @@ export async function updateProduct(
       condition: values.condition,
       stockStatus: values.stockStatus,
       featured: values.featured,
+      sortPriority,
       ...imagePayload,
       updatedAt: serverTimestamp(),
       updatedByUid: actor.uid,

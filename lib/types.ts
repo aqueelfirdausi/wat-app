@@ -30,6 +30,7 @@ export type Product = {
   condition: ProductCondition;
   stockStatus: StockStatus;
   featured: boolean;
+  sortPriority?: number;
   imageUrl: string;
   imagePath?: string;
   createdAt?: Date | null;
@@ -68,4 +69,5 @@ export type ProductFormValues = {
   condition: ProductCondition;
   stockStatus: StockStatus;
   featured: boolean;
+  sortPriority: string;
 };

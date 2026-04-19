@@ -1,3 +1,5 @@
+import type { Product } from "@/lib/types";
+
 export function formatCurrency(amount: number, currency = "PKR") {
   return new Intl.NumberFormat("en-PK", {
     style: "currency",
@@ -79,4 +81,68 @@ export function parseFirebaseDate(value: unknown): Date | null {
   }
 
   return null;
+}
+
+export function getProductFreshnessDate(product: Product) {
+  return product.updatedAt ?? product.createdAt ?? null;
+}
+
+export function isFreshProduct(product: Product, now = new Date()) {
+  const freshnessDate = getProductFreshnessDate(product);
+  if (!freshnessDate) {
+    return false;
+  }
+
+  return (
+    freshnessDate.getFullYear() === now.getFullYear() &&
+    freshnessDate.getMonth() === now.getMonth() &&
+    freshnessDate.getDate() === now.getDate()
+  );
+}
+
+export function isNewToday(product: Product, now = new Date()) {
+  const sourceDate = product.createdAt ?? getProductFreshnessDate(product);
+  if (!sourceDate) {
+    return false;
+  }
+
+  return (
+    sourceDate.getFullYear() === now.getFullYear() &&
+    sourceDate.getMonth() === now.getMonth() &&
+    sourceDate.getDate() === now.getDate()
+  );
+}
+
+export function isNewArrival(product: Product, now = new Date()) {
+  const sourceDate = product.createdAt ?? getProductFreshnessDate(product);
+  if (!sourceDate) {
+    return false;
+  }
+
+  return now.getTime() - sourceDate.getTime() <= 1000 * 60 * 60 * 72;
+}
+
+export function compareProductsByFreshness(a: Product, b: Product) {
+  const aTime = getProductFreshnessDate(a)?.getTime() ?? 0;
+  const bTime = getProductFreshnessDate(b)?.getTime() ?? 0;
+  return bTime - aTime;
+}
+
+export function compareProductsForStorefront(a: Product, b: Product) {
+  const featuredDelta = Number(Boolean(b.featured)) - Number(Boolean(a.featured));
+  if (featuredDelta !== 0) {
+    return featuredDelta;
+  }
+
+  const priorityDelta = (b.sortPriority ?? 0) - (a.sortPriority ?? 0);
+  if (priorityDelta !== 0) {
+    return priorityDelta;
+  }
+
+  const freshnessDelta = compareProductsByFreshness(a, b);
+  if (freshnessDelta !== 0) {
+    return freshnessDelta;
+  }
+
+  return a.name.localeCompare(b.name);
 }
