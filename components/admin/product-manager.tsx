@@ -72,6 +72,8 @@ export function ProductManager({ actor }: ProductManagerProps) {
   const [updatingStockId, setUpdatingStockId] = useState<string | null>(null);
   const [quickActionBusyId, setQuickActionBusyId] = useState<string | null>(null);
   const [quickActionFeedback, setQuickActionFeedback] = useState<{ productId: string; message: string } | null>(null);
+  const [bulkActionBusy, setBulkActionBusy] = useState<string | null>(null);
+  const [bulkActionFeedback, setBulkActionFeedback] = useState("");
   const [qrProduct, setQrProduct] = useState<Product | null>(null);
   const [qrCodeDataUrl, setQrCodeDataUrl] = useState("");
   const [qrCodeLoading, setQrCodeLoading] = useState(false);
@@ -371,16 +373,12 @@ export function ProductManager({ actor }: ProductManagerProps) {
     setSelectedIds((current) => (current.includes(productId) ? current.filter((id) => id !== productId) : [...current, productId]));
   }
 
-  function shortlistSelected() {
-    setShortlistedIds((current) => Array.from(new Set([...current, ...selectedIds])));
-  }
-
-  function removeSelectedFromShortlist() {
-    setShortlistedIds((current) => current.filter((id) => !selectedIds.includes(id)));
-  }
-
   function clearSelection() {
     setSelectedIds([]);
+  }
+
+  function selectVisibleProducts() {
+    setSelectedIds((current) => Array.from(new Set([...current, ...filteredProducts.map((product) => product.id)])));
   }
 
   function toggleChosen(productId: string) {
@@ -550,6 +548,91 @@ export function ProductManager({ actor }: ProductManagerProps) {
     }
   }
 
+  async function runBulkAction(
+    actionKey: string,
+    performUpdate: (product: Product) => Promise<void>,
+    buildSuccessMessage: (count: number) => string
+  ) {
+    const selectedProducts = products.filter((product) => selectedIds.includes(product.id));
+
+    if (!selectedProducts.length) {
+      return;
+    }
+
+    setError("");
+    setBulkActionFeedback("");
+    setOpenActionsMenuId(null);
+    setBulkActionBusy(actionKey);
+
+    try {
+      const results = await Promise.allSettled(selectedProducts.map((product) => performUpdate(product)));
+      const successCount = results.filter((result) => result.status === "fulfilled").length;
+      const failureCount = results.length - successCount;
+
+      if (successCount > 0) {
+        setBulkActionFeedback(buildSuccessMessage(successCount));
+      }
+
+      if (failureCount > 0) {
+        setError(
+          failureCount === 1
+            ? "1 selected product could not be updated."
+            : `${failureCount} selected products could not be updated.`
+        );
+      }
+
+      if (failureCount === 0) {
+        setSelectedIds([]);
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Unable to update selected products.";
+      setError(message);
+    } finally {
+      setBulkActionBusy(null);
+    }
+  }
+
+  async function handleBulkStockUpdate(nextStatus: Product["stockStatus"]) {
+    const normalizedStatus = normalizeStockStatus(nextStatus);
+
+    await runBulkAction(
+      `stock-${normalizedStatus}`,
+      async (product) => updateProductStockStatus(product, normalizedStatus, actor),
+      (count) => `${count} ${count === 1 ? "product" : "products"} marked ${getStockStatusLabel(normalizedStatus).toLowerCase()}`
+    );
+  }
+
+  async function handleBulkFeaturedUpdate(nextFeatured: boolean) {
+    await runBulkAction(
+      nextFeatured ? "feature" : "unfeature",
+      async (product) =>
+        updateProductOperationalState(
+          product,
+          { featured: nextFeatured },
+          actor,
+          `${nextFeatured ? "Featured" : "Removed featured status from"} ${product.name}.`
+        ),
+      (count) => `${count} ${count === 1 ? "product" : "products"} ${nextFeatured ? "featured" : "removed from featured"}`
+    );
+  }
+
+  async function handleBulkStorefrontVisibility(nextStorefrontVisible: boolean) {
+    await runBulkAction(
+      nextStorefrontVisible ? "show" : "hide",
+      async (product) =>
+        updateProductOperationalState(
+          product,
+          { storefrontVisible: nextStorefrontVisible },
+          actor,
+          `${nextStorefrontVisible ? "Returned" : "Hidden"} ${product.name} ${nextStorefrontVisible ? "to" : "from"} the storefront.`
+        ),
+      (count) =>
+        `${count} ${count === 1 ? "product" : "products"} ${
+          nextStorefrontVisible ? "shown on storefront" : "hidden from storefront"
+        }`
+    );
+  }
+
   useEffect(() => {
     return () => {
       if (copyResetTimeoutRef.current) {
@@ -571,6 +654,20 @@ export function ProductManager({ actor }: ProductManagerProps) {
       window.clearTimeout(timeoutId);
     };
   }, [quickActionFeedback]);
+
+  useEffect(() => {
+    if (!bulkActionFeedback) {
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      setBulkActionFeedback("");
+    }, 2600);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [bulkActionFeedback]);
 
   useEffect(() => {
     if (!qrProduct) {
@@ -719,6 +816,7 @@ export function ProductManager({ actor }: ProductManagerProps) {
   const visibleFeaturedCount = useMemo(() => filteredProducts.filter((product) => product.featured).length, [filteredProducts]);
   const visibleProductIds = useMemo(() => filteredProducts.map((product) => product.id), [filteredProducts]);
   const selectedVisibleCount = useMemo(() => selectedIds.filter((id) => visibleProductIds.includes(id)).length, [selectedIds, visibleProductIds]);
+  const allVisibleSelected = filteredProducts.length > 0 && selectedVisibleCount === filteredProducts.length;
   const visibleShortlistedCount = useMemo(
     () => filteredProducts.filter((product) => shortlistedIds.includes(product.id)).length,
     [filteredProducts, shortlistedIds]
@@ -767,6 +865,12 @@ export function ProductManager({ actor }: ProductManagerProps) {
           <div className="notice-banner notice-banner-muted" role="status" aria-live="polite">
             <strong>Started fresh</strong>
             <span>Your shortlist, selection, and inventory filters are back to the default working view.</span>
+          </div>
+        ) : null}
+        {bulkActionFeedback ? (
+          <div className="notice-banner notice-banner-success" role="status" aria-live="polite">
+            <strong>Bulk update complete</strong>
+            <span>{bulkActionFeedback}</span>
           </div>
         ) : null}
         {error ? <div className="inline-error">{error}</div> : null}
@@ -853,17 +957,37 @@ export function ProductManager({ actor }: ProductManagerProps) {
           ) : null}
         </div>
         {selectedIds.length ? (
-          <div className="batch-actions-strip" aria-label="Batch shortlist actions">
-            <span>
-              <strong>{selectedVisibleCount || selectedIds.length}</strong> selected
+          <div className="batch-actions-strip" aria-label="Bulk actions for selected products">
+            <span className="batch-actions-count">
+              <strong>{selectedIds.length}</strong> selected
             </span>
-            <button className="secondary-link" type="button" onClick={shortlistSelected}>
-              Shortlist selected
+            {filteredProducts.length ? (
+              <button className="secondary-link batch-actions-button batch-actions-button-muted" type="button" onClick={selectVisibleProducts} disabled={bulkActionBusy !== null || allVisibleSelected}>
+                {allVisibleSelected ? "Visible selected" : "Select visible"}
+              </button>
+            ) : null}
+            <button className="secondary-link batch-actions-button" type="button" onClick={() => void handleBulkStockUpdate("in_stock")} disabled={bulkActionBusy !== null}>
+              {bulkActionBusy === "stock-in_stock" ? "Working..." : "Mark in stock"}
             </button>
-            <button className="secondary-link" type="button" onClick={removeSelectedFromShortlist}>
-              Remove from shortlist
+            <button className="secondary-link batch-actions-button" type="button" onClick={() => void handleBulkStockUpdate("low_stock")} disabled={bulkActionBusy !== null}>
+              {bulkActionBusy === "stock-low_stock" ? "Working..." : "Mark low stock"}
             </button>
-            <button className="secondary-link" type="button" onClick={clearSelection}>
+            <button className="secondary-link batch-actions-button" type="button" onClick={() => void handleBulkStockUpdate("sold_out")} disabled={bulkActionBusy !== null}>
+              {bulkActionBusy === "stock-sold_out" ? "Working..." : "Mark sold out"}
+            </button>
+            <button className="secondary-link batch-actions-button" type="button" onClick={() => void handleBulkFeaturedUpdate(true)} disabled={bulkActionBusy !== null}>
+              {bulkActionBusy === "feature" ? "Working..." : "Feature selected"}
+            </button>
+            <button className="secondary-link batch-actions-button" type="button" onClick={() => void handleBulkFeaturedUpdate(false)} disabled={bulkActionBusy !== null}>
+              {bulkActionBusy === "unfeature" ? "Working..." : "Remove featured"}
+            </button>
+            <button className="secondary-link batch-actions-button" type="button" onClick={() => void handleBulkStorefrontVisibility(false)} disabled={bulkActionBusy !== null}>
+              {bulkActionBusy === "hide" ? "Working..." : "Hide from storefront"}
+            </button>
+            <button className="secondary-link batch-actions-button" type="button" onClick={() => void handleBulkStorefrontVisibility(true)} disabled={bulkActionBusy !== null}>
+              {bulkActionBusy === "show" ? "Working..." : "Show on storefront"}
+            </button>
+            <button className="secondary-link batch-actions-button batch-actions-button-muted" type="button" onClick={clearSelection} disabled={bulkActionBusy !== null}>
               Clear selection
             </button>
           </div>
@@ -905,7 +1029,7 @@ export function ProductManager({ actor }: ProductManagerProps) {
             const isShortlisted = shortlistedIds.includes(product.id);
             const isTopPick = readiness.ready && (product.featured || isShortlisted);
             const isChosen = chosenProductId === product.id;
-            const isRowBusy = updatingStockId === product.id || quickActionBusyId === product.id;
+            const isRowBusy = bulkActionBusy !== null || updatingStockId === product.id || quickActionBusyId === product.id;
             const rowFeedback = quickActionFeedback?.productId === product.id ? quickActionFeedback.message : null;
 
             return (
@@ -926,6 +1050,7 @@ export function ProductManager({ actor }: ProductManagerProps) {
                         type="checkbox"
                         checked={selectedIds.includes(product.id)}
                         onChange={() => toggleSelected(product.id)}
+                        disabled={bulkActionBusy !== null}
                       />
                     </label>
                     <div className="product-row-thumb">
