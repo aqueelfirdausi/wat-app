@@ -2180,6 +2180,11 @@ textarea {
   color: rgba(18, 101, 61, 0.88);
 }
 
+.table-badge-muted {
+  background: rgba(109, 98, 83, 0.08);
+  color: rgba(97, 83, 65, 0.9);
+}
+
 .table-badge-ready {
   background: rgba(31, 143, 88, 0.07);
   color: rgba(18, 101, 61, 0.84);
@@ -2485,6 +2490,11 @@ textarea {
   background: #f5ece0;
 }
 
+.actions-menu-trigger:disabled {
+  opacity: 0.72;
+  cursor: wait;
+}
+
 .actions-menu-trigger[aria-expanded="true"] {
   background: #f7eee1;
   border-color: rgba(31, 143, 88, 0.18);
@@ -2548,14 +2558,34 @@ textarea {
   background: #f6eee3;
 }
 
+.actions-menu-item:disabled {
+  opacity: 0.62;
+  cursor: wait;
+}
+
 .actions-menu-item-danger {
   color: var(--danger);
+}
+
+.actions-menu-divider {
+  height: 1px;
+  margin: 3px 4px;
+  background: rgba(233, 220, 203, 0.95);
 }
 
 .inventory-actions-cell {
   display: flex;
   align-items: flex-start;
   justify-content: flex-start;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.inventory-action-feedback {
+  color: #12653d;
+  font-size: 0.72rem;
+  font-weight: 600;
+  line-height: 1.25;
 }
 
 .log-item {

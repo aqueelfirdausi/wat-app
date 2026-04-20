@@ -7,7 +7,7 @@ import { ProductCard } from "@/components/product-card";
 import { STORE_BRANDS, resolveProductBrand } from "@/lib/brands";
 import { fetchCategories, fetchProducts, subscribeToCategories, subscribeToProducts } from "@/lib/firebase/firestore";
 import { Category, Product } from "@/lib/types";
-import { compareProductsForStorefront, isFreshProduct, normalizeStockStatus } from "@/lib/utils";
+import { compareProductsForStorefront, isFreshProduct, isProductVisibleOnStorefront, normalizeStockStatus } from "@/lib/utils";
 
 type DeferredInstallPrompt = Event & {
   prompt: () => Promise<void>;
@@ -126,12 +126,18 @@ export function HomepageClient() {
     };
   }, []);
 
+  const visibleProducts = useMemo(() => products.filter((product) => isProductVisibleOnStorefront(product)), [products]);
+  const visibleCategories = useMemo(
+    () => categories.filter((category) => visibleProducts.some((product) => product.categoryName === category.name)),
+    [categories, visibleProducts]
+  );
+
   const filteredProducts = useMemo(() => {
     const scopedProducts =
-      activeCategory === "All" ? products : products.filter((product) => product.categoryName === activeCategory);
+      activeCategory === "All" ? visibleProducts : visibleProducts.filter((product) => product.categoryName === activeCategory);
 
     return [...scopedProducts].sort(compareProductsForStorefront);
-  }, [activeCategory, products]);
+  }, [activeCategory, visibleProducts]);
 
   const featuredProducts = useMemo(() => filteredProducts.filter((product) => product.featured).slice(0, 4), [filteredProducts]);
   const featuredIds = useMemo(() => new Set(featuredProducts.map((product) => product.id)), [featuredProducts]);
@@ -144,8 +150,11 @@ export function HomepageClient() {
     const remainingProducts = filteredProducts.filter((product) => !featuredIds.has(product.id) && !freshIds.has(product.id));
     return remainingProducts.length ? remainingProducts.slice(0, 8) : filteredProducts.slice(0, 8);
   }, [featuredIds, filteredProducts, freshIds]);
-  const freshTodayCount = useMemo(() => products.filter((item) => isFreshProduct(item)).length, [products]);
-  const readyTodayCount = useMemo(() => products.filter((item) => normalizeStockStatus(item.stockStatus) !== "sold_out").length, [products]);
+  const freshTodayCount = useMemo(() => visibleProducts.filter((item) => isFreshProduct(item)).length, [visibleProducts]);
+  const readyTodayCount = useMemo(
+    () => visibleProducts.filter((item) => normalizeStockStatus(item.stockStatus) !== "sold_out").length,
+    [visibleProducts]
+  );
   const firstProductSectionId = featuredProducts.length
     ? "featured-products"
     : freshProducts.length
@@ -181,10 +190,10 @@ export function HomepageClient() {
     () =>
       STORE_BRANDS.map((brand) => ({
         ...brand,
-        productCount: products.filter((product) => resolveProductBrand(product) === brand.id).length,
-        categories: categories.filter((category) => brand.categoryNames.includes(category.name))
+        productCount: visibleProducts.filter((product) => resolveProductBrand(product) === brand.id).length,
+        categories: visibleCategories.filter((category) => brand.categoryNames.includes(category.name))
       })),
-    [categories, products]
+    [visibleCategories, visibleProducts]
   );
 
   return (
@@ -225,13 +234,13 @@ export function HomepageClient() {
           </div>
           <div className="hero-summary-strip" aria-label="Live stock summary">
             <span>
-              <strong>{products.length}</strong> live products
+              <strong>{visibleProducts.length}</strong> live products
             </span>
             <span>
               <strong>{freshTodayCount}</strong> updated today
             </span>
             <span>
-              <strong>{categories.length}</strong> categories
+              <strong>{visibleCategories.length}</strong> categories
             </span>
             <span>
               <strong>{readyTodayCount}</strong> ready today
@@ -304,7 +313,7 @@ export function HomepageClient() {
           <button className={activeCategory === "All" ? "category-chip active" : "category-chip"} onClick={() => setActiveCategory("All")}>
             All
           </button>
-          {categories.map((category) => (
+          {visibleCategories.map((category) => (
             <button
               key={category.id}
               className={activeCategory === category.name ? "category-chip active" : "category-chip"}

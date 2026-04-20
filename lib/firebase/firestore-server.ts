@@ -1,4 +1,4 @@
-import { normalizeStockStatus } from "@/lib/utils";
+import { isProductVisibleOnStorefront, normalizeStockStatus } from "@/lib/utils";
 
 const FIRESTORE_DATABASE_ID = "watapp";
 
@@ -27,6 +27,7 @@ export type ProductMetadataRecord = {
   condition: string;
   stockStatus: string;
   featured: boolean;
+  storefrontVisible: boolean;
   imageUrl: string;
 };
 
@@ -72,6 +73,7 @@ function readFirestoreValue(value?: FirestoreValue) {
 function mapMetadataProduct(document: FirestoreDocument): ProductMetadataRecord {
   const fields = document.fields ?? {};
   const nameSegments = document.name.split("/");
+  const rawStorefrontVisible = readFirestoreValue(fields.storefrontVisible);
 
   return {
     id: nameSegments[nameSegments.length - 1] ?? "",
@@ -85,6 +87,9 @@ function mapMetadataProduct(document: FirestoreDocument): ProductMetadataRecord 
     condition: String(readFirestoreValue(fields.condition) ?? "Used"),
     stockStatus: normalizeStockStatus(readFirestoreValue(fields.stockStatus)),
     featured: Boolean(readFirestoreValue(fields.featured)),
+    storefrontVisible: isProductVisibleOnStorefront({
+      storefrontVisible: typeof rawStorefrontVisible === "boolean" ? rawStorefrontVisible : true
+    }),
     imageUrl: String(readFirestoreValue(fields.imageUrl) ?? "")
   };
 }
@@ -131,5 +136,6 @@ export async function fetchProductMetadataBySlug(slug: string) {
     return null;
   }
 
-  return mapMetadataProduct(document);
+  const product = mapMetadataProduct(document);
+  return product.storefrontVisible ? product : null;
 }

@@ -53,6 +53,10 @@ export function isProductLowStock(product: Pick<Product, "stockStatus">) {
   return normalizeStockStatus(product.stockStatus) === "low_stock";
 }
 
+export function isProductVisibleOnStorefront(product: Pick<Product, "storefrontVisible">) {
+  return product.storefrontVisible !== false;
+}
+
 export function formatCurrency(amount: number, currency = "PKR") {
   return new Intl.NumberFormat("en-PK", {
     style: "currency",

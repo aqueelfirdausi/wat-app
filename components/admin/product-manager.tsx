@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import QRCode from "qrcode";
 import { STOCK_STATUSES } from "@/lib/constants";
-import { removeProduct, subscribeToProducts, updateProductStockStatus } from "@/lib/firebase/firestore";
+import { removeProduct, subscribeToProducts, updateProductOperationalState, updateProductStockStatus } from "@/lib/firebase/firestore";
 import { generateMinimalStatusImage } from "@/lib/status-image-minimal";
 import { getTeamContactById } from "@/lib/team-contacts";
 import { Product } from "@/lib/types";
@@ -70,6 +70,8 @@ export function ProductManager({ actor }: ProductManagerProps) {
   const [openActionsMenuId, setOpenActionsMenuId] = useState<string | null>(null);
   const [copiedProductId, setCopiedProductId] = useState<string | null>(null);
   const [updatingStockId, setUpdatingStockId] = useState<string | null>(null);
+  const [quickActionBusyId, setQuickActionBusyId] = useState<string | null>(null);
+  const [quickActionFeedback, setQuickActionFeedback] = useState<{ productId: string; message: string } | null>(null);
   const [qrProduct, setQrProduct] = useState<Product | null>(null);
   const [qrCodeDataUrl, setQrCodeDataUrl] = useState("");
   const [qrCodeLoading, setQrCodeLoading] = useState(false);
@@ -478,6 +480,76 @@ export function ProductManager({ actor }: ProductManagerProps) {
     }
   }
 
+  function setRowFeedback(productId: string, message: string) {
+    setQuickActionFeedback({ productId, message });
+  }
+
+  async function handleQuickStockAction(product: Product, nextStatus: Product["stockStatus"]) {
+    const normalizedStatus = normalizeStockStatus(nextStatus);
+
+    if (normalizeStockStatus(product.stockStatus) === normalizedStatus) {
+      setRowFeedback(product.id, `Already ${getStockStatusLabel(normalizedStatus).toLowerCase()}.`);
+      return;
+    }
+
+    setError("");
+    setQuickActionBusyId(product.id);
+
+    try {
+      await updateProductStockStatus(product, normalizedStatus, actor);
+      setRowFeedback(product.id, `${getStockStatusLabel(normalizedStatus)} saved.`);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Unable to update stock status.";
+      setError(message);
+    } finally {
+      setQuickActionBusyId((current) => (current === product.id ? null : current));
+    }
+  }
+
+  async function handleFeaturedToggle(product: Product) {
+    const nextFeatured = !product.featured;
+
+    setError("");
+    setQuickActionBusyId(product.id);
+
+    try {
+      await updateProductOperationalState(
+        product,
+        { featured: nextFeatured },
+        actor,
+        `${nextFeatured ? "Featured" : "Removed featured status from"} ${product.name}.`
+      );
+      setRowFeedback(product.id, nextFeatured ? "Featured on homepage." : "Removed from featured.");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Unable to update featured status.";
+      setError(message);
+    } finally {
+      setQuickActionBusyId((current) => (current === product.id ? null : current));
+    }
+  }
+
+  async function handleStorefrontVisibilityToggle(product: Product) {
+    const nextStorefrontVisible = !product.storefrontVisible;
+
+    setError("");
+    setQuickActionBusyId(product.id);
+
+    try {
+      await updateProductOperationalState(
+        product,
+        { storefrontVisible: nextStorefrontVisible },
+        actor,
+        `${nextStorefrontVisible ? "Returned" : "Hidden"} ${product.name} ${nextStorefrontVisible ? "to" : "from"} the storefront.`
+      );
+      setRowFeedback(product.id, nextStorefrontVisible ? "Live on storefront." : "Hidden from storefront.");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Unable to update storefront visibility.";
+      setError(message);
+    } finally {
+      setQuickActionBusyId((current) => (current === product.id ? null : current));
+    }
+  }
+
   useEffect(() => {
     return () => {
       if (copyResetTimeoutRef.current) {
@@ -485,6 +557,20 @@ export function ProductManager({ actor }: ProductManagerProps) {
       }
     };
   }, []);
+
+  useEffect(() => {
+    if (!quickActionFeedback) {
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      setQuickActionFeedback((current) => (current?.productId === quickActionFeedback.productId ? null : current));
+    }, 2200);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [quickActionFeedback]);
 
   useEffect(() => {
     if (!qrProduct) {
@@ -819,6 +905,8 @@ export function ProductManager({ actor }: ProductManagerProps) {
             const isShortlisted = shortlistedIds.includes(product.id);
             const isTopPick = readiness.ready && (product.featured || isShortlisted);
             const isChosen = chosenProductId === product.id;
+            const isRowBusy = updatingStockId === product.id || quickActionBusyId === product.id;
+            const rowFeedback = quickActionFeedback?.productId === product.id ? quickActionFeedback.message : null;
 
             return (
             <article
@@ -857,6 +945,7 @@ export function ProductManager({ actor }: ProductManagerProps) {
                       <strong className="product-row-name">{product.name}</strong>
                       <div className="product-row-badges">
                         {product.featured ? <span className="table-badge">Featured</span> : null}
+                        {!product.storefrontVisible ? <span className="table-badge table-badge-muted">Hidden</span> : null}
                         {(product.sortPriority ?? 0) > 0 ? <span className="table-badge">Priority {product.sortPriority}</span> : null}
                         {isBrandNewToday ? <span className="table-badge table-badge-fresh">New today</span> : null}
                         {isRecentlyAdded ? <span className="table-badge table-badge-fresh">New</span> : null}
@@ -888,7 +977,7 @@ export function ProductManager({ actor }: ProductManagerProps) {
                       aria-label={`Set stock status for ${product.name}`}
                       value={normalizedStockStatus}
                       onChange={(event) => handleStockStatusChange(product, event.target.value as Product["stockStatus"])}
-                      disabled={updatingStockId === product.id}
+                      disabled={isRowBusy}
                     >
                       {STOCK_STATUSES.map((status) => (
                         <option key={status} value={status}>
@@ -917,11 +1006,73 @@ export function ProductManager({ actor }: ProductManagerProps) {
                         event.stopPropagation();
                         toggleActionsMenu(product.id);
                       }}
+                      disabled={isRowBusy}
                     >
-                      <span>Actions</span>
+                      <span>{quickActionBusyId === product.id ? "Working..." : "Actions"}</span>
                     </button>
                     {openActionsMenuId === product.id ? (
                       <div className="actions-menu-popover" role="menu">
+                        <button
+                          className="actions-menu-item"
+                          type="button"
+                          role="menuitem"
+                          disabled={isRowBusy}
+                          onClick={() => {
+                            closeActionsMenu();
+                            void handleQuickStockAction(product, "in_stock");
+                          }}
+                        >
+                          Mark in stock
+                        </button>
+                        <button
+                          className="actions-menu-item"
+                          type="button"
+                          role="menuitem"
+                          disabled={isRowBusy}
+                          onClick={() => {
+                            closeActionsMenu();
+                            void handleQuickStockAction(product, "low_stock");
+                          }}
+                        >
+                          Mark low stock
+                        </button>
+                        <button
+                          className="actions-menu-item"
+                          type="button"
+                          role="menuitem"
+                          disabled={isRowBusy}
+                          onClick={() => {
+                            closeActionsMenu();
+                            void handleQuickStockAction(product, "sold_out");
+                          }}
+                        >
+                          Mark sold out
+                        </button>
+                        <button
+                          className="actions-menu-item"
+                          type="button"
+                          role="menuitem"
+                          disabled={isRowBusy}
+                          onClick={() => {
+                            closeActionsMenu();
+                            void handleFeaturedToggle(product);
+                          }}
+                        >
+                          {product.featured ? "Remove featured" : "Feature item"}
+                        </button>
+                        <button
+                          className="actions-menu-item"
+                          type="button"
+                          role="menuitem"
+                          disabled={isRowBusy}
+                          onClick={() => {
+                            closeActionsMenu();
+                            void handleStorefrontVisibilityToggle(product);
+                          }}
+                        >
+                          {product.storefrontVisible ? "Hide from storefront" : "Show on storefront"}
+                        </button>
+                        <div className="actions-menu-divider" role="separator" />
                         <button
                           className="actions-menu-item"
                           type="button"
@@ -1041,6 +1192,7 @@ export function ProductManager({ actor }: ProductManagerProps) {
                       </div>
                     ) : null}
                   </div>
+                  {rowFeedback ? <span className="inventory-action-feedback">{rowFeedback}</span> : null}
                 </div>
               </article>
             );
@@ -1124,6 +1276,10 @@ export function ProductManager({ actor }: ProductManagerProps) {
                 <div className="product-view-row">
                   <span>Featured</span>
                   <strong>{selectedProduct.featured ? "Yes" : "No"}</strong>
+                </div>
+                <div className="product-view-row">
+                  <span>Storefront</span>
+                  <strong>{selectedProduct.storefrontVisible ? "Visible" : "Hidden"}</strong>
                 </div>
                 <div className="product-view-row">
                   <span>Priority</span>

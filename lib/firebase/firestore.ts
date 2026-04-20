@@ -22,7 +22,7 @@ import { db, storage } from "@/lib/firebase/client";
 import { DEFAULT_CURRENCY } from "@/lib/constants";
 import { getTeamContactById } from "@/lib/team-contacts";
 import { ActivityLog, Category, Product, ProductFormValues } from "@/lib/types";
-import { normalizeStockStatus, parseFirebaseDate, slugify } from "@/lib/utils";
+import { isProductVisibleOnStorefront, normalizeStockStatus, parseFirebaseDate, slugify } from "@/lib/utils";
 
 type Actor = {
   uid: string;
@@ -106,6 +106,9 @@ function mapProduct(id: string, data: Record<string, unknown>): Product {
     condition: (data.condition as Product["condition"]) ?? "Used",
     stockStatus: normalizeStockStatus(data.stockStatus),
     featured: Boolean(data.featured),
+    storefrontVisible: isProductVisibleOnStorefront({
+      storefrontVisible: typeof data.storefrontVisible === "boolean" ? data.storefrontVisible : true
+    }),
     sortPriority: Number(data.sortPriority ?? 0),
     imageUrl: String(data.imageUrl ?? ""),
     imagePath: data.imagePath ? String(data.imagePath) : undefined,
@@ -247,6 +250,7 @@ export async function createProduct(values: ProductFormValues, actor: Actor, fil
     condition: values.condition,
     stockStatus: normalizeStockStatus(values.stockStatus),
     featured: values.featured,
+    storefrontVisible: true,
     sortPriority,
     imageUrl: image.imageUrl,
     imagePath: image.imagePath,
@@ -311,6 +315,7 @@ export async function updateProduct(
       condition: values.condition,
       stockStatus: normalizeStockStatus(values.stockStatus),
       featured: values.featured,
+      storefrontVisible: previousProduct.storefrontVisible ?? true,
       sortPriority,
       ...imagePayload,
       updatedAt: serverTimestamp(),
@@ -335,18 +340,45 @@ export async function updateProduct(
 }
 
 export async function updateProductStockStatus(product: Product, stockStatus: Product["stockStatus"], actor: Actor) {
+  return updateProductOperationalState(
+    product,
+    {
+      stockStatus: normalizeStockStatus(stockStatus)
+    },
+    actor,
+    `Updated ${product.name} stock status to ${normalizeStockStatus(stockStatus)}.`
+  );
+}
+
+export async function updateProductOperationalState(
+  product: Product,
+  updates: Partial<Pick<Product, "stockStatus" | "featured" | "storefrontVisible">>,
+  actor: Actor,
+  details: string
+) {
   const firestore = ensureDb();
-  const normalizedStatus = normalizeStockStatus(stockStatus);
+  const payload: Record<string, unknown> = {
+    updatedAt: serverTimestamp(),
+    updatedByUid: actor.uid,
+    updatedByName: actor.name
+  };
+
+  if (updates.stockStatus) {
+    payload.stockStatus = normalizeStockStatus(updates.stockStatus);
+  }
+
+  if (typeof updates.featured === "boolean") {
+    payload.featured = updates.featured;
+  }
+
+  if (typeof updates.storefrontVisible === "boolean") {
+    payload.storefrontVisible = updates.storefrontVisible;
+  }
 
   try {
-    await updateDoc(doc(firestore, "products", product.id), {
-      stockStatus: normalizedStatus,
-      updatedAt: serverTimestamp(),
-      updatedByUid: actor.uid,
-      updatedByName: actor.name
-    });
+    await updateDoc(doc(firestore, "products", product.id), payload);
   } catch (error) {
-    throw new Error(`Stock status update failed in Firestore: ${getFirebaseErrorMessage(error)}.`);
+    throw new Error(`Product update failed in Firestore: ${getFirebaseErrorMessage(error)}.`);
   }
 
   await ensureUserProfile(actor);
@@ -358,7 +390,7 @@ export async function updateProductStockStatus(product: Product, stockStatus: Pr
     actorUid: actor.uid,
     actorName: actor.name,
     actorEmail: actor.email,
-    details: `Updated ${product.name} stock status to ${normalizedStatus}.`
+    details
   });
 }
 
@@ -398,7 +430,8 @@ export async function fetchProductBySlug(slug: string) {
     return null;
   }
 
-  return mapProduct(productDoc.id, productDoc.data());
+  const product = mapProduct(productDoc.id, productDoc.data());
+  return product.storefrontVisible ? product : null;
 }
 
 export async function fetchCategories() {
