@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
 import { FirebaseStatus } from "@/components/firebase-status";
+import { MobileFeedCard } from "@/components/mobile-feed-card";
 import { ProductCard } from "@/components/product-card";
 import { STORE_BRANDS, resolveProductBrand } from "@/lib/brands";
 import { fetchCategories, fetchProducts, subscribeToCategories, subscribeToProducts } from "@/lib/firebase/firestore";
@@ -18,6 +19,7 @@ type DeferredInstallPrompt = Event & {
 };
 
 const INSTALL_HINT_STORAGE_KEY = "watapp-install-hint-dismissed";
+const STOREFRONT_MODE_STORAGE_KEY = "watapp-storefront-mode";
 
 function getInstallGuidance() {
   if (typeof window === "undefined") {
@@ -61,6 +63,7 @@ export function HomepageClient() {
   const [showInstallHint, setShowInstallHint] = useState(false);
   const [deferredInstallPrompt, setDeferredInstallPrompt] = useState<DeferredInstallPrompt | null>(null);
   const [showInstallGuide, setShowInstallGuide] = useState(false);
+  const [storefrontMode, setStorefrontMode] = useState<"catalog" | "feed">("catalog");
 
   useEffect(() => {
     let productsUnsubscribe: undefined | (() => void);
@@ -126,6 +129,17 @@ export function HomepageClient() {
     };
   }, []);
 
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const savedMode = window.localStorage.getItem(STOREFRONT_MODE_STORAGE_KEY);
+    if (savedMode === "feed" || savedMode === "catalog") {
+      setStorefrontMode(savedMode);
+    }
+  }, []);
+
   const visibleProducts = useMemo(() => products.filter((product) => isProductVisibleOnStorefront(product)), [products]);
   const visibleCategories = useMemo(
     () => categories.filter((category) => visibleProducts.some((product) => product.categoryName === category.name)),
@@ -166,6 +180,14 @@ export function HomepageClient() {
       window.localStorage.setItem(INSTALL_HINT_STORAGE_KEY, "true");
     }
     setShowInstallHint(false);
+  }
+
+  function handleStorefrontModeChange(nextMode: "catalog" | "feed") {
+    setStorefrontMode(nextMode);
+
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem(STOREFRONT_MODE_STORAGE_KEY, nextMode);
+    }
   }
 
   async function handleInstallHintAction() {
@@ -325,7 +347,53 @@ export function HomepageClient() {
         </div>
       </section>
 
-      {featuredProducts.length ? (
+      <section className="section-block section-tight">
+        <div className="storefront-mode-panel" aria-label="Storefront view mode">
+          <div className="storefront-mode-copy">
+            <p className="eyebrow">Storefront mode</p>
+            <strong>Switch between the stable catalog and a new mobile feed view.</strong>
+            <p>The feed is an additive browsing experiment only. The current catalog stays available anytime.</p>
+          </div>
+          <div className="storefront-mode-toggle" role="tablist" aria-label="Choose storefront mode">
+            <button
+              type="button"
+              role="tab"
+              aria-selected={storefrontMode === "catalog"}
+              className={storefrontMode === "catalog" ? "storefront-mode-chip active" : "storefront-mode-chip"}
+              onClick={() => handleStorefrontModeChange("catalog")}
+            >
+              Catalog
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={storefrontMode === "feed"}
+              className={storefrontMode === "feed" ? "storefront-mode-chip active" : "storefront-mode-chip"}
+              onClick={() => handleStorefrontModeChange("feed")}
+            >
+              Feed
+            </button>
+          </div>
+        </div>
+      </section>
+
+      {storefrontMode === "feed" ? (
+        <section className="section-block mobile-feed-section" id={firstProductSectionId}>
+          <div className="section-heading mobile-feed-heading">
+            <h2>Live mobile feed</h2>
+            <p>A cleaner, image-first flow for faster mobile scanning and WhatsApp-first shopping.</p>
+          </div>
+          <div className="mobile-feed-list">
+            {filteredProducts.length ? (
+              filteredProducts.map((product) => <MobileFeedCard key={product.id} product={product} />)
+            ) : (
+              <div className="empty-state">Products will appear here once your team starts adding stock.</div>
+            )}
+          </div>
+        </section>
+      ) : null}
+
+      {storefrontMode === "catalog" && featuredProducts.length ? (
         <section className="section-block" id="featured-products">
           <div className="section-heading">
             <h2>Featured today</h2>
@@ -339,7 +407,7 @@ export function HomepageClient() {
         </section>
       ) : null}
 
-      {freshProducts.length ? (
+      {storefrontMode === "catalog" && freshProducts.length ? (
         <section className="section-block section-fresh" id="fresh-products">
           <div className="section-heading">
             <h2>Fresh today</h2>
@@ -353,22 +421,24 @@ export function HomepageClient() {
         </section>
       ) : null}
 
-      <section
-        className="section-block"
-        id={!featuredProducts.length && !freshProducts.length ? "latest-products" : undefined}
-      >
-        <div className="section-heading">
-          <h2>{featuredProducts.length || freshProducts.length ? "More live items" : "Live stock today"}</h2>
-          <p>
-            {featuredProducts.length || freshProducts.length
-              ? "The rest of today's live stock, still ordered to keep the most important items near the top."
-              : "Fresh stock from across the WAT App stores, ready for WhatsApp conversations now."}
-          </p>
-        </div>
-        <div className="product-grid">
-          {latestProducts.length ? latestProducts.map((product) => <ProductCard key={product.id} product={product} />) : <div className="empty-state">Products will appear here once your team starts adding stock.</div>}
-        </div>
-      </section>
+      {storefrontMode === "catalog" ? (
+        <section
+          className="section-block"
+          id={!featuredProducts.length && !freshProducts.length ? "latest-products" : undefined}
+        >
+          <div className="section-heading">
+            <h2>{featuredProducts.length || freshProducts.length ? "More live items" : "Live stock today"}</h2>
+            <p>
+              {featuredProducts.length || freshProducts.length
+                ? "The rest of today's live stock, still ordered to keep the most important items near the top."
+                : "Fresh stock from across the WAT App stores, ready for WhatsApp conversations now."}
+            </p>
+          </div>
+          <div className="product-grid">
+            {latestProducts.length ? latestProducts.map((product) => <ProductCard key={product.id} product={product} />) : <div className="empty-state">Products will appear here once your team starts adding stock.</div>}
+          </div>
+        </section>
+      ) : null}
 
       <section className="section-block" id="brand-stores">
         <div className="section-heading">
