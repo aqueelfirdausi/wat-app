@@ -32,6 +32,11 @@ export function getDefaultMeta() {
   };
 }
 
+export function buildProductMetadataTitle(name: string) {
+  const trimmedName = name.trim();
+  return trimmedName ? `${trimmedName} | ${DEFAULT_APP_TITLE}` : DEFAULT_APP_TITLE;
+}
+
 export function buildProductMetaDescription(input: {
   categoryName?: string;
   condition?: string;
@@ -56,5 +61,15 @@ export function buildProductMetaDescription(input: {
         }).format(input.price)
       : "Price on request";
 
-  return `${category} · ${condition} · ${price}`;
+  return `${category} - ${condition} - ${price}`;
+}
+
+export function buildProductMetadataImageUrl(slug: string, imageUrl?: string) {
+  const trimmedImageUrl = imageUrl?.trim();
+
+  if (trimmedImageUrl) {
+    return buildMetadataUrl(`/api/image-proxy?url=${encodeURIComponent(trimmedImageUrl)}`);
+  }
+
+  return buildMetadataUrl(`/product/${slug}/opengraph-image`);
 }

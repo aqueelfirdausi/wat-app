@@ -19,7 +19,7 @@ type ProductImageProps = {
 
 export default async function ProductOpenGraphImage({ params }: ProductImageProps) {
   const { slug } = await params;
-  const product = await fetchProductMetadataBySlug(slug);
+  const product = await fetchProductMetadataBySlug(slug, { revalidate: false });
 
   const description = product
     ? buildProductMetaDescription({
@@ -29,7 +29,7 @@ export default async function ProductOpenGraphImage({ params }: ProductImageProp
         currency: product.currency,
         description: product.description
       })
-    : "Live product link from WAT App";
+    : "This product link is no longer available.";
 
   return new ImageResponse(
     (

@@ -31,6 +31,10 @@ export type ProductMetadataRecord = {
   imageUrl: string;
 };
 
+type ProductMetadataFetchOptions = {
+  revalidate?: number | false;
+};
+
 function getFirestoreRestConfig() {
   const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID?.trim();
   const apiKey = process.env.NEXT_PUBLIC_FIREBASE_API_KEY?.trim();
@@ -94,35 +98,44 @@ function mapMetadataProduct(document: FirestoreDocument): ProductMetadataRecord 
   };
 }
 
-export async function fetchProductMetadataBySlug(slug: string) {
+export async function fetchProductMetadataBySlug(slug: string, options?: ProductMetadataFetchOptions) {
   const config = getFirestoreRestConfig();
 
   if (!config || !slug.trim()) {
     return null;
   }
 
+  const fetchOptions: RequestInit & { next?: { revalidate: number } } = {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      structuredQuery: {
+        from: [{ collectionId: "products" }],
+        where: {
+          fieldFilter: {
+            field: { fieldPath: "slug" },
+            op: "EQUAL",
+            value: { stringValue: slug }
+          }
+        },
+        limit: 1
+      }
+    })
+  };
+
+  if (options?.revalidate === false) {
+    fetchOptions.cache = "no-store";
+  } else {
+    fetchOptions.next = {
+      revalidate: options?.revalidate ?? 300
+    };
+  }
+
   const response = await fetch(
     `https://firestore.googleapis.com/v1/projects/${config.projectId}/databases/${FIRESTORE_DATABASE_ID}/documents:runQuery?key=${config.apiKey}`,
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        structuredQuery: {
-          from: [{ collectionId: "products" }],
-          where: {
-            fieldFilter: {
-              field: { fieldPath: "slug" },
-              op: "EQUAL",
-              value: { stringValue: slug }
-            }
-          },
-          limit: 1
-        }
-      }),
-      next: { revalidate: 300 }
-    }
+    fetchOptions
   );
 
   if (!response.ok) {

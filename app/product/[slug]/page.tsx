@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
+import { notFound } from "next/navigation";
 import { ProductDetailClient } from "@/components/product-detail-client";
 import { fetchProductMetadataBySlug } from "@/lib/firebase/firestore-server";
-import { buildMetadataUrl, buildProductMetaDescription } from "@/lib/metadata";
+import { buildMetadataUrl, buildProductMetaDescription, buildProductMetadataImageUrl, buildProductMetadataTitle } from "@/lib/metadata";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -14,13 +15,22 @@ type ProductPageProps = {
 
 export async function generateMetadata({ params }: ProductPageProps): Promise<Metadata> {
   const { slug } = await params;
-  const product = await fetchProductMetadataBySlug(slug);
+  const product = await fetchProductMetadataBySlug(slug, { revalidate: false });
   const productUrl = buildMetadataUrl(`/product/${slug}`);
 
   if (!product) {
     return {
       title: "Product unavailable | WAT App",
       description: "This product link is no longer available.",
+      robots: {
+        index: false,
+        follow: false,
+        googleBot: {
+          index: false,
+          follow: false,
+          noimageindex: true
+        }
+      },
       alternates: {
         canonical: productUrl
       },
@@ -28,21 +38,13 @@ export async function generateMetadata({ params }: ProductPageProps): Promise<Me
         title: "Product unavailable | WAT App",
         description: "This product link is no longer available.",
         url: productUrl,
-        type: "website",
-        images: [
-          {
-            url: buildMetadataUrl(`/product/${slug}/opengraph-image`),
-            width: 1200,
-            height: 630,
-            alt: "WAT App product preview"
-          }
-        ]
+        siteName: "WAT App",
+        type: "website"
       },
       twitter: {
-        card: "summary_large_image",
+        card: "summary",
         title: "Product unavailable | WAT App",
-        description: "This product link is no longer available.",
-        images: [buildMetadataUrl(`/product/${slug}/opengraph-image`)]
+        description: "This product link is no longer available."
       }
     };
   }
@@ -55,18 +57,20 @@ export async function generateMetadata({ params }: ProductPageProps): Promise<Me
     description: product.description
   });
 
-  const imageUrl = product.imageUrl || buildMetadataUrl(`/product/${slug}/opengraph-image`);
+  const title = buildProductMetadataTitle(product.name);
+  const imageUrl = buildProductMetadataImageUrl(slug, product.imageUrl);
 
   return {
-    title: `${product.name} | WAT App`,
+    title,
     description,
     alternates: {
       canonical: productUrl
     },
     openGraph: {
-      title: product.name,
+      title,
       description,
       url: productUrl,
+      siteName: "WAT App",
       type: "website",
       images: [
         {
@@ -79,7 +83,7 @@ export async function generateMetadata({ params }: ProductPageProps): Promise<Me
     },
     twitter: {
       card: "summary_large_image",
-      title: product.name,
+      title,
       description,
       images: [imageUrl]
     }
@@ -88,6 +92,11 @@ export async function generateMetadata({ params }: ProductPageProps): Promise<Me
 
 export default async function ProductPage({ params }: ProductPageProps) {
   const { slug } = await params;
+  const product = await fetchProductMetadataBySlug(slug, { revalidate: false });
+
+  if (!product) {
+    notFound();
+  }
 
   return <ProductDetailClient slug={slug} />;
 }
