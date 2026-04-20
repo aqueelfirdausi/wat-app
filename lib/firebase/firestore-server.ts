@@ -1,3 +1,5 @@
+import { normalizeStockStatus } from "@/lib/utils";
+
 const FIRESTORE_DATABASE_ID = "watapp";
 
 type FirestoreValue =
@@ -81,7 +83,7 @@ function mapMetadataProduct(document: FirestoreDocument): ProductMetadataRecord 
     price: Number(readFirestoreValue(fields.price) ?? 0),
     currency: String(readFirestoreValue(fields.currency) ?? "PKR"),
     condition: String(readFirestoreValue(fields.condition) ?? "Used"),
-    stockStatus: String(readFirestoreValue(fields.stockStatus) ?? "In Stock"),
+    stockStatus: normalizeStockStatus(readFirestoreValue(fields.stockStatus)),
     featured: Boolean(readFirestoreValue(fields.featured)),
     imageUrl: String(readFirestoreValue(fields.imageUrl) ?? "")
   };

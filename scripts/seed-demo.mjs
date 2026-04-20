@@ -111,7 +111,7 @@ const products = [
     price: 185000,
     currency: "PKR",
     condition: "Like New",
-    stockStatus: "In Stock",
+    stockStatus: "in_stock",
     featured: true,
     imageUrl: "https://images.unsplash.com/photo-1632661674596-df8be070a5c5?auto=format&fit=crop&w=1200&q=80"
   },
@@ -127,7 +127,7 @@ const products = [
     price: 32000,
     currency: "PKR",
     condition: "Used",
-    stockStatus: "Low Stock",
+    stockStatus: "low_stock",
     featured: false,
     imageUrl: "https://images.unsplash.com/photo-1606220945770-b5b6c2c55bf1?auto=format&fit=crop&w=1200&q=80"
   },
@@ -143,7 +143,7 @@ const products = [
     price: 6500,
     currency: "PKR",
     condition: "New",
-    stockStatus: "In Stock",
+    stockStatus: "in_stock",
     featured: true,
     imageUrl: "https://images.unsplash.com/photo-1585338107529-13afc5f02586?auto=format&fit=crop&w=1200&q=80"
   }

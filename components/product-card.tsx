@@ -4,7 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { getStoreBrandById, resolveProductBrand } from "@/lib/brands";
 import { Product } from "@/lib/types";
-import { buildProductPath, formatCurrency, isFreshProduct, isNewArrival } from "@/lib/utils";
+import { buildProductPath, formatCurrency, getStockStatusClassName, getStockStatusLabel, isFreshProduct, isNewArrival } from "@/lib/utils";
 import { WhatsAppChooserButton } from "@/components/whatsapp-contact-chooser";
 
 type ProductCardProps = {
@@ -32,8 +32,8 @@ export function ProductCard({ product }: ProductCardProps) {
           ) : (
             <div className="product-image product-image-fallback">{product.categoryName || "WAT"}</div>
           )}
-          <span className={`stock-pill stock-${product.stockStatus.toLowerCase().replace(/\s+/g, "-")}`}>
-            {product.stockStatus}
+          <span className={`stock-pill ${getStockStatusClassName(product.stockStatus)}`}>
+            {getStockStatusLabel(product.stockStatus)}
           </span>
         </div>
         <div className="product-card-body">

@@ -1,7 +1,7 @@
 import QRCode from "qrcode";
 import { getStoreBrandById, resolveProductBrand } from "@/lib/brands";
 import { Product } from "@/lib/types";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, getStockStatusLabel } from "@/lib/utils";
 
 const CANVAS_WIDTH = 1080;
 const CANVAS_HEIGHT = 1920;
@@ -292,7 +292,7 @@ export async function generateMinimalStatusImage(product: Product, productUrl: s
     supportY = priceY + SUPPORT_GAP;
   }
 
-  const supportLine = [product.condition, product.stockStatus].filter(Boolean).join(" • ");
+  const supportLine = [product.condition, getStockStatusLabel(product.stockStatus)].filter(Boolean).join(" • ");
   if (supportLine) {
     context.fillStyle = "#6d6253";
     context.font = "600 24px sans-serif";

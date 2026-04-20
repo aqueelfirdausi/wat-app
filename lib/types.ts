@@ -1,5 +1,5 @@
 export type ProductCondition = "New" | "Like New" | "Used";
-export type StockStatus = "In Stock" | "Low Stock" | "Out of Stock";
+export type StockStatus = "in_stock" | "low_stock" | "sold_out";
 export type ProductBrand = "univercell" | "eko";
 
 export type TeamContact = {

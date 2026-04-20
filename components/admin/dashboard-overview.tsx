@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { subscribeToProducts } from "@/lib/firebase/firestore";
 import { Product } from "@/lib/types";
+import { normalizeStockStatus } from "@/lib/utils";
 
 export function DashboardOverview() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -23,8 +24,8 @@ export function DashboardOverview() {
     () => [
       { label: "Total products", value: products.length },
       { label: "Featured", value: products.filter((product) => product.featured).length },
-      { label: "In stock", value: products.filter((product) => product.stockStatus === "In Stock").length },
-      { label: "Low stock", value: products.filter((product) => product.stockStatus === "Low Stock").length }
+      { label: "In stock", value: products.filter((product) => normalizeStockStatus(product.stockStatus) === "in_stock").length },
+      { label: "Low stock", value: products.filter((product) => normalizeStockStatus(product.stockStatus) === "low_stock").length }
     ],
     [products]
   );

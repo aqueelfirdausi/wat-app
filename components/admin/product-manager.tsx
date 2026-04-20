@@ -5,11 +5,23 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import QRCode from "qrcode";
-import { removeProduct, subscribeToProducts } from "@/lib/firebase/firestore";
+import { STOCK_STATUSES } from "@/lib/constants";
+import { removeProduct, subscribeToProducts, updateProductStockStatus } from "@/lib/firebase/firestore";
 import { generateMinimalStatusImage } from "@/lib/status-image-minimal";
 import { getTeamContactById } from "@/lib/team-contacts";
 import { Product } from "@/lib/types";
-import { buildProductPath, buildPublicProductUrl, compareProductsForStorefront, formatCurrency, formatDate, isNewArrival, isNewToday } from "@/lib/utils";
+import {
+  buildProductPath,
+  buildPublicProductUrl,
+  compareProductsForStorefront,
+  formatCurrency,
+  formatDate,
+  getStockStatusClassName,
+  getStockStatusLabel,
+  isNewArrival,
+  isNewToday,
+  normalizeStockStatus
+} from "@/lib/utils";
 
 type ProductManagerProps = {
   actor: {
@@ -57,6 +69,7 @@ export function ProductManager({ actor }: ProductManagerProps) {
   const [chosenProductId, setChosenProductId] = useState<string | null>(null);
   const [openActionsMenuId, setOpenActionsMenuId] = useState<string | null>(null);
   const [copiedProductId, setCopiedProductId] = useState<string | null>(null);
+  const [updatingStockId, setUpdatingStockId] = useState<string | null>(null);
   const [qrProduct, setQrProduct] = useState<Product | null>(null);
   const [qrCodeDataUrl, setQrCodeDataUrl] = useState("");
   const [qrCodeLoading, setQrCodeLoading] = useState(false);
@@ -133,7 +146,7 @@ export function ProductManager({ actor }: ProductManagerProps) {
     const validIds = new Set(products.map((product) => product.id));
     const validCategories = new Set(products.map((product) => product.categoryName).filter(Boolean));
     const validSortValues = new Set(["storefront_order", "updated_newest", "updated_oldest", "price_low", "price_high"]);
-    const validStockValues = new Set(["all", "In Stock", "Low Stock", "Out of Stock"]);
+    const validStockValues = new Set(["all", ...STOCK_STATUSES]);
 
     setShortlistedIds((restored.shortlistedIds ?? []).filter((id) => validIds.has(id)));
     setSelectedIds((restored.selectedIds ?? []).filter((id) => validIds.has(id)));
@@ -143,7 +156,9 @@ export function ProductManager({ actor }: ProductManagerProps) {
     setFeaturedOnly(Boolean(restored.featuredOnly));
     setSortBy(validSortValues.has(restored.sortBy ?? "") ? restored.sortBy ?? "storefront_order" : "storefront_order");
     setCategoryFilter(validCategories.has(restored.categoryFilter ?? "") ? restored.categoryFilter ?? "all" : "all");
-    setStockFilter(validStockValues.has(restored.stockFilter ?? "") ? restored.stockFilter ?? "all" : "all");
+    const restoredStockFilter =
+      restored.stockFilter && restored.stockFilter !== "all" ? normalizeStockStatus(restored.stockFilter) : "all";
+    setStockFilter(validStockValues.has(restoredStockFilter) ? restoredStockFilter : "all");
     setSearchQuery(restored.searchQuery ?? "");
     setRestoredStateNotice(true);
     inventorySessionRef.current = null;
@@ -296,7 +311,7 @@ export function ProductManager({ actor }: ProductManagerProps) {
         product.name.toLowerCase().includes(normalizedQuery) ||
         product.categoryName.toLowerCase().includes(normalizedQuery);
       const matchesCategory = categoryFilter === "all" || product.categoryName === categoryFilter;
-      const matchesStock = stockFilter === "all" || product.stockStatus === stockFilter;
+      const matchesStock = stockFilter === "all" || normalizeStockStatus(product.stockStatus) === stockFilter;
       const matchesFeatured = !featuredOnly || product.featured;
       const matchesShortlist = !shortlistedOnly || shortlistedIds.includes(product.id);
       const matchesNeedsAttention = !needsAttentionOnly || !getReadinessState(product).ready;
@@ -439,6 +454,27 @@ export function ProductManager({ actor }: ProductManagerProps) {
     } catch (err) {
       const message = err instanceof Error ? err.message : "Unable to copy product link.";
       setError(message);
+    }
+  }
+
+  async function handleStockStatusChange(product: Product, nextStatus: Product["stockStatus"]) {
+    const normalizedCurrent = normalizeStockStatus(product.stockStatus);
+    const normalizedNext = normalizeStockStatus(nextStatus);
+
+    if (normalizedCurrent === normalizedNext) {
+      return;
+    }
+
+    setError("");
+    setUpdatingStockId(product.id);
+
+    try {
+      await updateProductStockStatus(product, normalizedNext, actor);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Unable to update stock status.";
+      setError(message);
+    } finally {
+      setUpdatingStockId((current) => (current === product.id ? null : current));
     }
   }
 
@@ -674,9 +710,11 @@ export function ProductManager({ actor }: ProductManagerProps) {
               <span>Stock status</span>
               <select value={stockFilter} onChange={(event) => setStockFilter(event.target.value)}>
                 <option value="all">All stock</option>
-                <option value="In Stock">In Stock</option>
-                <option value="Low Stock">Low Stock</option>
-                <option value="Out of Stock">Out of Stock</option>
+                {STOCK_STATUSES.map((status) => (
+                  <option key={status} value={status}>
+                    {getStockStatusLabel(status)}
+                  </option>
+                ))}
               </select>
             </label>
             <label>
@@ -776,6 +814,7 @@ export function ProductManager({ actor }: ProductManagerProps) {
             const isBrandNewToday = isNewToday(product);
             const isRecentlyAdded = !isBrandNewToday && isNewArrival(product);
             const readiness = getReadinessState(product);
+            const normalizedStockStatus = normalizeStockStatus(product.stockStatus);
             const missingSummary = readiness.missing.slice(0, 2).join(" + ");
             const isShortlisted = shortlistedIds.includes(product.id);
             const isTopPick = readiness.ready && (product.featured || isShortlisted);
@@ -840,17 +879,25 @@ export function ProductManager({ actor }: ProductManagerProps) {
 
                 <div className="inventory-meta-cell inventory-status-cell">
                   <span className="inventory-meta-label">Status</span>
-                  <span
-                    className={`status-pill ${
-                      product.stockStatus === "In Stock"
-                        ? "status-pill-in-stock"
-                        : product.stockStatus === "Low Stock"
-                          ? "status-pill-low-stock"
-                          : "status-pill-out-of-stock"
-                    }`}
-                  >
-                    {product.stockStatus}
-                  </span>
+                  <div className="inventory-stock-editor">
+                    <span className={`status-pill ${getStockStatusClassName(normalizedStockStatus).replace("stock-", "status-pill-")}`}>
+                      {getStockStatusLabel(normalizedStockStatus)}
+                    </span>
+                    <select
+                      className="inventory-stock-select"
+                      aria-label={`Set stock status for ${product.name}`}
+                      value={normalizedStockStatus}
+                      onChange={(event) => handleStockStatusChange(product, event.target.value as Product["stockStatus"])}
+                      disabled={updatingStockId === product.id}
+                    >
+                      {STOCK_STATUSES.map((status) => (
+                        <option key={status} value={status}>
+                          {getStockStatusLabel(status)}
+                        </option>
+                      ))}
+                    </select>
+                    {updatingStockId === product.id ? <span className="inventory-stock-saving">Saving...</span> : null}
+                  </div>
                 </div>
 
                 <div className="inventory-meta-cell inventory-updated-cell">
@@ -1068,7 +1115,7 @@ export function ProductManager({ actor }: ProductManagerProps) {
                 </div>
                 <div className="product-view-row">
                   <span>Stock status</span>
-                  <strong>{selectedProduct.stockStatus}</strong>
+                  <strong>{getStockStatusLabel(normalizeStockStatus(selectedProduct.stockStatus))}</strong>
                 </div>
                 <div className="product-view-row">
                   <span>Condition</span>

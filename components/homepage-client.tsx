@@ -7,7 +7,7 @@ import { ProductCard } from "@/components/product-card";
 import { STORE_BRANDS, resolveProductBrand } from "@/lib/brands";
 import { fetchCategories, fetchProducts, subscribeToCategories, subscribeToProducts } from "@/lib/firebase/firestore";
 import { Category, Product } from "@/lib/types";
-import { compareProductsForStorefront, isFreshProduct } from "@/lib/utils";
+import { compareProductsForStorefront, isFreshProduct, normalizeStockStatus } from "@/lib/utils";
 
 type DeferredInstallPrompt = Event & {
   prompt: () => Promise<void>;
@@ -145,8 +145,7 @@ export function HomepageClient() {
     return remainingProducts.length ? remainingProducts.slice(0, 8) : filteredProducts.slice(0, 8);
   }, [featuredIds, filteredProducts, freshIds]);
   const freshTodayCount = useMemo(() => products.filter((item) => isFreshProduct(item)).length, [products]);
-  const liveProductCount = useMemo(() => products.filter((item) => item.stockStatus === "In Stock").length, [products]);
-  const readyTodayCount = useMemo(() => products.filter((item) => item.stockStatus !== "Out of Stock").length, [products]);
+  const readyTodayCount = useMemo(() => products.filter((item) => normalizeStockStatus(item.stockStatus) !== "sold_out").length, [products]);
   const firstProductSectionId = featuredProducts.length
     ? "featured-products"
     : freshProducts.length

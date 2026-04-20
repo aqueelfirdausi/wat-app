@@ -22,7 +22,7 @@ import { db, storage } from "@/lib/firebase/client";
 import { DEFAULT_CURRENCY } from "@/lib/constants";
 import { getTeamContactById } from "@/lib/team-contacts";
 import { ActivityLog, Category, Product, ProductFormValues } from "@/lib/types";
-import { parseFirebaseDate, slugify } from "@/lib/utils";
+import { normalizeStockStatus, parseFirebaseDate, slugify } from "@/lib/utils";
 
 type Actor = {
   uid: string;
@@ -104,7 +104,7 @@ function mapProduct(id: string, data: Record<string, unknown>): Product {
     price: Number(data.price ?? 0),
     currency: String(data.currency ?? DEFAULT_CURRENCY),
     condition: (data.condition as Product["condition"]) ?? "Used",
-    stockStatus: (data.stockStatus as Product["stockStatus"]) ?? "In Stock",
+    stockStatus: normalizeStockStatus(data.stockStatus),
     featured: Boolean(data.featured),
     sortPriority: Number(data.sortPriority ?? 0),
     imageUrl: String(data.imageUrl ?? ""),
@@ -245,7 +245,7 @@ export async function createProduct(values: ProductFormValues, actor: Actor, fil
     price: Number(values.price),
     currency: DEFAULT_CURRENCY,
     condition: values.condition,
-    stockStatus: values.stockStatus,
+    stockStatus: normalizeStockStatus(values.stockStatus),
     featured: values.featured,
     sortPriority,
     imageUrl: image.imageUrl,
@@ -309,7 +309,7 @@ export async function updateProduct(
       categoryName: category.categoryName,
       price: Number(values.price),
       condition: values.condition,
-      stockStatus: values.stockStatus,
+      stockStatus: normalizeStockStatus(values.stockStatus),
       featured: values.featured,
       sortPriority,
       ...imagePayload,
@@ -331,6 +331,34 @@ export async function updateProduct(
     actorName: actor.name,
     actorEmail: actor.email,
     details: `Updated ${values.name.trim()} and set price to ${Number(values.price)} PKR.`
+  });
+}
+
+export async function updateProductStockStatus(product: Product, stockStatus: Product["stockStatus"], actor: Actor) {
+  const firestore = ensureDb();
+  const normalizedStatus = normalizeStockStatus(stockStatus);
+
+  try {
+    await updateDoc(doc(firestore, "products", product.id), {
+      stockStatus: normalizedStatus,
+      updatedAt: serverTimestamp(),
+      updatedByUid: actor.uid,
+      updatedByName: actor.name
+    });
+  } catch (error) {
+    throw new Error(`Stock status update failed in Firestore: ${getFirebaseErrorMessage(error)}.`);
+  }
+
+  await ensureUserProfile(actor);
+  await logActivity({
+    action: "updated",
+    entityType: "product",
+    entityId: product.id,
+    entityName: product.name,
+    actorUid: actor.uid,
+    actorName: actor.name,
+    actorEmail: actor.email,
+    details: `Updated ${product.name} stock status to ${normalizedStatus}.`
   });
 }
 

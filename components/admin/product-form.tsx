@@ -10,6 +10,7 @@ import { PRODUCT_BRANDS, PRODUCT_CONDITIONS, STOCK_STATUSES } from "@/lib/consta
 import { createProduct, updateProduct } from "@/lib/firebase/firestore";
 import { TEAM_CONTACTS } from "@/lib/team-contacts";
 import { Product, ProductFormValues } from "@/lib/types";
+import { getStockStatusLabel } from "@/lib/utils";
 
 type ProductFormProps = {
   mode: "create" | "edit";
@@ -35,7 +36,7 @@ export function ProductForm({ mode, actor, initialProduct }: ProductFormProps) {
     categoryName: initialProduct?.categoryName ?? "",
     price: initialProduct?.price ? String(initialProduct.price) : "",
     condition: initialProduct?.condition ?? "Used",
-    stockStatus: initialProduct?.stockStatus ?? "In Stock",
+    stockStatus: initialProduct?.stockStatus ?? "in_stock",
     featured: initialProduct?.featured ?? false,
     sortPriority: String(initialProduct?.sortPriority ?? 0)
   };
@@ -355,7 +356,7 @@ export function ProductForm({ mode, actor, initialProduct }: ProductFormProps) {
             <select value={values.stockStatus} onChange={(event) => setValues((current) => ({ ...current, stockStatus: event.target.value as Product["stockStatus"] }))}>
               {STOCK_STATUSES.map((status) => (
                 <option key={status} value={status}>
-                  {status}
+                  {getStockStatusLabel(status)}
                 </option>
               ))}
             </select>

@@ -1,5 +1,58 @@
 import type { Product } from "@/lib/types";
 
+export function normalizeStockStatus(value: unknown): Product["stockStatus"] {
+  if (typeof value !== "string") {
+    return "in_stock";
+  }
+
+  const normalized = value.trim().toLowerCase();
+
+  if (normalized === "low_stock" || normalized === "low stock") {
+    return "low_stock";
+  }
+
+  if (
+    normalized === "sold_out" ||
+    normalized === "sold out" ||
+    normalized === "out_of_stock" ||
+    normalized === "out of stock"
+  ) {
+    return "sold_out";
+  }
+
+  return "in_stock";
+}
+
+export function getStockStatusLabel(status: Product["stockStatus"]) {
+  switch (status) {
+    case "low_stock":
+      return "Low stock";
+    case "sold_out":
+      return "Sold out";
+    default:
+      return "In stock";
+  }
+}
+
+export function getStockStatusClassName(status: Product["stockStatus"]) {
+  switch (status) {
+    case "low_stock":
+      return "stock-low-stock";
+    case "sold_out":
+      return "stock-sold-out";
+    default:
+      return "stock-in-stock";
+  }
+}
+
+export function isProductSoldOut(product: Pick<Product, "stockStatus">) {
+  return normalizeStockStatus(product.stockStatus) === "sold_out";
+}
+
+export function isProductLowStock(product: Pick<Product, "stockStatus">) {
+  return normalizeStockStatus(product.stockStatus) === "low_stock";
+}
+
 export function formatCurrency(amount: number, currency = "PKR") {
   return new Intl.NumberFormat("en-PK", {
     style: "currency",

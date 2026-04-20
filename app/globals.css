@@ -703,6 +703,27 @@ textarea:focus-visible {
   backdrop-filter: none;
 }
 
+.product-tag-low-stock {
+  background: rgba(241, 177, 77, 0.16);
+  color: #8a5d16;
+}
+
+.product-detail-availability-message {
+  margin: 0;
+  max-width: 52ch;
+  font-size: 0.9rem;
+  line-height: 1.62;
+  text-wrap: pretty;
+}
+
+.product-detail-availability-message-low-stock {
+  color: #8a5d16;
+}
+
+.product-detail-availability-message-sold-out {
+  color: var(--muted);
+}
+
 .product-detail-description {
   margin: 0;
   color: var(--muted);
@@ -724,6 +745,10 @@ textarea:focus-visible {
   width: 100%;
   min-height: 48px;
   box-shadow: 0 10px 22px rgba(31, 143, 88, 0.14);
+}
+
+.product-detail-button-muted {
+  box-shadow: none;
 }
 
 .product-detail-note {
@@ -834,6 +859,7 @@ textarea:focus-visible {
   color: #8a5d16;
 }
 
+.stock-sold-out,
 .stock-out-of-stock {
   background: rgba(255, 241, 241, 0.94);
   color: var(--danger);
@@ -2075,6 +2101,33 @@ textarea {
   align-content: start;
 }
 
+.inventory-stock-editor {
+  display: grid;
+  gap: 6px;
+  align-content: start;
+  justify-items: flex-start;
+}
+
+.inventory-stock-select {
+  min-width: 122px;
+  padding: 7px 11px;
+  border-radius: 12px;
+  border: 1px solid rgba(228, 216, 198, 0.9);
+  background: rgba(255, 255, 255, 0.82);
+  color: var(--text);
+  font: inherit;
+}
+
+.inventory-stock-select:disabled {
+  opacity: 0.72;
+}
+
+.inventory-stock-saving {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+
 .inventory-meta-label {
   display: block;
   color: var(--muted);
@@ -2379,6 +2432,7 @@ textarea {
   color: #8a5d16;
 }
 
+.status-pill-sold-out,
 .status-pill-out-of-stock {
   background: rgba(185, 66, 66, 0.12);
   color: var(--danger);

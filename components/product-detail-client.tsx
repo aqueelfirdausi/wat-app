@@ -7,7 +7,7 @@ import { WhatsAppChooserButton } from "@/components/whatsapp-contact-chooser";
 import { getStoreBrandById, resolveProductBrand } from "@/lib/brands";
 import { fetchProductBySlug } from "@/lib/firebase/firestore";
 import { Product } from "@/lib/types";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, getStockStatusClassName, getStockStatusLabel, isProductLowStock, isProductSoldOut } from "@/lib/utils";
 
 type ProductDetailClientProps = {
   slug: string;
@@ -54,6 +54,8 @@ export function ProductDetailClient({ slug }: ProductDetailClientProps) {
   }, [slug]);
 
   const storeBrand = product ? getStoreBrandById(resolveProductBrand(product)) : undefined;
+  const isSoldOut = product ? isProductSoldOut(product) : false;
+  const isLowStock = product ? isProductLowStock(product) : false;
 
   return (
     <main className="public-shell">
@@ -108,20 +110,38 @@ export function ProductDetailClient({ slug }: ProductDetailClientProps) {
               <h1>{product.name}</h1>
               <p className="product-detail-price">{formatCurrency(product.price, product.currency)}</p>
               <div className="product-detail-pills">
-                <span className={`stock-pill product-detail-stock stock-${product.stockStatus.toLowerCase().replace(/\s+/g, "-")}`}>
-                  {product.stockStatus}
+                <span className={`stock-pill product-detail-stock ${getStockStatusClassName(product.stockStatus)}`}>
+                  {getStockStatusLabel(product.stockStatus)}
                 </span>
                 <span className="product-tag product-tag-condition">{product.condition}</span>
                 {product.featured ? <span className="product-tag product-tag-featured">Featured</span> : null}
+                {isLowStock ? <span className="product-tag product-tag-low-stock">Almost gone</span> : null}
               </div>
+              {isSoldOut ? (
+                <p className="product-detail-availability-message product-detail-availability-message-sold-out">
+                  This item is currently sold out. You can still ask on WhatsApp in case it comes back or a similar option is available.
+                </p>
+              ) : isLowStock ? (
+                <p className="product-detail-availability-message product-detail-availability-message-low-stock">
+                  Low stock right now. A quick WhatsApp check is the safest way to confirm before it goes.
+                </p>
+              ) : null}
               <p className="product-detail-description">
                 {product.description || "Ask on WhatsApp for the latest details, availability, and ordering information."}
               </p>
             </div>
 
             <div className="product-detail-actions">
-              <WhatsAppChooserButton product={product} className="whatsapp-button product-detail-button" />
-              <p className="product-detail-note">Open WhatsApp, choose the right team member, and ask about availability today.</p>
+              <WhatsAppChooserButton
+                product={product}
+                className={isSoldOut ? "secondary-button product-detail-button product-detail-button-muted" : "whatsapp-button product-detail-button"}
+                label={isSoldOut ? "Ask on WhatsApp about availability" : "Ask on WhatsApp"}
+              />
+              <p className="product-detail-note">
+                {isSoldOut
+                  ? "Open WhatsApp, choose the right team member, and ask if this item can be restocked or if there is a close alternative."
+                  : "Open WhatsApp, choose the right team member, and ask about availability today."}
+              </p>
             </div>
           </article>
         </section>
