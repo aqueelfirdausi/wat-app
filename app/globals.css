@@ -687,7 +687,8 @@ textarea:focus-visible {
 
 .mobile-feed-media {
   position: relative;
-  min-height: 372px;
+  min-height: 388px;
+  aspect-ratio: 4 / 5;
   background:
     linear-gradient(135deg, rgba(239, 227, 209, 0.82), rgba(255, 247, 234, 0.96)),
     radial-gradient(circle at top, rgba(255, 255, 255, 0.8), transparent 58%);
@@ -820,25 +821,26 @@ textarea:focus-visible {
 .mobile-feed-actions {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  gap: 9px;
+  gap: 10px;
   padding: 0 18px 18px;
   border-top: 1px solid rgba(228, 216, 198, 0.56);
-  margin-top: 2px;
-  padding-top: 14px;
+  margin-top: 4px;
+  padding-top: 16px;
+  background: linear-gradient(180deg, rgba(255, 248, 239, 0) 0%, rgba(255, 251, 245, 0.78) 100%);
 }
 
 .mobile-feed-whatsapp {
   width: 100%;
-  min-height: 50px;
-  box-shadow: 0 12px 26px rgba(31, 143, 88, 0.16);
+  min-height: 52px;
+  box-shadow: 0 14px 28px rgba(31, 143, 88, 0.17);
 }
 
 .mobile-feed-details {
-  min-height: 42px;
+  min-height: 44px;
   width: fit-content;
-  padding-inline: 14px;
-  background: transparent;
-  border-color: rgba(228, 216, 198, 0.78);
+  padding-inline: 15px;
+  background: rgba(255, 255, 255, 0.72);
+  border-color: rgba(228, 216, 198, 0.82);
   color: var(--muted);
   box-shadow: none;
 }
@@ -1412,7 +1414,7 @@ textarea:focus-visible {
   }
 
   .mobile-feed-media {
-    min-height: 328px;
+    min-height: 344px;
   }
 
   .mobile-feed-topline {
@@ -1425,8 +1427,8 @@ textarea:focus-visible {
   }
 
   .mobile-feed-actions {
-    gap: 8px;
-    padding: 12px 16px 16px;
+    gap: 9px;
+    padding: 13px 16px 16px;
   }
 
   .mobile-feed-details {
@@ -3064,6 +3066,11 @@ textarea {
   .mobile-feed-list {
     width: min(640px, 100%);
     margin: 0 auto;
+  }
+
+  .mobile-feed-media {
+    min-height: 372px;
+    aspect-ratio: 5 / 6;
   }
 
   .product-detail-layout {
