@@ -360,7 +360,7 @@ export function ProductForm({ mode, actor, initialProduct }: ProductFormProps) {
                 </option>
               ))}
             </select>
-            <small className="field-helper">Use low stock when you want urgency without marking the item unavailable.</small>
+            <small className="field-helper">Use low stock for a gentle heads-up, or sold out to keep the listing visible while softening storefront CTAs.</small>
           </label>
         </div>
       </section>

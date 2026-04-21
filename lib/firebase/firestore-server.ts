@@ -28,6 +28,7 @@ export type ProductMetadataRecord = {
   stockStatus: string;
   featured: boolean;
   storefrontVisible: boolean;
+  feedVisible: boolean;
   imageUrl: string;
 };
 
@@ -94,6 +95,7 @@ function mapMetadataProduct(document: FirestoreDocument): ProductMetadataRecord 
     storefrontVisible: isProductVisibleOnStorefront({
       storefrontVisible: typeof rawStorefrontVisible === "boolean" ? rawStorefrontVisible : true
     }),
+    feedVisible: typeof readFirestoreValue(fields.feedVisible) === "boolean" ? Boolean(readFirestoreValue(fields.feedVisible)) : true,
     imageUrl: String(readFirestoreValue(fields.imageUrl) ?? "")
   };
 }

@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { getActiveTeamContacts, resolveProductContact } from "@/lib/team-contacts";
 import { Product } from "@/lib/types";
-import { buildWhatsAppLink } from "@/lib/utils";
+import { buildWhatsAppLink, getWhatsAppCtaLabel, isProductSoldOut } from "@/lib/utils";
 import styles from "@/components/whatsapp-chooser-button.module.css";
 
 type WhatsAppChooserButtonProps = {
@@ -16,11 +16,17 @@ type WhatsAppChooserButtonProps = {
 export function WhatsAppChooserButton({
   product,
   className = "whatsapp-button",
-  label = "Ask on WhatsApp"
+  label
 }: WhatsAppChooserButtonProps) {
   const preferredContact = resolveProductContact(product);
   const [isMounted, setIsMounted] = useState(false);
   const [isContactModalOpen, setIsContactModalOpen] = useState(false);
+  const isSoldOut = isProductSoldOut(product);
+  const resolvedLabel = label ?? getWhatsAppCtaLabel(product);
+  const chooserTitle = isSoldOut ? "Ask about availability" : "Start your WhatsApp chat";
+  const chooserDescription = isSoldOut
+    ? "Select the team member you want to ask about restock timing or a similar option."
+    : "Select the team member you want to message about this product.";
 
   const contactOptions = useMemo(() => {
     const activeContacts = getActiveTeamContacts();
@@ -67,7 +73,8 @@ export function WhatsAppChooserButton({
 
     const whatsappLink = buildWhatsAppLink(product.name, product.price, product.condition, {
       phone: selectedContact.whatsappNumber,
-      contactName: selectedContact.name
+      contactName: selectedContact.name,
+      stockStatus: product.stockStatus
     });
 
     window.open(whatsappLink, "_blank", "noopener,noreferrer");
@@ -89,8 +96,8 @@ export function WhatsAppChooserButton({
         <div className="contact-modal-header">
           <div>
             <p className="eyebrow">Choose a team member</p>
-            <h3>Start your WhatsApp chat</h3>
-            <p>Select the team member you want to message about this product.</p>
+            <h3>{chooserTitle}</h3>
+            <p>{chooserDescription}</p>
             <div className="contact-modal-product">{product.name}</div>
           </div>
           <button type="button" className="contact-modal-close" onClick={() => setIsContactModalOpen(false)} aria-label="Close contact chooser">
@@ -110,7 +117,7 @@ export function WhatsAppChooserButton({
                 </span>
                 <span className={styles.role}>{contact.label}</span>
               </span>
-              <span className={styles.actionButton}>Open</span>
+              <span className={styles.actionButton}>{isSoldOut ? "Ask" : "Open"}</span>
             </button>
           ))}
         </div>
@@ -129,7 +136,7 @@ export function WhatsAppChooserButton({
           setIsContactModalOpen(true);
         }}
       >
-        {label}
+        {resolvedLabel}
       </button>
 
       {isMounted && isContactModalOpen ? createPortal(modal, document.body) : null}

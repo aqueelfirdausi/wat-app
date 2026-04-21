@@ -12,6 +12,7 @@ import {
   getStockStatusLabel,
   isFreshProduct,
   isNewArrival,
+  isProductSoldOut,
   normalizeStockStatus
 } from "@/lib/utils";
 
@@ -20,6 +21,12 @@ type MobileFeedCardProps = {
 };
 
 function buildSupportingLine(product: Product) {
+  const normalizedStatus = normalizeStockStatus(product.stockStatus);
+
+  if (normalizedStatus === "sold_out") {
+    return "Currently unavailable. Ask if it may return or if a similar option is available.";
+  }
+
   const summary = product.description?.trim();
 
   if (summary) {
@@ -28,7 +35,7 @@ function buildSupportingLine(product: Product) {
 
   const details = [product.categoryName, product.condition];
 
-  if (normalizeStockStatus(product.stockStatus) === "low_stock") {
+  if (normalizedStatus === "low_stock") {
     details.push("Low stock today");
   }
 
@@ -39,11 +46,12 @@ export function MobileFeedCard({ product }: MobileFeedCardProps) {
   const storeBrand = getStoreBrandById(resolveProductBrand(product));
   const isFreshToday = isFreshProduct(product);
   const isRecentlyAdded = !isFreshToday && isNewArrival(product);
+  const isSoldOut = isProductSoldOut(product);
   const supportingLine = buildSupportingLine(product);
   const secondaryBadge = product.featured ? "Featured" : isFreshToday ? "Fresh today" : isRecentlyAdded ? "New" : null;
 
   return (
-    <article className="mobile-feed-card">
+    <article className={isSoldOut ? "mobile-feed-card mobile-feed-card-sold-out" : "mobile-feed-card"}>
       <Link href={buildProductPath(product.slug)} className="mobile-feed-link">
         <div className="mobile-feed-media">
           {product.imageUrl ? (
@@ -83,7 +91,10 @@ export function MobileFeedCard({ product }: MobileFeedCardProps) {
       </Link>
 
       <div className="mobile-feed-actions">
-        <WhatsAppChooserButton product={product} className="whatsapp-button mobile-feed-whatsapp" />
+        <WhatsAppChooserButton
+          product={product}
+          className={isSoldOut ? "secondary-button mobile-feed-whatsapp mobile-feed-whatsapp-muted" : "whatsapp-button mobile-feed-whatsapp"}
+        />
         <Link href={buildProductPath(product.slug)} className="secondary-link mobile-feed-details">
           View details
         </Link>

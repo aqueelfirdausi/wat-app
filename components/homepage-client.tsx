@@ -8,7 +8,7 @@ import { ProductCard } from "@/components/product-card";
 import { STORE_BRANDS, resolveProductBrand } from "@/lib/brands";
 import { fetchCategories, fetchProducts, subscribeToCategories, subscribeToProducts } from "@/lib/firebase/firestore";
 import { Category, Product } from "@/lib/types";
-import { compareProductsForStorefront, isFreshProduct, isProductVisibleOnStorefront, normalizeStockStatus } from "@/lib/utils";
+import { compareProductsForStorefront, isFreshProduct, isProductVisibleInFeed, isProductVisibleOnStorefront, normalizeStockStatus } from "@/lib/utils";
 
 type DeferredInstallPrompt = Event & {
   prompt: () => Promise<void>;
@@ -20,6 +20,8 @@ type DeferredInstallPrompt = Event & {
 
 const INSTALL_HINT_STORAGE_KEY = "watapp-install-hint-dismissed";
 const STOREFRONT_MODE_STORAGE_KEY = "watapp-storefront-mode";
+const STOREFRONT_PREFERRED_MODE_STORAGE_KEY = "watapp-storefront-preferred-mode";
+const FEED_HINT_DISMISSED_STORAGE_KEY = "watapp-feed-hint-dismissed";
 
 function getInstallGuidance() {
   if (typeof window === "undefined") {
@@ -64,6 +66,8 @@ export function HomepageClient() {
   const [deferredInstallPrompt, setDeferredInstallPrompt] = useState<DeferredInstallPrompt | null>(null);
   const [showInstallGuide, setShowInstallGuide] = useState(false);
   const [storefrontMode, setStorefrontMode] = useState<"catalog" | "feed">("catalog");
+  const [showFeedHint, setShowFeedHint] = useState(false);
+  const [hasResolvedStorefrontMode, setHasResolvedStorefrontMode] = useState(false);
 
   useEffect(() => {
     let productsUnsubscribe: undefined | (() => void);
@@ -134,10 +138,28 @@ export function HomepageClient() {
       return;
     }
 
-    const savedMode = window.localStorage.getItem(STOREFRONT_MODE_STORAGE_KEY);
-    if (savedMode === "feed" || savedMode === "catalog") {
-      setStorefrontMode(savedMode);
+    const storedPreferredMode = window.localStorage.getItem(STOREFRONT_PREFERRED_MODE_STORAGE_KEY);
+    const legacyStoredMode = window.localStorage.getItem(STOREFRONT_MODE_STORAGE_KEY);
+    const resolvedMode =
+      storedPreferredMode === "feed" || storedPreferredMode === "catalog"
+        ? storedPreferredMode
+        : legacyStoredMode === "feed" || legacyStoredMode === "catalog"
+          ? legacyStoredMode
+          : "catalog";
+
+    setStorefrontMode(resolvedMode);
+
+    if (resolvedMode === "feed" || resolvedMode === "catalog") {
+      window.localStorage.setItem(STOREFRONT_PREFERRED_MODE_STORAGE_KEY, resolvedMode);
+      window.localStorage.setItem(STOREFRONT_MODE_STORAGE_KEY, resolvedMode);
     }
+
+    const feedHintDismissed = window.localStorage.getItem(FEED_HINT_DISMISSED_STORAGE_KEY) === "true";
+    if (!feedHintDismissed && resolvedMode !== "feed") {
+      setShowFeedHint(true);
+    }
+
+    setHasResolvedStorefrontMode(true);
   }, []);
 
   const visibleProducts = useMemo(() => products.filter((product) => isProductVisibleOnStorefront(product)), [products]);
@@ -152,6 +174,7 @@ export function HomepageClient() {
 
     return [...scopedProducts].sort(compareProductsForStorefront);
   }, [activeCategory, visibleProducts]);
+  const feedProducts = useMemo(() => filteredProducts.filter((product) => isProductVisibleInFeed(product)), [filteredProducts]);
 
   const featuredProducts = useMemo(() => filteredProducts.filter((product) => product.featured).slice(0, 4), [filteredProducts]);
   const featuredIds = useMemo(() => new Set(featuredProducts.map((product) => product.id)), [featuredProducts]);
@@ -186,8 +209,22 @@ export function HomepageClient() {
     setStorefrontMode(nextMode);
 
     if (typeof window !== "undefined") {
+      window.localStorage.setItem(STOREFRONT_PREFERRED_MODE_STORAGE_KEY, nextMode);
       window.localStorage.setItem(STOREFRONT_MODE_STORAGE_KEY, nextMode);
+
+      if (nextMode === "feed") {
+        window.localStorage.setItem(FEED_HINT_DISMISSED_STORAGE_KEY, "true");
+        setShowFeedHint(false);
+      }
     }
+  }
+
+  function dismissFeedHint() {
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem(FEED_HINT_DISMISSED_STORAGE_KEY, "true");
+    }
+
+    setShowFeedHint(false);
   }
 
   async function handleInstallHintAction() {
@@ -375,25 +412,46 @@ export function HomepageClient() {
             </button>
           </div>
         </div>
+        {hasResolvedStorefrontMode && showFeedHint && storefrontMode !== "feed" ? (
+          <div className="feed-hint-banner" role="status" aria-live="polite">
+            <div className="feed-hint-copy">
+              <span className="feed-hint-kicker">New</span>
+              <strong>Try Feed for quick browsing.</strong>
+              <p>See the latest items in a faster image-first view, then jump into WhatsApp as usual.</p>
+            </div>
+            <div className="feed-hint-actions">
+              <button
+                type="button"
+                className="secondary-link feed-hint-open"
+                onClick={() => handleStorefrontModeChange("feed")}
+              >
+                Open Feed
+              </button>
+              <button type="button" className="feed-hint-dismiss" onClick={dismissFeedHint} aria-label="Dismiss Feed hint">
+                Not now
+              </button>
+            </div>
+          </div>
+        ) : null}
       </section>
 
-      {storefrontMode === "feed" ? (
+      {hasResolvedStorefrontMode && storefrontMode === "feed" ? (
         <section className="section-block mobile-feed-section" id={firstProductSectionId}>
           <div className="section-heading mobile-feed-heading">
             <h2>Live mobile feed</h2>
             <p>A cleaner, image-first flow for faster mobile scanning and WhatsApp-first shopping.</p>
           </div>
           <div className="mobile-feed-list">
-            {filteredProducts.length ? (
-              filteredProducts.map((product) => <MobileFeedCard key={product.id} product={product} />)
+            {feedProducts.length ? (
+              feedProducts.map((product) => <MobileFeedCard key={product.id} product={product} />)
             ) : (
-              <div className="empty-state">Products will appear here once your team starts adding stock.</div>
+              <div className="empty-state">Feed items will appear here once live products are ready for browsing.</div>
             )}
           </div>
         </section>
       ) : null}
 
-      {storefrontMode === "catalog" && featuredProducts.length ? (
+      {(!hasResolvedStorefrontMode || storefrontMode === "catalog") && featuredProducts.length ? (
         <section className="section-block" id="featured-products">
           <div className="section-heading">
             <h2>Featured today</h2>
@@ -407,7 +465,7 @@ export function HomepageClient() {
         </section>
       ) : null}
 
-      {storefrontMode === "catalog" && freshProducts.length ? (
+      {(!hasResolvedStorefrontMode || storefrontMode === "catalog") && freshProducts.length ? (
         <section className="section-block section-fresh" id="fresh-products">
           <div className="section-heading">
             <h2>Fresh today</h2>
@@ -421,7 +479,7 @@ export function HomepageClient() {
         </section>
       ) : null}
 
-      {storefrontMode === "catalog" ? (
+      {!hasResolvedStorefrontMode || storefrontMode === "catalog" ? (
         <section
           className="section-block"
           id={!featuredProducts.length && !freshProducts.length ? "latest-products" : undefined}

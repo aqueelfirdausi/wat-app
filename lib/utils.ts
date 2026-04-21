@@ -45,6 +45,28 @@ export function getStockStatusClassName(status: Product["stockStatus"]) {
   }
 }
 
+export function getAvailabilityTagLabel(status: Product["stockStatus"]) {
+  switch (normalizeStockStatus(status)) {
+    case "low_stock":
+      return "Low stock";
+    case "sold_out":
+      return "Unavailable today";
+    default:
+      return "Ready today";
+  }
+}
+
+export function getAvailabilityTagClassName(status: Product["stockStatus"]) {
+  switch (normalizeStockStatus(status)) {
+    case "low_stock":
+      return "product-tag-low-stock";
+    case "sold_out":
+      return "product-tag-unavailable";
+    default:
+      return "product-tag-availability";
+  }
+}
+
 export function isProductSoldOut(product: Pick<Product, "stockStatus">) {
   return normalizeStockStatus(product.stockStatus) === "sold_out";
 }
@@ -55,6 +77,26 @@ export function isProductLowStock(product: Pick<Product, "stockStatus">) {
 
 export function isProductVisibleOnStorefront(product: Pick<Product, "storefrontVisible">) {
   return product.storefrontVisible !== false;
+}
+
+export function isProductVisibleInFeed(product: Pick<Product, "stockStatus" | "feedVisible">) {
+  return normalizeStockStatus(product.stockStatus) !== "sold_out" || product.feedVisible !== false;
+}
+
+export function getWhatsAppCtaLabel(product: Pick<Product, "stockStatus">) {
+  return isProductSoldOut(product) ? "Ask about availability" : "Ask on WhatsApp";
+}
+
+export function getWhatsAppCtaHelper(product: Pick<Product, "stockStatus">) {
+  if (isProductSoldOut(product)) {
+    return "Ask if this item may return or if a similar option is available.";
+  }
+
+  if (isProductLowStock(product)) {
+    return "A quick WhatsApp check can confirm it is still available today.";
+  }
+
+  return "Choose the right team member and ask about availability today.";
 }
 
 export function formatCurrency(amount: number, currency = "PKR") {
@@ -87,13 +129,20 @@ export function buildWhatsAppLink(
   options?: {
     phone?: string;
     contactName?: string;
+    stockStatus?: Product["stockStatus"];
   }
 ) {
   const phone = options?.phone ?? process.env.NEXT_PUBLIC_WHATSAPP_NUMBER ?? "";
   const contactLine = options?.contactName ? ` for ${options.contactName}` : "";
-  const message = encodeURIComponent(
-    `Hi, I'm interested in "${productName}" (${condition}) listed at ${formatCurrency(price)}. Is it available today${contactLine}?`
-  );
+  const normalizedStatus = normalizeStockStatus(options?.stockStatus);
+  const baseLine = `Hi, I'm interested in "${productName}" (${condition}) listed at ${formatCurrency(price)}.`;
+  const messageBody =
+    normalizedStatus === "sold_out"
+      ? `${baseLine} I saw it is sold out. Can you let me know if it may be available again${contactLine} or suggest a similar option?`
+      : normalizedStatus === "low_stock"
+        ? `${baseLine} I saw it is low in stock. Is it still available today${contactLine}?`
+        : `${baseLine} Is it available today${contactLine}?`;
+  const message = encodeURIComponent(messageBody);
 
   return `https://wa.me/${phone}?text=${message}`;
 }

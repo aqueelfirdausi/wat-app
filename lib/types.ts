@@ -30,7 +30,9 @@ export type Product = {
   condition: ProductCondition;
   stockStatus: StockStatus;
   featured: boolean;
+  statusPick: boolean;
   storefrontVisible: boolean;
+  feedVisible: boolean;
   sortPriority?: number;
   imageUrl: string;
   imagePath?: string;

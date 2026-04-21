@@ -7,7 +7,14 @@ import { WhatsAppChooserButton } from "@/components/whatsapp-contact-chooser";
 import { getStoreBrandById, resolveProductBrand } from "@/lib/brands";
 import { fetchProductBySlug } from "@/lib/firebase/firestore";
 import { Product } from "@/lib/types";
-import { formatCurrency, getStockStatusClassName, getStockStatusLabel, isProductLowStock, isProductSoldOut } from "@/lib/utils";
+import {
+  formatCurrency,
+  getStockStatusClassName,
+  getStockStatusLabel,
+  getWhatsAppCtaHelper,
+  isProductLowStock,
+  isProductSoldOut
+} from "@/lib/utils";
 
 type ProductDetailClientProps = {
   slug: string;
@@ -119,11 +126,11 @@ export function ProductDetailClient({ slug }: ProductDetailClientProps) {
               </div>
               {isSoldOut ? (
                 <p className="product-detail-availability-message product-detail-availability-message-sold-out">
-                  This item is currently sold out. You can still ask on WhatsApp in case it comes back or a similar option is available.
+                  Currently sold out. You can still ask on WhatsApp if it may return or if there is a similar option.
                 </p>
               ) : isLowStock ? (
                 <p className="product-detail-availability-message product-detail-availability-message-low-stock">
-                  Low stock right now. A quick WhatsApp check is the safest way to confirm before it goes.
+                  Low stock today. A quick WhatsApp check can confirm before you order.
                 </p>
               ) : null}
               <p className="product-detail-description">
@@ -135,13 +142,8 @@ export function ProductDetailClient({ slug }: ProductDetailClientProps) {
               <WhatsAppChooserButton
                 product={product}
                 className={isSoldOut ? "secondary-button product-detail-button product-detail-button-muted" : "whatsapp-button product-detail-button"}
-                label={isSoldOut ? "Ask on WhatsApp about availability" : "Ask on WhatsApp"}
               />
-              <p className="product-detail-note">
-                {isSoldOut
-                  ? "Open WhatsApp, choose the right team member, and ask if this item can be restocked or if there is a close alternative."
-                  : "Open WhatsApp, choose the right team member, and ask about availability today."}
-              </p>
+              <p className="product-detail-note">{getWhatsAppCtaHelper(product)}</p>
             </div>
           </article>
         </section>

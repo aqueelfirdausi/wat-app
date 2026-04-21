@@ -106,9 +106,11 @@ function mapProduct(id: string, data: Record<string, unknown>): Product {
     condition: (data.condition as Product["condition"]) ?? "Used",
     stockStatus: normalizeStockStatus(data.stockStatus),
     featured: Boolean(data.featured),
+    statusPick: Boolean(data.statusPick),
     storefrontVisible: isProductVisibleOnStorefront({
       storefrontVisible: typeof data.storefrontVisible === "boolean" ? data.storefrontVisible : true
     }),
+    feedVisible: typeof data.feedVisible === "boolean" ? data.feedVisible : true,
     sortPriority: Number(data.sortPriority ?? 0),
     imageUrl: String(data.imageUrl ?? ""),
     imagePath: data.imagePath ? String(data.imagePath) : undefined,
@@ -250,7 +252,9 @@ export async function createProduct(values: ProductFormValues, actor: Actor, fil
     condition: values.condition,
     stockStatus: normalizeStockStatus(values.stockStatus),
     featured: values.featured,
+    statusPick: false,
     storefrontVisible: true,
+    feedVisible: true,
     sortPriority,
     imageUrl: image.imageUrl,
     imagePath: image.imagePath,
@@ -315,7 +319,9 @@ export async function updateProduct(
       condition: values.condition,
       stockStatus: normalizeStockStatus(values.stockStatus),
       featured: values.featured,
+      statusPick: previousProduct.statusPick ?? false,
       storefrontVisible: previousProduct.storefrontVisible ?? true,
+      feedVisible: previousProduct.feedVisible ?? true,
       sortPriority,
       ...imagePayload,
       updatedAt: serverTimestamp(),
@@ -352,7 +358,7 @@ export async function updateProductStockStatus(product: Product, stockStatus: Pr
 
 export async function updateProductOperationalState(
   product: Product,
-  updates: Partial<Pick<Product, "stockStatus" | "featured" | "storefrontVisible">>,
+  updates: Partial<Pick<Product, "stockStatus" | "featured" | "statusPick" | "storefrontVisible" | "feedVisible" | "sortPriority">>,
   actor: Actor,
   details: string
 ) {
@@ -371,8 +377,20 @@ export async function updateProductOperationalState(
     payload.featured = updates.featured;
   }
 
+  if (typeof updates.statusPick === "boolean") {
+    payload.statusPick = updates.statusPick;
+  }
+
   if (typeof updates.storefrontVisible === "boolean") {
     payload.storefrontVisible = updates.storefrontVisible;
+  }
+
+  if (typeof updates.feedVisible === "boolean") {
+    payload.feedVisible = updates.feedVisible;
+  }
+
+  if (typeof updates.sortPriority === "number" && Number.isFinite(updates.sortPriority)) {
+    payload.sortPriority = Math.max(0, Math.trunc(updates.sortPriority));
   }
 
   try {

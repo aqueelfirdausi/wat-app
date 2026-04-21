@@ -25,7 +25,8 @@ export function DashboardOverview() {
       { label: "Total products", value: products.length },
       { label: "Featured", value: products.filter((product) => product.featured).length },
       { label: "In stock", value: products.filter((product) => normalizeStockStatus(product.stockStatus) === "in_stock").length },
-      { label: "Low stock", value: products.filter((product) => normalizeStockStatus(product.stockStatus) === "low_stock").length }
+      { label: "Low stock", value: products.filter((product) => normalizeStockStatus(product.stockStatus) === "low_stock").length },
+      { label: "Sold out", value: products.filter((product) => normalizeStockStatus(product.stockStatus) === "sold_out").length }
     ],
     [products]
   );

@@ -4,7 +4,17 @@ import Image from "next/image";
 import Link from "next/link";
 import { getStoreBrandById, resolveProductBrand } from "@/lib/brands";
 import { Product } from "@/lib/types";
-import { buildProductPath, formatCurrency, getStockStatusClassName, getStockStatusLabel, isFreshProduct, isNewArrival } from "@/lib/utils";
+import {
+  buildProductPath,
+  formatCurrency,
+  getAvailabilityTagClassName,
+  getAvailabilityTagLabel,
+  getStockStatusClassName,
+  getStockStatusLabel,
+  isFreshProduct,
+  isNewArrival,
+  isProductSoldOut
+} from "@/lib/utils";
 import { WhatsAppChooserButton } from "@/components/whatsapp-contact-chooser";
 
 type ProductCardProps = {
@@ -16,9 +26,10 @@ export function ProductCard({ product }: ProductCardProps) {
   const storeBrand = getStoreBrandById(resolvedBrand);
   const isFreshToday = isFreshProduct(product);
   const isRecentlyAdded = !isFreshToday && isNewArrival(product);
+  const isSoldOut = isProductSoldOut(product);
 
   return (
-    <article className="product-card">
+    <article className={isSoldOut ? "product-card product-card-sold-out" : "product-card"}>
       <Link href={buildProductPath(product.slug)} className="product-card-link">
         <div className="product-image-wrap">
           {product.imageUrl ? (
@@ -48,15 +59,15 @@ export function ProductCard({ product }: ProductCardProps) {
               {isFreshToday ? <span className="product-tag product-tag-fresh">Fresh today</span> : null}
               {!isFreshToday && isRecentlyAdded ? <span className="product-tag product-tag-new">New</span> : null}
               <span className="product-tag product-tag-condition">{product.condition}</span>
-              <span className={`product-tag ${product.featured ? "product-tag-featured" : "product-tag-availability"}`}>
-                {product.featured ? "Featured" : "Ready today"}
+              <span className={`product-tag ${product.featured ? "product-tag-featured" : getAvailabilityTagClassName(product.stockStatus)}`}>
+                {product.featured ? "Featured" : getAvailabilityTagLabel(product.stockStatus)}
               </span>
             </div>
           </div>
         </div>
       </Link>
       <div className="product-card-actions">
-        <WhatsAppChooserButton product={product} />
+        <WhatsAppChooserButton product={product} className={isSoldOut ? "secondary-button product-card-button-muted" : "whatsapp-button"} />
       </div>
     </article>
   );
