@@ -25,6 +25,26 @@ export function buildMetadataUrl(path = "/") {
   return base ? new URL(path, `${base}/`).toString() : path;
 }
 
+export function getAbsolutePublicImageUrl(imageUrl?: string) {
+  const trimmedImageUrl = imageUrl?.trim();
+
+  if (!trimmedImageUrl) {
+    return undefined;
+  }
+
+  try {
+    const parsedUrl = new URL(trimmedImageUrl);
+
+    if (parsedUrl.protocol !== "http:" && parsedUrl.protocol !== "https:") {
+      return undefined;
+    }
+
+    return parsedUrl.toString();
+  } catch {
+    return undefined;
+  }
+}
+
 export function getDefaultMeta() {
   return {
     title: DEFAULT_APP_TITLE,
@@ -65,10 +85,10 @@ export function buildProductMetaDescription(input: {
 }
 
 export function buildProductMetadataImageUrl(slug: string, imageUrl?: string) {
-  const trimmedImageUrl = imageUrl?.trim();
+  const publicImageUrl = getAbsolutePublicImageUrl(imageUrl);
 
-  if (trimmedImageUrl) {
-    return buildMetadataUrl(`/api/image-proxy?url=${encodeURIComponent(trimmedImageUrl)}`);
+  if (publicImageUrl) {
+    return publicImageUrl;
   }
 
   return buildMetadataUrl(`/product/${slug}/opengraph-image`);

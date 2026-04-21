@@ -1,6 +1,6 @@
 import { ImageResponse } from "next/og";
 import { fetchProductMetadataBySlug } from "@/lib/firebase/firestore-server";
-import { buildProductMetaDescription } from "@/lib/metadata";
+import { buildProductMetaDescription, getAbsolutePublicImageUrl } from "@/lib/metadata";
 
 export const dynamic = "force-dynamic";
 
@@ -20,6 +20,7 @@ type ProductImageProps = {
 export default async function ProductOpenGraphImage({ params }: ProductImageProps) {
   const { slug } = await params;
   const product = await fetchProductMetadataBySlug(slug, { revalidate: false });
+  const productImageUrl = getAbsolutePublicImageUrl(product?.imageUrl);
 
   const description = product
     ? buildProductMetaDescription({
@@ -142,11 +143,11 @@ export default async function ProductOpenGraphImage({ params }: ProductImageProp
             boxShadow: "0 18px 45px rgba(44, 27, 3, 0.08)"
           }}
         >
-          {product?.imageUrl ? (
+          {productImageUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
-              src={product.imageUrl}
-              alt={product.name}
+              src={productImageUrl}
+              alt={product?.name ?? "WAT App product preview"}
               width="380"
               height="546"
               style={{ width: "100%", height: "100%", objectFit: "cover" }}
