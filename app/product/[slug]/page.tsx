@@ -58,7 +58,7 @@ export async function generateMetadata({ params }: ProductPageProps): Promise<Me
   });
 
   const title = buildProductMetadataTitle(product.name);
-  const imageUrl = buildProductMetadataImageUrl(slug, product.imageUrl);
+  const imageUrl = buildProductMetadataImageUrl(slug);
 
   return {
     title,
@@ -75,6 +75,7 @@ export async function generateMetadata({ params }: ProductPageProps): Promise<Me
       images: [
         {
           url: imageUrl,
+          type: "image/png",
           width: 1200,
           height: 630,
           alt: product.name

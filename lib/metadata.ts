@@ -84,12 +84,6 @@ export function buildProductMetaDescription(input: {
   return `${category} - ${condition} - ${price}`;
 }
 
-export function buildProductMetadataImageUrl(slug: string, imageUrl?: string) {
-  const publicImageUrl = getAbsolutePublicImageUrl(imageUrl);
-
-  if (publicImageUrl) {
-    return publicImageUrl;
-  }
-
+export function buildProductMetadataImageUrl(slug: string) {
   return buildMetadataUrl(`/product/${slug}/opengraph-image`);
 }

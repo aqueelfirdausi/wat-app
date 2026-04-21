@@ -1,8 +1,10 @@
+import { Buffer } from "node:buffer";
 import { ImageResponse } from "next/og";
 import { fetchProductMetadataBySlug } from "@/lib/firebase/firestore-server";
 import { buildProductMetaDescription, getAbsolutePublicImageUrl } from "@/lib/metadata";
 
 export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
 
 export const size = {
   width: 1200,
@@ -17,10 +19,42 @@ type ProductImageProps = {
   }>;
 };
 
+async function buildEmbeddedProductImageSrc(imageUrl?: string) {
+  const publicImageUrl = getAbsolutePublicImageUrl(imageUrl);
+
+  if (!publicImageUrl) {
+    return null;
+  }
+
+  try {
+    const response = await fetch(publicImageUrl, {
+      headers: {
+        Accept: "image/*"
+      },
+      cache: "no-store"
+    });
+
+    if (!response.ok) {
+      return null;
+    }
+
+    const contentType = response.headers.get("content-type")?.split(";")[0]?.trim() ?? "image/jpeg";
+
+    if (!contentType.startsWith("image/")) {
+      return null;
+    }
+
+    const imageBuffer = Buffer.from(await response.arrayBuffer());
+    return `data:${contentType};base64,${imageBuffer.toString("base64")}`;
+  } catch {
+    return null;
+  }
+}
+
 export default async function ProductOpenGraphImage({ params }: ProductImageProps) {
   const { slug } = await params;
   const product = await fetchProductMetadataBySlug(slug, { revalidate: false });
-  const productImageUrl = getAbsolutePublicImageUrl(product?.imageUrl);
+  const productImageSrc = await buildEmbeddedProductImageSrc(product?.imageUrl);
 
   const description = product
     ? buildProductMetaDescription({
@@ -143,10 +177,10 @@ export default async function ProductOpenGraphImage({ params }: ProductImageProp
             boxShadow: "0 18px 45px rgba(44, 27, 3, 0.08)"
           }}
         >
-          {productImageUrl ? (
+          {productImageSrc ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
-              src={productImageUrl}
+              src={productImageSrc}
               alt={product?.name ?? "WAT App product preview"}
               width="380"
               height="546"
