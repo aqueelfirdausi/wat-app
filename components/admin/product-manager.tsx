@@ -915,7 +915,7 @@ export function ProductManager({ actor }: ProductManagerProps) {
 
   return (
     <>
-      <section className="panel-card">
+      <section className="panel-card inventory-panel">
         <div className="panel-header">
           <div>
             <p className="eyebrow">Inventory</p>
@@ -924,7 +924,7 @@ export function ProductManager({ actor }: ProductManagerProps) {
             {products.some((product) => product.statusPick) ? (
               <p className="panel-shortlist-count">
                 Status picks: {products.filter((product) => product.statusPick).length}
-                {chosenProduct ? ` • Chosen today: ${chosenProduct.name}` : ""}
+                {chosenProduct ? ` - Chosen today: ${chosenProduct.name}` : ""}
               </p>
             ) : null}
           </div>

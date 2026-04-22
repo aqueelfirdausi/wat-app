@@ -1661,26 +1661,47 @@ textarea:focus-visible {
   }
 
   .storefront-mode-panel {
-    padding: 14px;
+    gap: 9px;
+    padding: 12px;
+  }
+
+  .storefront-mode-copy {
+    gap: 4px;
+  }
+
+  .storefront-mode-copy strong {
+    font-size: 0.95rem;
+  }
+
+  .storefront-mode-copy p:last-child {
+    font-size: 0.83rem;
+    line-height: 1.42;
   }
 
   .storefront-mode-toggle {
     width: 100%;
     justify-content: space-between;
+    gap: 6px;
+    padding: 5px;
   }
 
   .storefront-mode-reassurance {
     display: grid;
     grid-template-columns: minmax(0, 1fr);
+    gap: 6px;
   }
 
   .storefront-mode-reassurance span {
     justify-content: center;
-    min-height: 32px;
+    min-height: 28px;
+    padding: 0 9px;
+    font-size: 0.72rem;
   }
 
   .storefront-mode-chip {
     flex: 1 1 0;
+    min-height: 36px;
+    padding: 0 13px;
   }
 
   .feed-hint-banner {
@@ -1977,16 +1998,16 @@ textarea:focus-visible {
   }
 
   .manager-controls {
-    gap: 10px;
-    padding: 12px;
+    gap: 9px;
+    padding: 10px;
   }
 
   .manager-filters {
-    gap: 8px;
+    gap: 7px;
   }
 
   .manager-checkbox {
-    min-height: 48px;
+    min-height: 42px;
     align-items: center;
   }
 
@@ -2013,18 +2034,6 @@ textarea:focus-visible {
 
   .product-row-main {
     gap: 10px;
-  }
-
-  .product-row-name,
-  .product-row-copy > span {
-    white-space: normal;
-  }
-
-  .product-row-name {
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
   }
 
   .inventory-updated-cell strong {
@@ -2193,6 +2202,40 @@ textarea:focus-visible {
   margin-bottom: 2px;
 }
 
+.inventory-panel {
+  gap: 12px;
+}
+
+.inventory-panel .panel-header {
+  margin-bottom: 0;
+  gap: 10px 14px;
+}
+
+.inventory-panel .panel-header > div {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.inventory-panel .panel-header h1 {
+  margin: 0;
+  font-size: 1.55rem;
+  line-height: 1.08;
+  letter-spacing: -0.03em;
+}
+
+.inventory-panel .panel-header .primary-link {
+  min-height: 42px;
+  padding-inline: 15px;
+}
+
+.inventory-panel .panel-header p:last-child {
+  max-width: 44ch;
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.52;
+}
+
 .panel-header p:last-child,
 .form-header p:last-child {
   max-width: 52ch;
@@ -2201,9 +2244,9 @@ textarea:focus-visible {
 }
 
 .panel-shortlist-count {
-  margin: 8px 0 0;
+  margin: 3px 0 0;
   color: var(--brand-dark);
-  font-size: 0.82rem;
+  font-size: 0.78rem;
   font-weight: 700;
   letter-spacing: 0.01em;
 }
@@ -2412,9 +2455,9 @@ textarea {
 
 .manager-controls {
   display: grid;
-  gap: 12px;
-  margin-bottom: 16px;
-  padding: 14px;
+  gap: 10px;
+  margin-bottom: 12px;
+  padding: 11px 12px;
   border: 1px solid rgba(228, 216, 198, 0.82);
   border-radius: var(--radius-panel);
   background: rgba(255, 255, 255, 0.54);
@@ -2422,12 +2465,12 @@ textarea {
 
 .manager-controls label {
   display: grid;
-  gap: 7px;
+  gap: 5px;
 }
 
 .manager-controls label span {
   font-weight: 700;
-  font-size: 0.8rem;
+  font-size: 0.74rem;
   letter-spacing: 0.03em;
   text-transform: uppercase;
   color: var(--muted);
@@ -2436,11 +2479,13 @@ textarea {
 .manager-search input,
 .manager-filters select {
   min-width: 0;
+  min-height: 44px;
+  padding-block: 10px;
 }
 
 .manager-filters {
   display: grid;
-  gap: 10px;
+  gap: 8px;
 }
 
 .activity-log-filters {
@@ -2449,7 +2494,8 @@ textarea {
 }
 
 .manager-checkbox {
-  padding: 12px 13px;
+  min-height: 42px;
+  padding: 9px 11px;
   border: 1px solid var(--border);
   border-radius: var(--radius-control);
   background: rgba(255, 255, 255, 0.66);
@@ -2470,14 +2516,14 @@ textarea {
   align-items: center;
   justify-content: space-between;
   gap: 8px 12px;
-  margin: -4px 2px 14px;
+  margin: -2px 2px 10px;
 }
 
 .manager-tip {
   margin: 0;
   color: var(--muted);
-  font-size: 0.84rem;
-  line-height: 1.52;
+  font-size: 0.79rem;
+  line-height: 1.46;
   text-wrap: pretty;
 }
 
@@ -2536,20 +2582,20 @@ textarea {
 .today-picks-strip {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
-  margin: 0 0 14px;
+  gap: 7px;
+  margin: 0 0 12px;
 }
 
 .today-picks-strip span {
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  padding: 6px 10px;
+  padding: 5px 9px;
   border-radius: var(--radius-pill);
   border: 1px solid rgba(228, 216, 198, 0.82);
   background: rgba(255, 255, 255, 0.72);
   color: var(--muted);
-  font-size: 0.76rem;
+  font-size: 0.74rem;
   font-weight: 600;
 }
 
@@ -2561,9 +2607,10 @@ textarea {
 
 .product-row-main {
   position: relative;
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
+  display: grid;
+  grid-template-columns: auto 60px minmax(0, 1fr);
+  align-items: start;
+  gap: 10px;
   min-width: 0;
 }
 
@@ -2622,13 +2669,10 @@ textarea {
 
 .product-row-copy {
   display: grid;
-  gap: 3px;
-  flex: 1 1 auto;
-  width: 100%;
+  gap: 4px;
   min-width: 0;
 }
 
-.product-row-name,
 .product-row-copy > span {
   overflow: hidden;
   text-overflow: ellipsis;
@@ -2636,18 +2680,23 @@ textarea {
 }
 
 .product-row-name {
-  display: block;
+  display: -webkit-box;
+  overflow: hidden;
   font-size: 1rem;
   font-weight: 800;
   line-height: 1.24;
   letter-spacing: -0.025em;
   color: var(--text);
+  text-wrap: balance;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
 }
 
 .product-row-badges {
   display: flex;
   flex-wrap: wrap;
-  align-items: center;
+  align-items: flex-start;
+  align-content: flex-start;
   gap: 4px 5px;
   width: 100%;
   min-width: 0;
@@ -2661,7 +2710,7 @@ textarea {
 
 .inventory-list {
   display: grid;
-  gap: 10px;
+  gap: 8px;
 }
 
 .inventory-head {
@@ -2670,8 +2719,8 @@ textarea {
 
 .inventory-row-card {
   display: grid;
-  gap: 12px;
-  padding: 14px 15px;
+  gap: 10px;
+  padding: 12px 14px;
   border: 1px solid rgba(233, 220, 203, 0.92);
   border-radius: var(--radius-panel);
   background:
@@ -2737,7 +2786,7 @@ textarea {
 
 .inventory-meta-cell {
   display: grid;
-  gap: 5px;
+  gap: 4px;
   align-content: start;
 }
 
@@ -2791,8 +2840,9 @@ textarea {
 }
 
 .inventory-price-cell strong {
-  font-size: 1rem;
+  font-size: 1.02rem;
   letter-spacing: -0.02em;
+  white-space: nowrap;
 }
 
 .inventory-price-cell {
@@ -2811,11 +2861,11 @@ textarea {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 3px 7px;
+  padding: 3px 6px;
   border-radius: var(--radius-pill);
   background: rgba(241, 177, 77, 0.13);
   color: rgba(126, 88, 20, 0.88);
-  font-size: 0.64rem;
+  font-size: 0.62rem;
   font-weight: 650;
   line-height: 1.05;
   white-space: nowrap;
@@ -3230,12 +3280,12 @@ textarea {
   align-items: flex-start;
   justify-content: flex-start;
   flex-direction: column;
-  gap: 6px;
+  gap: 5px;
 }
 
 .inventory-quick-actions {
   display: grid;
-  gap: 6px;
+  gap: 5px;
   width: 100%;
 }
 
@@ -3243,8 +3293,8 @@ textarea {
 .quick-meta-group {
   display: flex;
   flex-wrap: wrap;
-  gap: 5px;
-  align-items: center;
+  gap: 4px;
+  align-items: flex-start;
 }
 
 .quick-stock-chip,
@@ -3630,10 +3680,10 @@ textarea {
 
   .inventory-head {
     display: grid;
-    grid-template-columns: minmax(0, 2.8fr) minmax(130px, 0.9fr) minmax(120px, 0.85fr) minmax(170px, 1fr) auto;
-    gap: 14px;
+    grid-template-columns: minmax(0, 2.45fr) minmax(110px, 0.72fr) minmax(120px, 0.78fr) minmax(118px, 0.74fr) minmax(290px, 1.45fr);
+    gap: 12px;
     align-items: center;
-    padding: 0 16px 2px;
+    padding: 0 14px 2px;
     color: var(--muted);
     font-size: 0.76rem;
     font-weight: 700;
@@ -3642,19 +3692,21 @@ textarea {
   }
 
   .inventory-row-card {
-    grid-template-columns: minmax(0, 3.45fr) minmax(128px, 0.74fr) minmax(112px, 0.72fr) minmax(156px, 0.84fr) auto;
-    align-items: center;
-    gap: 14px;
-    padding: 14px 16px;
+    grid-template-columns: minmax(0, 2.45fr) minmax(110px, 0.72fr) minmax(120px, 0.78fr) minmax(118px, 0.74fr) minmax(290px, 1.45fr);
+    align-items: start;
+    gap: 12px;
+    padding: 12px 14px;
   }
 
   .inventory-price-cell {
-    padding-left: 10px;
+    padding-left: 0;
     border-left: 1px solid rgba(228, 216, 198, 0.6);
+    padding-inline: 12px 0;
   }
 
   .inventory-actions-cell {
     justify-content: flex-end;
+    min-width: 290px;
   }
 
   .inventory-meta-label {
@@ -3668,11 +3720,14 @@ textarea {
 
   .inventory-quick-actions {
     justify-items: end;
+    align-content: start;
+    max-width: 100%;
   }
 
   .quick-stock-group,
   .quick-meta-group {
     justify-content: flex-end;
+    max-width: 100%;
   }
 
 }
