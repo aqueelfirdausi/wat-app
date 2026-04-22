@@ -6,7 +6,13 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import QRCode from "qrcode";
 import { STOCK_STATUSES } from "@/lib/constants";
-import { removeProduct, subscribeToProducts, updateProductOperationalState, updateProductStockStatus } from "@/lib/firebase/firestore";
+import {
+  removeProduct,
+  subscribeToProducts,
+  updateChosenForToday,
+  updateProductOperationalState,
+  updateProductStockStatus
+} from "@/lib/firebase/firestore";
 import { generateMinimalStatusImage } from "@/lib/status-image-minimal";
 import { getTeamContactById } from "@/lib/team-contacts";
 import { Product } from "@/lib/types";
@@ -38,7 +44,7 @@ const INVENTORY_SESSION_STATE_KEY = "watapp-admin-inventory-session";
 
 type InventorySessionState = {
   selectedIds?: string[];
-  chosenProductId?: string | null;
+  chosenOnly?: boolean;
   statusPickOnly?: boolean;
   needsAttentionOnly?: boolean;
   featuredOnly?: boolean;
@@ -62,10 +68,10 @@ export function ProductManager({ actor }: ProductManagerProps) {
   const [stockFilter, setStockFilter] = useState("all");
   const [featuredOnly, setFeaturedOnly] = useState(false);
   const [statusPickOnly, setStatusPickOnly] = useState(false);
+  const [chosenOnly, setChosenOnly] = useState(false);
   const [needsAttentionOnly, setNeedsAttentionOnly] = useState(false);
   const [sortBy, setSortBy] = useState("storefront_order");
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
-  const [chosenProductId, setChosenProductId] = useState<string | null>(null);
   const [openActionsMenuId, setOpenActionsMenuId] = useState<string | null>(null);
   const [copiedProductId, setCopiedProductId] = useState<string | null>(null);
   const [quickActionBusyId, setQuickActionBusyId] = useState<string | null>(null);
@@ -151,7 +157,7 @@ export function ProductManager({ actor }: ProductManagerProps) {
     const validStockValues = new Set(["all", ...STOCK_STATUSES]);
 
     setSelectedIds((restored.selectedIds ?? []).filter((id) => validIds.has(id)));
-    setChosenProductId(restored.chosenProductId && validIds.has(restored.chosenProductId) ? restored.chosenProductId : null);
+    setChosenOnly(Boolean(restored.chosenOnly));
     setStatusPickOnly(Boolean(restored.statusPickOnly));
     setNeedsAttentionOnly(Boolean(restored.needsAttentionOnly));
     setFeaturedOnly(Boolean(restored.featuredOnly));
@@ -172,7 +178,7 @@ export function ProductManager({ actor }: ProductManagerProps) {
 
     const isDefaultState =
       selectedIds.length === 0 &&
-      chosenProductId === null &&
+      !chosenOnly &&
       !statusPickOnly &&
       !needsAttentionOnly &&
       !featuredOnly &&
@@ -188,7 +194,7 @@ export function ProductManager({ actor }: ProductManagerProps) {
 
     const payload: InventorySessionState = {
       selectedIds,
-      chosenProductId,
+      chosenOnly,
       statusPickOnly,
       needsAttentionOnly,
       featuredOnly,
@@ -201,7 +207,7 @@ export function ProductManager({ actor }: ProductManagerProps) {
     window.sessionStorage.setItem(INVENTORY_SESSION_STATE_KEY, JSON.stringify(payload));
   }, [
     categoryFilter,
-    chosenProductId,
+    chosenOnly,
     featuredOnly,
     hasLoadedInventory,
     needsAttentionOnly,
@@ -310,15 +316,21 @@ export function ProductManager({ actor }: ProductManagerProps) {
         product.categoryName.toLowerCase().includes(normalizedQuery);
       const matchesCategory = categoryFilter === "all" || product.categoryName === categoryFilter;
       const matchesStock = stockFilter === "all" || normalizeStockStatus(product.stockStatus) === stockFilter;
-      const matchesFeatured = !featuredOnly || product.featured;
+    const matchesFeatured = !featuredOnly || product.featured;
       const matchesStatusPick = !statusPickOnly || product.statusPick;
+      const matchesChosen = !chosenOnly || product.chosenForToday;
       const matchesNeedsAttention = !needsAttentionOnly || !getReadinessState(product).ready;
 
-      return matchesQuery && matchesCategory && matchesStock && matchesFeatured && matchesStatusPick && matchesNeedsAttention;
+      return matchesQuery && matchesCategory && matchesStock && matchesFeatured && matchesStatusPick && matchesChosen && matchesNeedsAttention;
     });
 
     nextProducts.sort((first, second) => {
       if (sortBy === "storefront_order") {
+        const chosenDelta = Number(Boolean(second.chosenForToday)) - Number(Boolean(first.chosenForToday));
+        if (chosenDelta !== 0) {
+          return chosenDelta;
+        }
+
         const statusPickDelta = Number(Boolean(second.statusPick)) - Number(Boolean(first.statusPick));
         if (statusPickDelta !== 0) {
           return statusPickDelta;
@@ -343,7 +355,7 @@ export function ProductManager({ actor }: ProductManagerProps) {
     });
 
     return nextProducts;
-  }, [categoryFilter, featuredOnly, needsAttentionOnly, products, searchQuery, sortBy, statusPickOnly, stockFilter]);
+  }, [categoryFilter, chosenOnly, featuredOnly, needsAttentionOnly, products, searchQuery, sortBy, statusPickOnly, stockFilter]);
 
   const hasActiveFilters =
     searchQuery.trim().length > 0 ||
@@ -351,6 +363,7 @@ export function ProductManager({ actor }: ProductManagerProps) {
     stockFilter !== "all" ||
     featuredOnly ||
     statusPickOnly ||
+    chosenOnly ||
     needsAttentionOnly ||
     sortBy !== "storefront_order";
 
@@ -360,6 +373,7 @@ export function ProductManager({ actor }: ProductManagerProps) {
     setStockFilter("all");
     setFeaturedOnly(false);
     setStatusPickOnly(false);
+    setChosenOnly(false);
     setNeedsAttentionOnly(false);
     setSortBy("storefront_order");
   }
@@ -374,10 +388,6 @@ export function ProductManager({ actor }: ProductManagerProps) {
 
   function selectVisibleProducts() {
     setSelectedIds((current) => Array.from(new Set([...current, ...filteredProducts.map((product) => product.id)])));
-  }
-
-  function toggleChosen(productId: string) {
-    setChosenProductId((current) => (current === productId ? null : productId));
   }
 
   function toggleActionsMenu(productId: string) {
@@ -399,10 +409,10 @@ export function ProductManager({ actor }: ProductManagerProps) {
     setStockFilter("all");
     setFeaturedOnly(false);
     setStatusPickOnly(false);
+    setChosenOnly(false);
     setNeedsAttentionOnly(false);
     setSortBy("storefront_order");
     setSelectedIds([]);
-    setChosenProductId(null);
     setRestoredStateNotice(false);
     setFreshStartNotice(true);
   }
@@ -500,6 +510,11 @@ export function ProductManager({ actor }: ProductManagerProps) {
   }
 
   async function handleStatusPickToggle(product: Product) {
+    if (product.chosenForToday) {
+      setRowFeedback(product.id, "This item is the chosen main pick. Clear that first if you want to remove it from status picks.");
+      return;
+    }
+
     const nextStatusPick = !product.statusPick;
 
     setError("");
@@ -515,6 +530,26 @@ export function ProductManager({ actor }: ProductManagerProps) {
       setRowFeedback(product.id, nextStatusPick ? "Added to today's status picks." : "Removed from today's status picks.");
     } catch (err) {
       const message = err instanceof Error ? err.message : "Unable to update status pick.";
+      setError(message);
+    } finally {
+      setQuickActionBusyId((current) => (current === product.id ? null : current));
+    }
+  }
+
+  async function handleChosenForTodayToggle(product: Product) {
+    const nextChosen = !product.chosenForToday;
+
+    setError("");
+    setQuickActionBusyId(product.id);
+
+    try {
+      await updateChosenForToday(product, nextChosen, actor);
+      setRowFeedback(
+        product.id,
+        nextChosen ? "Set as today's main pick." : "Cleared as today's main pick."
+      );
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Unable to update today's main pick.";
       setError(message);
     } finally {
       setQuickActionBusyId((current) => (current === product.id ? null : current));
@@ -859,10 +894,12 @@ export function ProductManager({ actor }: ProductManagerProps) {
   }
 
   const visibleFeaturedCount = useMemo(() => filteredProducts.filter((product) => product.featured).length, [filteredProducts]);
+  const chosenProduct = useMemo(() => products.find((product) => product.chosenForToday) ?? null, [products]);
   const visibleProductIds = useMemo(() => filteredProducts.map((product) => product.id), [filteredProducts]);
   const selectedVisibleCount = useMemo(() => selectedIds.filter((id) => visibleProductIds.includes(id)).length, [selectedIds, visibleProductIds]);
   const allVisibleSelected = filteredProducts.length > 0 && selectedVisibleCount === filteredProducts.length;
   const visibleStatusPickCount = useMemo(() => filteredProducts.filter((product) => product.statusPick).length, [filteredProducts]);
+  const visibleChosenCount = useMemo(() => filteredProducts.filter((product) => product.chosenForToday).length, [filteredProducts]);
   const visibleReadyCount = useMemo(
     () => filteredProducts.filter((product) => getReadinessState(product).ready).length,
     [filteredProducts]
@@ -873,7 +910,7 @@ export function ProductManager({ actor }: ProductManagerProps) {
   );
   const hasWorkingState =
     selectedIds.length > 0 ||
-    chosenProductId !== null ||
+    chosenOnly ||
     hasActiveFilters;
 
   return (
@@ -885,7 +922,10 @@ export function ProductManager({ actor }: ProductManagerProps) {
             <h1>Product inventory</h1>
             <p>Search stock, review item status, and open the daily share/export tools from one place.</p>
             {products.some((product) => product.statusPick) ? (
-              <p className="panel-shortlist-count">Status picks: {products.filter((product) => product.statusPick).length}</p>
+              <p className="panel-shortlist-count">
+                Status picks: {products.filter((product) => product.statusPick).length}
+                {chosenProduct ? ` • Chosen today: ${chosenProduct.name}` : ""}
+              </p>
             ) : null}
           </div>
           <Link href="/admin/products/new" className="primary-link">
@@ -979,6 +1019,14 @@ export function ProductManager({ actor }: ProductManagerProps) {
             <label className="checkbox-row manager-checkbox">
               <input
                 type="checkbox"
+                checked={chosenOnly}
+                onChange={(event) => setChosenOnly(event.target.checked)}
+              />
+              <span>Chosen today</span>
+            </label>
+            <label className="checkbox-row manager-checkbox">
+              <input
+                type="checkbox"
                 checked={needsAttentionOnly}
                 onChange={(event) => setNeedsAttentionOnly(event.target.checked)}
               />
@@ -1048,9 +1096,9 @@ export function ProductManager({ actor }: ProductManagerProps) {
           <span>
             <strong>{visibleNeedsAttentionCount}</strong> needs attention
           </span>
-          {chosenProductId ? (
+          {chosenProduct ? (
             <span>
-              <strong>1</strong> chosen for today
+              <strong>{visibleChosenCount}</strong> chosen today
             </span>
           ) : null}
         </div>
@@ -1072,7 +1120,7 @@ export function ProductManager({ actor }: ProductManagerProps) {
             const missingSummary = readiness.missing.slice(0, 2).join(" + ");
             const isStatusPick = product.statusPick;
             const isTopPick = readiness.ready && (product.featured || isStatusPick);
-            const isChosen = chosenProductId === product.id;
+            const isChosen = product.chosenForToday;
             const isRowBusy = bulkActionBusy !== null || quickActionBusyId === product.id;
             const rowFeedback = quickActionFeedback?.productId === product.id ? quickActionFeedback.message : null;
 
@@ -1115,6 +1163,7 @@ export function ProductManager({ actor }: ProductManagerProps) {
                       <div className="product-row-badges">
                         {product.featured ? <span className="table-badge">Featured</span> : null}
                         {isStatusPick ? <span className="table-badge table-badge-status-pick">Status pick</span> : null}
+                        {isChosen ? <span className="table-badge table-badge-chosen">Chosen today</span> : null}
                         {!product.storefrontVisible ? <span className="table-badge table-badge-muted">Hidden</span> : null}
                         {normalizedStockStatus === "sold_out" && !isFeedVisible ? <span className="table-badge table-badge-muted">Feed hidden</span> : null}
                         {(product.sortPriority ?? 0) > 0 ? <span className="table-badge">Priority {product.sortPriority}</span> : null}
@@ -1124,7 +1173,6 @@ export function ProductManager({ actor }: ProductManagerProps) {
                           {readiness.ready ? "Ready" : "Needs details"}
                         </span>
                         {isTopPick ? <span className="table-badge table-badge-top-pick">Top pick</span> : null}
-                        {isChosen ? <span className="table-badge table-badge-chosen">Chosen for today</span> : null}
                       </div>
                       <span>{product.categoryName}</span>
                       {!readiness.ready ? <span className="inventory-readiness-hint">Missing {missingSummary}</span> : null}
@@ -1177,6 +1225,16 @@ export function ProductManager({ actor }: ProductManagerProps) {
                     </div>
 
                     <div className="quick-meta-group">
+                      <button
+                        className={isChosen ? "quick-meta-chip quick-meta-chip-chosen active" : "quick-meta-chip quick-meta-chip-chosen"}
+                        type="button"
+                        onClick={() => void handleChosenForTodayToggle(product)}
+                        disabled={isRowBusy}
+                        aria-pressed={isChosen}
+                      >
+                        {isChosen ? "Chosen today" : "Choose today"}
+                      </button>
+
                       <button
                         className={product.statusPick ? "quick-meta-chip quick-meta-chip-status-pick active" : "quick-meta-chip quick-meta-chip-status-pick"}
                         type="button"
@@ -1382,12 +1440,13 @@ export function ProductManager({ actor }: ProductManagerProps) {
                           className="actions-menu-item"
                           type="button"
                           role="menuitem"
+                          disabled={isRowBusy}
                           onClick={() => {
                             closeActionsMenu();
-                            toggleChosen(product.id);
+                            void handleChosenForTodayToggle(product);
                           }}
                         >
-                          {isChosen ? "Clear chosen" : "Choose for today"}
+                          {isChosen ? "Clear chosen today" : "Set as today's main pick"}
                         </button>
                         <button
                           className="actions-menu-item"
@@ -1542,6 +1601,10 @@ export function ProductManager({ actor }: ProductManagerProps) {
                 <div className="product-view-row">
                   <span>Featured</span>
                   <strong>{selectedProduct.featured ? "Yes" : "No"}</strong>
+                </div>
+                <div className="product-view-row">
+                  <span>Chosen today</span>
+                  <strong>{selectedProduct.chosenForToday ? "Yes" : "No"}</strong>
                 </div>
                 <div className="product-view-row">
                   <span>Storefront</span>

@@ -277,7 +277,7 @@ export function HomepageClient() {
         <div className="hero-copy">
           <span className="eyebrow">Daily stock from WhatsApp Status</span>
           <h1>Browse today&apos;s live stock fast.</h1>
-          <p>Open the status link, scan what&apos;s available now, and message your order in one tap.</p>
+          <p>Check what&apos;s available now, see today&apos;s pricing clearly, and move into WhatsApp when you&apos;re ready to confirm.</p>
           <div className="hero-actions">
             <a href={`#${firstProductSectionId}`} className="primary-link">
               Browse live products
@@ -287,9 +287,9 @@ export function HomepageClient() {
             </a>
           </div>
           <div className="hero-trust-bar">
-            <span>Updated daily</span>
-            <span>WhatsApp-first ordering</span>
-            <span>Fast stock checks</span>
+            <span>Updated through the day</span>
+            <span>Posted price shown clearly</span>
+            <span>Confirm on WhatsApp before ordering</span>
           </div>
           <div className="hero-summary-strip" aria-label="Live stock summary">
             <span>
@@ -366,7 +366,7 @@ export function HomepageClient() {
       <section className="section-block section-tight">
         <div className="section-heading">
           <h2>Browse by category</h2>
-          <p>Tap a category to narrow down live stock fast.</p>
+          <p>Tap a category to narrow today&apos;s live stock without losing the quick scan flow.</p>
         </div>
         <div className="category-strip">
           <button className={activeCategory === "All" ? "category-chip active" : "category-chip"} onClick={() => setActiveCategory("All")}>
@@ -388,8 +388,8 @@ export function HomepageClient() {
         <div className="storefront-mode-panel" aria-label="Storefront view mode">
           <div className="storefront-mode-copy">
             <p className="eyebrow">Storefront mode</p>
-            <strong>Switch between the stable catalog and a new mobile feed view.</strong>
-            <p>The feed is an additive browsing experiment only. The current catalog stays available anytime.</p>
+            <strong>Choose the view that feels easiest to browse right now.</strong>
+            <p>Catalog and Feed show the same live products, pricing, and WhatsApp path. Switch anytime without losing your place.</p>
           </div>
           <div className="storefront-mode-toggle" role="tablist" aria-label="Choose storefront mode">
             <button
@@ -411,13 +411,18 @@ export function HomepageClient() {
               Feed
             </button>
           </div>
+          <div className="storefront-mode-reassurance" aria-label="Storefront reassurance">
+            <span>Same live stock in both views</span>
+            <span>Availability stays visible</span>
+            <span>WhatsApp ordering works the same way</span>
+          </div>
         </div>
         {hasResolvedStorefrontMode && showFeedHint && storefrontMode !== "feed" ? (
           <div className="feed-hint-banner" role="status" aria-live="polite">
             <div className="feed-hint-copy">
               <span className="feed-hint-kicker">New</span>
               <strong>Try Feed for quick browsing.</strong>
-              <p>See the latest items in a faster image-first view, then jump into WhatsApp as usual.</p>
+              <p>See the latest items in a faster image-first view, then move into the same product details and WhatsApp flow as usual.</p>
             </div>
             <div className="feed-hint-actions">
               <button
@@ -439,7 +444,7 @@ export function HomepageClient() {
         <section className="section-block mobile-feed-section" id={firstProductSectionId}>
           <div className="section-heading mobile-feed-heading">
             <h2>Live mobile feed</h2>
-            <p>A cleaner, image-first flow for faster mobile scanning and WhatsApp-first shopping.</p>
+            <p>A cleaner, image-first flow for faster mobile scanning, with the same availability cues and WhatsApp ordering path.</p>
           </div>
           <div className="mobile-feed-list">
             {feedProducts.length ? (
@@ -455,7 +460,7 @@ export function HomepageClient() {
         <section className="section-block" id="featured-products">
           <div className="section-heading">
             <h2>Featured today</h2>
-            <p>Admin-picked items that deserve the strongest visibility on today&apos;s live board.</p>
+            <p>Important live items surfaced first so casual visitors can trust what deserves attention today.</p>
           </div>
           <div className="product-grid">
             {featuredProducts.map((product) => (
@@ -469,7 +474,7 @@ export function HomepageClient() {
         <section className="section-block section-fresh" id="fresh-products">
           <div className="section-heading">
             <h2>Fresh today</h2>
-            <p>Newest additions or updates from today, surfaced first for fast status-driven browsing.</p>
+            <p>Newest additions or updates from today, surfaced early so repeat visitors can spot fresh stock quickly.</p>
           </div>
           <div className="product-grid">
             {freshProducts.map((product) => (
@@ -488,8 +493,8 @@ export function HomepageClient() {
             <h2>{featuredProducts.length || freshProducts.length ? "More live items" : "Live stock today"}</h2>
             <p>
               {featuredProducts.length || freshProducts.length
-                ? "The rest of today's live stock, still ordered to keep the most important items near the top."
-                : "Fresh stock from across the WAT App stores, ready for WhatsApp conversations now."}
+                ? "The rest of today's live stock, still ordered to keep the clearest and most relevant items near the top."
+                : "Live stock from across the WAT App stores, ready for quick detail checks and WhatsApp confirmation."}
             </p>
           </div>
           <div className="product-grid">

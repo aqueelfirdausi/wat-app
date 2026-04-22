@@ -14,7 +14,8 @@ import {
   serverTimestamp,
   setDoc,
   updateDoc,
-  where
+  where,
+  writeBatch
 } from "firebase/firestore";
 import { deleteObject, getDownloadURL, ref, uploadBytes } from "firebase/storage";
 import { inferBrandFromCategory } from "@/lib/brands";
@@ -107,6 +108,7 @@ function mapProduct(id: string, data: Record<string, unknown>): Product {
     stockStatus: normalizeStockStatus(data.stockStatus),
     featured: Boolean(data.featured),
     statusPick: Boolean(data.statusPick),
+    chosenForToday: Boolean(data.chosenForToday),
     storefrontVisible: isProductVisibleOnStorefront({
       storefrontVisible: typeof data.storefrontVisible === "boolean" ? data.storefrontVisible : true
     }),
@@ -253,6 +255,7 @@ export async function createProduct(values: ProductFormValues, actor: Actor, fil
     stockStatus: normalizeStockStatus(values.stockStatus),
     featured: values.featured,
     statusPick: false,
+    chosenForToday: false,
     storefrontVisible: true,
     feedVisible: true,
     sortPriority,
@@ -320,6 +323,7 @@ export async function updateProduct(
       stockStatus: normalizeStockStatus(values.stockStatus),
       featured: values.featured,
       statusPick: previousProduct.statusPick ?? false,
+      chosenForToday: previousProduct.chosenForToday ?? false,
       storefrontVisible: previousProduct.storefrontVisible ?? true,
       feedVisible: previousProduct.feedVisible ?? true,
       sortPriority,
@@ -358,7 +362,7 @@ export async function updateProductStockStatus(product: Product, stockStatus: Pr
 
 export async function updateProductOperationalState(
   product: Product,
-  updates: Partial<Pick<Product, "stockStatus" | "featured" | "statusPick" | "storefrontVisible" | "feedVisible" | "sortPriority">>,
+  updates: Partial<Pick<Product, "stockStatus" | "featured" | "statusPick" | "chosenForToday" | "storefrontVisible" | "feedVisible" | "sortPriority">>,
   actor: Actor,
   details: string
 ) {
@@ -379,6 +383,10 @@ export async function updateProductOperationalState(
 
   if (typeof updates.statusPick === "boolean") {
     payload.statusPick = updates.statusPick;
+  }
+
+  if (typeof updates.chosenForToday === "boolean") {
+    payload.chosenForToday = updates.chosenForToday;
   }
 
   if (typeof updates.storefrontVisible === "boolean") {
@@ -409,6 +417,59 @@ export async function updateProductOperationalState(
     actorName: actor.name,
     actorEmail: actor.email,
     details
+  });
+}
+
+export async function updateChosenForToday(product: Product, nextChosen: boolean, actor: Actor) {
+  const firestore = ensureDb();
+  const batch = writeBatch(firestore);
+  const updates: string[] = [];
+
+  if (nextChosen) {
+    const chosenQuery = query(collection(firestore, "products"), where("chosenForToday", "==", true));
+    const chosenSnapshot = await getDocs(chosenQuery);
+
+    chosenSnapshot.docs.forEach((document) => {
+      if (document.id === product.id) {
+        return;
+      }
+
+      batch.update(document.ref, {
+        chosenForToday: false,
+        updatedAt: serverTimestamp(),
+        updatedByUid: actor.uid,
+        updatedByName: actor.name
+      });
+      updates.push(`replaced ${String(document.data().name ?? "previous main pick")}`);
+    });
+  }
+
+  batch.update(doc(firestore, "products", product.id), {
+    chosenForToday: nextChosen,
+    statusPick: nextChosen ? true : product.statusPick,
+    updatedAt: serverTimestamp(),
+    updatedByUid: actor.uid,
+    updatedByName: actor.name
+  });
+
+  try {
+    await batch.commit();
+  } catch (error) {
+    throw new Error(`Product update failed in Firestore: ${getFirebaseErrorMessage(error)}.`);
+  }
+
+  await ensureUserProfile(actor);
+  await logActivity({
+    action: "updated",
+    entityType: "product",
+    entityId: product.id,
+    entityName: product.name,
+    actorUid: actor.uid,
+    actorName: actor.name,
+    actorEmail: actor.email,
+    details: nextChosen
+      ? `Chosen ${product.name} as today's main pick${updates.length ? ` and ${updates.join(", ")}.` : "."}`
+      : `Cleared ${product.name} as today's main pick.`
   });
 }
 

@@ -10,44 +10,22 @@ import {
   formatCurrency,
   getStockStatusClassName,
   getStockStatusLabel,
+  getProductSupportingLine,
   isFreshProduct,
   isNewArrival,
-  isProductSoldOut,
-  normalizeStockStatus
+  isProductSoldOut
 } from "@/lib/utils";
 
 type MobileFeedCardProps = {
   product: Product;
 };
 
-function buildSupportingLine(product: Product) {
-  const normalizedStatus = normalizeStockStatus(product.stockStatus);
-
-  if (normalizedStatus === "sold_out") {
-    return "Currently unavailable. Ask if it may return or if a similar option is available.";
-  }
-
-  const summary = product.description?.trim();
-
-  if (summary) {
-    return summary.length > 72 ? `${summary.slice(0, 69)}...` : summary;
-  }
-
-  const details = [product.categoryName, product.condition];
-
-  if (normalizedStatus === "low_stock") {
-    details.push("Low stock today");
-  }
-
-  return details.filter(Boolean).join(" - ");
-}
-
 export function MobileFeedCard({ product }: MobileFeedCardProps) {
   const storeBrand = getStoreBrandById(resolveProductBrand(product));
   const isFreshToday = isFreshProduct(product);
   const isRecentlyAdded = !isFreshToday && isNewArrival(product);
   const isSoldOut = isProductSoldOut(product);
-  const supportingLine = buildSupportingLine(product);
+  const supportingLine = getProductSupportingLine(product);
   const secondaryBadge = product.featured ? "Featured" : isFreshToday ? "Fresh today" : isRecentlyAdded ? "New" : null;
 
   return (

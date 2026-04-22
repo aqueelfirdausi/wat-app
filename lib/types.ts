@@ -31,6 +31,7 @@ export type Product = {
   stockStatus: StockStatus;
   featured: boolean;
   statusPick: boolean;
+  chosenForToday: boolean;
   storefrontVisible: boolean;
   feedVisible: boolean;
   sortPriority?: number;

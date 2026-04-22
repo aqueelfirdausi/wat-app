@@ -87,6 +87,18 @@ export function getWhatsAppCtaLabel(product: Pick<Product, "stockStatus">) {
   return isProductSoldOut(product) ? "Ask about availability" : "Ask on WhatsApp";
 }
 
+export function getProductAvailabilityMessage(product: Pick<Product, "stockStatus">) {
+  if (isProductSoldOut(product)) {
+    return "Currently sold out. You can still ask on WhatsApp if it may return or if there is a similar option.";
+  }
+
+  if (isProductLowStock(product)) {
+    return "Low stock today. A quick WhatsApp check can confirm before you order.";
+  }
+
+  return "Available to confirm on WhatsApp before you place your order.";
+}
+
 export function getWhatsAppCtaHelper(product: Pick<Product, "stockStatus">) {
   if (isProductSoldOut(product)) {
     return "Ask if this item may return or if a similar option is available.";
@@ -97,6 +109,29 @@ export function getWhatsAppCtaHelper(product: Pick<Product, "stockStatus">) {
   }
 
   return "Choose the right team member and ask about availability today.";
+}
+
+export function getProductSupportingLine(
+  product: Pick<Product, "description" | "categoryName" | "condition" | "stockStatus">,
+  maxLength = 72
+) {
+  if (isProductSoldOut(product)) {
+    return getProductAvailabilityMessage(product);
+  }
+
+  const summary = product.description?.trim();
+
+  if (summary) {
+    return summary.length > maxLength ? `${summary.slice(0, Math.max(0, maxLength - 3)).trimEnd()}...` : summary;
+  }
+
+  const details = [product.categoryName, product.condition];
+
+  if (isProductLowStock(product)) {
+    details.push("Low stock today");
+  }
+
+  return details.filter(Boolean).join(" - ");
 }
 
 export function formatCurrency(amount: number, currency = "PKR") {

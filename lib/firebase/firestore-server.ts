@@ -27,6 +27,7 @@ export type ProductMetadataRecord = {
   condition: string;
   stockStatus: string;
   featured: boolean;
+  chosenForToday: boolean;
   storefrontVisible: boolean;
   feedVisible: boolean;
   imageUrl: string;
@@ -92,6 +93,7 @@ function mapMetadataProduct(document: FirestoreDocument): ProductMetadataRecord 
     condition: String(readFirestoreValue(fields.condition) ?? "Used"),
     stockStatus: normalizeStockStatus(readFirestoreValue(fields.stockStatus)),
     featured: Boolean(readFirestoreValue(fields.featured)),
+    chosenForToday: Boolean(readFirestoreValue(fields.chosenForToday)),
     storefrontVisible: isProductVisibleOnStorefront({
       storefrontVisible: typeof rawStorefrontVisible === "boolean" ? rawStorefrontVisible : true
     }),
