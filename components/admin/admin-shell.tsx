@@ -9,6 +9,7 @@ const links = [
   { href: "/admin", label: "Dashboard" },
   { href: "/admin/products", label: "Products" },
   { href: "/admin/products/new", label: "Add Product" },
+  { href: "/admin/analytics", label: "Analytics" },
   { href: "/admin/logs", label: "Activity Log" }
 ];
 

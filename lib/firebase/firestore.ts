@@ -22,7 +22,7 @@ import { inferBrandFromCategory } from "@/lib/brands";
 import { db, storage } from "@/lib/firebase/client";
 import { DEFAULT_CURRENCY } from "@/lib/constants";
 import { getTeamContactById } from "@/lib/team-contacts";
-import { ActivityLog, Category, Product, ProductFormValues } from "@/lib/types";
+import { ActivityLog, AnalyticsEvent, Category, Product, ProductFormValues } from "@/lib/types";
 import { isProductVisibleOnStorefront, normalizeStockStatus, parseFirebaseDate, slugify } from "@/lib/utils";
 
 type Actor = {
@@ -143,6 +143,24 @@ function mapLog(id: string, data: Record<string, unknown>): ActivityLog {
     actorName: String(data.actorName ?? "Unknown user"),
     actorEmail: String(data.actorEmail ?? ""),
     details: String(data.details ?? ""),
+    createdAt: parseFirebaseDate(data.createdAt)
+  };
+}
+
+function mapAnalyticsEvent(id: string, data: Record<string, unknown>): AnalyticsEvent {
+  const eventName = String(data.eventName ?? "");
+  const context = String(data.context ?? "");
+
+  return {
+    id,
+    eventName: (["storefront_visit", "feed_view", "product_view", "whatsapp_click"].includes(eventName)
+      ? eventName
+      : "storefront_visit") as AnalyticsEvent["eventName"],
+    sessionId: data.sessionId ? String(data.sessionId) : undefined,
+    productId: data.productId ? String(data.productId) : undefined,
+    productSlug: data.productSlug ? String(data.productSlug) : undefined,
+    category: data.category ? String(data.category) : undefined,
+    context: ["storefront", "catalog", "feed", "detail"].includes(context) ? (context as AnalyticsEvent["context"]) : undefined,
     createdAt: parseFirebaseDate(data.createdAt)
   };
 }
@@ -538,6 +556,21 @@ export function subscribeToActivityLogs(callback: (logs: ActivityLog[]) => void)
   return onSnapshot(query(collection(firestore, "logs"), orderBy("createdAt", "desc"), limit(50)), (snapshot) => {
     callback(snapshot.docs.map((item) => mapLog(item.id, item.data())));
   });
+}
+
+export function subscribeToAnalyticsEvents(startDate: Date, callback: (events: AnalyticsEvent[]) => void) {
+  const firestore = ensureDb();
+  return onSnapshot(
+    query(
+      collection(firestore, "analyticsEvents"),
+      where("createdAt", ">=", Timestamp.fromDate(startDate)),
+      orderBy("createdAt", "desc"),
+      limit(750)
+    ),
+    (snapshot) => {
+      callback(snapshot.docs.map((item) => mapAnalyticsEvent(item.id, item.data())));
+    }
+  );
 }
 
 export async function seedSettings() {

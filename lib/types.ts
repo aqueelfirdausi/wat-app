@@ -63,6 +63,19 @@ export type ActivityLog = {
   createdAt?: Date | null;
 };
 
+export type AnalyticsEventName = "storefront_visit" | "feed_view" | "product_view" | "whatsapp_click";
+
+export type AnalyticsEvent = {
+  id: string;
+  eventName: AnalyticsEventName;
+  sessionId?: string;
+  productId?: string;
+  productSlug?: string;
+  category?: string;
+  context?: "storefront" | "catalog" | "feed" | "detail";
+  createdAt?: Date | null;
+};
+
 export type ProductFormValues = {
   name: string;
   description: string;
