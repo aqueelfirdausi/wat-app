@@ -2314,6 +2314,11 @@ textarea:focus-visible {
   gap: 5px;
 }
 
+.analytics-section-head {
+  display: grid;
+  gap: 8px;
+}
+
 .analytics-ranked-list {
   display: grid;
   gap: 10px;
@@ -2363,6 +2368,85 @@ textarea:focus-visible {
 .analytics-ranked-count {
   font-size: 1.2rem;
   font-variant-numeric: tabular-nums;
+}
+
+.analytics-insights-grid {
+  display: grid;
+  gap: 14px;
+}
+
+.analytics-insight-card {
+  display: grid;
+  gap: 12px;
+  padding: 15px;
+  border: 1px solid rgba(233, 220, 203, 0.88);
+  border-radius: var(--radius-panel);
+  background: rgba(255, 251, 245, 0.84);
+}
+
+.analytics-insight-description {
+  color: var(--muted);
+  font-size: 0.88rem;
+  line-height: 1.5;
+}
+
+.analytics-insight-list {
+  display: grid;
+  gap: 9px;
+}
+
+.analytics-insight-item {
+  display: grid;
+  gap: 8px;
+  padding: 12px 13px;
+  border-radius: var(--radius-panel);
+  background: rgba(255, 255, 255, 0.8);
+  border: 1px solid rgba(233, 220, 203, 0.7);
+}
+
+.analytics-insight-copy {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.analytics-insight-copy strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.analytics-insight-copy span {
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.analytics-insight-metrics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  align-items: center;
+}
+
+.analytics-insight-metrics span,
+.analytics-insight-metrics strong {
+  display: inline-flex;
+  align-items: center;
+  min-height: 30px;
+  padding: 0 10px;
+  border-radius: var(--radius-pill);
+  font-size: 0.8rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.analytics-insight-metrics span {
+  color: var(--muted);
+  background: rgba(31, 143, 88, 0.08);
+}
+
+.analytics-insight-metrics strong {
+  color: var(--brand-dark);
+  background: rgba(31, 143, 88, 0.14);
 }
 
 .quick-links {
@@ -3764,6 +3848,11 @@ textarea {
 
   .analytics-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+  }
+
+  .analytics-insights-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     align-items: start;
   }
 
