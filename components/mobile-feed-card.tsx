@@ -18,9 +18,10 @@ import {
 
 type MobileFeedCardProps = {
   product: Product;
+  analyticsContext?: "feed";
 };
 
-export function MobileFeedCard({ product }: MobileFeedCardProps) {
+export function MobileFeedCard({ product, analyticsContext = "feed" }: MobileFeedCardProps) {
   const storeBrand = getStoreBrandById(resolveProductBrand(product));
   const isFreshToday = isFreshProduct(product);
   const isRecentlyAdded = !isFreshToday && isNewArrival(product);
@@ -71,6 +72,7 @@ export function MobileFeedCard({ product }: MobileFeedCardProps) {
       <div className="mobile-feed-actions">
         <WhatsAppChooserButton
           product={product}
+          analyticsContext={analyticsContext}
           className={isSoldOut ? "secondary-button mobile-feed-whatsapp mobile-feed-whatsapp-muted" : "whatsapp-button mobile-feed-whatsapp"}
         />
         <Link href={buildProductPath(product.slug)} className="secondary-link mobile-feed-details">

@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { WhatsAppChooserButton } from "@/components/whatsapp-contact-chooser";
+import { trackAnalyticsEvent } from "@/lib/analytics";
 import { getStoreBrandById, resolveProductBrand } from "@/lib/brands";
 import { fetchProductBySlug } from "@/lib/firebase/firestore";
 import { Product } from "@/lib/types";
@@ -41,6 +42,14 @@ export function ProductDetailClient({ slug }: ProductDetailClientProps) {
         }
 
         setProduct(nextProduct);
+        if (nextProduct) {
+          trackAnalyticsEvent({
+            eventName: "product_view",
+            context: "detail",
+            product: nextProduct,
+            dedupeKey: `product_view:${nextProduct.id}`
+          });
+        }
         if (!nextProduct) {
           setError("This product link is no longer available.");
         }
@@ -178,6 +187,7 @@ export function ProductDetailClient({ slug }: ProductDetailClientProps) {
               </div>
               <WhatsAppChooserButton
                 product={product}
+                analyticsContext="detail"
                 className={isSoldOut ? "secondary-button product-detail-button product-detail-button-muted" : "whatsapp-button product-detail-button"}
               />
               <div className="product-detail-trust-list" aria-label="Buying support">

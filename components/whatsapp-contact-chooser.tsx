@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
+import { trackAnalyticsEvent } from "@/lib/analytics";
 import { getActiveTeamContacts, resolveProductContact } from "@/lib/team-contacts";
 import { Product } from "@/lib/types";
 import { buildWhatsAppLink, getWhatsAppCtaLabel, isProductSoldOut } from "@/lib/utils";
@@ -11,12 +12,14 @@ type WhatsAppChooserButtonProps = {
   product: Product;
   className?: string;
   label?: string;
+  analyticsContext?: "catalog" | "feed" | "detail";
 };
 
 export function WhatsAppChooserButton({
   product,
   className = "whatsapp-button",
-  label
+  label,
+  analyticsContext
 }: WhatsAppChooserButtonProps) {
   const preferredContact = resolveProductContact(product);
   const [isMounted, setIsMounted] = useState(false);
@@ -133,6 +136,11 @@ export function WhatsAppChooserButton({
         onClick={(event) => {
           event.preventDefault();
           event.stopPropagation();
+          trackAnalyticsEvent({
+            eventName: "whatsapp_click",
+            context: analyticsContext,
+            product
+          });
           setIsContactModalOpen(true);
         }}
       >

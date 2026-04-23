@@ -19,9 +19,10 @@ import { WhatsAppChooserButton } from "@/components/whatsapp-contact-chooser";
 
 type ProductCardProps = {
   product: Product;
+  analyticsContext?: "catalog" | "feed";
 };
 
-export function ProductCard({ product }: ProductCardProps) {
+export function ProductCard({ product, analyticsContext = "catalog" }: ProductCardProps) {
   const resolvedBrand = resolveProductBrand(product);
   const storeBrand = getStoreBrandById(resolvedBrand);
   const isFreshToday = isFreshProduct(product);
@@ -67,7 +68,11 @@ export function ProductCard({ product }: ProductCardProps) {
         </div>
       </Link>
       <div className="product-card-actions">
-        <WhatsAppChooserButton product={product} className={isSoldOut ? "secondary-button product-card-button-muted" : "whatsapp-button"} />
+        <WhatsAppChooserButton
+          product={product}
+          analyticsContext={analyticsContext}
+          className={isSoldOut ? "secondary-button product-card-button-muted" : "whatsapp-button"}
+        />
       </div>
     </article>
   );

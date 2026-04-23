@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { FirebaseStatus } from "@/components/firebase-status";
 import { MobileFeedCard } from "@/components/mobile-feed-card";
 import { ProductCard } from "@/components/product-card";
+import { trackAnalyticsEvent } from "@/lib/analytics";
 import { STORE_BRANDS, resolveProductBrand } from "@/lib/brands";
 import { fetchCategories, fetchProducts, subscribeToCategories, subscribeToProducts } from "@/lib/firebase/firestore";
 import { Category, Product } from "@/lib/types";
@@ -160,6 +161,20 @@ export function HomepageClient() {
     }
 
     setHasResolvedStorefrontMode(true);
+
+    trackAnalyticsEvent({
+      eventName: "storefront_visit",
+      context: resolvedMode,
+      dedupeKey: "storefront_visit"
+    });
+
+    if (resolvedMode === "feed") {
+      trackAnalyticsEvent({
+        eventName: "feed_view",
+        context: "feed",
+        dedupeKey: "feed_view"
+      });
+    }
   }, []);
 
   const visibleProducts = useMemo(() => products.filter((product) => isProductVisibleOnStorefront(product)), [products]);
@@ -215,6 +230,11 @@ export function HomepageClient() {
       if (nextMode === "feed") {
         window.localStorage.setItem(FEED_HINT_DISMISSED_STORAGE_KEY, "true");
         setShowFeedHint(false);
+        trackAnalyticsEvent({
+          eventName: "feed_view",
+          context: "feed",
+          dedupeKey: "feed_view"
+        });
       }
     }
   }
@@ -448,7 +468,7 @@ export function HomepageClient() {
           </div>
           <div className="mobile-feed-list">
             {feedProducts.length ? (
-              feedProducts.map((product) => <MobileFeedCard key={product.id} product={product} />)
+              feedProducts.map((product) => <MobileFeedCard key={product.id} product={product} analyticsContext="feed" />)
             ) : (
               <div className="empty-state">Feed items will appear here once live products are ready for browsing.</div>
             )}
@@ -464,7 +484,7 @@ export function HomepageClient() {
           </div>
           <div className="product-grid">
             {featuredProducts.map((product) => (
-              <ProductCard key={product.id} product={product} />
+              <ProductCard key={product.id} product={product} analyticsContext="catalog" />
             ))}
           </div>
         </section>
@@ -478,7 +498,7 @@ export function HomepageClient() {
           </div>
           <div className="product-grid">
             {freshProducts.map((product) => (
-              <ProductCard key={product.id} product={product} />
+              <ProductCard key={product.id} product={product} analyticsContext="catalog" />
             ))}
           </div>
         </section>
@@ -498,7 +518,7 @@ export function HomepageClient() {
             </p>
           </div>
           <div className="product-grid">
-            {latestProducts.length ? latestProducts.map((product) => <ProductCard key={product.id} product={product} />) : <div className="empty-state">Products will appear here once your team starts adding stock.</div>}
+            {latestProducts.length ? latestProducts.map((product) => <ProductCard key={product.id} product={product} analyticsContext="catalog" />) : <div className="empty-state">Products will appear here once your team starts adding stock.</div>}
           </div>
         </section>
       ) : null}
