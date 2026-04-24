@@ -3621,7 +3621,7 @@ textarea {
 }
 
 .activity-log-card {
-  gap: 14px;
+  gap: 16px;
   padding: 18px;
   background:
     linear-gradient(180deg, rgba(255, 253, 248, 1), rgba(255, 248, 239, 0.98)),
@@ -3635,19 +3635,32 @@ textarea {
 
 .activity-log-title {
   display: grid;
-  gap: 12px;
+  gap: 10px;
+}
+
+.activity-log-body {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
 }
 
 .activity-log-title h3 {
-  margin: 0 0 6px;
+  margin: 0;
   font-size: 1.05rem;
   letter-spacing: -0.02em;
+  overflow-wrap: anywhere;
+}
+
+.activity-log-title p {
+  color: rgba(89, 80, 67, 0.92);
+  line-height: 1.5;
 }
 
 .activity-log-time {
   color: var(--muted);
-  font-size: 0.88rem;
+  font-size: 0.84rem;
   font-weight: 600;
+  line-height: 1.35;
 }
 
 .activity-log-action {
@@ -3659,8 +3672,8 @@ textarea {
   border-radius: var(--radius-pill);
   font-size: 0.76rem;
   font-weight: 700;
-  text-transform: capitalize;
   line-height: 1;
+  white-space: nowrap;
 }
 
 .activity-log-action-created {
@@ -3676,6 +3689,11 @@ textarea {
 .activity-log-action-deleted {
   background: rgba(185, 66, 66, 0.12);
   color: var(--danger);
+}
+
+.activity-log-action-other {
+  background: rgba(102, 91, 78, 0.1);
+  color: var(--muted);
 }
 
 .activity-log-meta {
