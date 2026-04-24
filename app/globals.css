@@ -3100,6 +3100,19 @@ textarea {
   text-wrap: pretty;
 }
 
+.inventory-review-hint {
+  color: rgba(97, 83, 65, 0.92);
+  font-size: 0.74rem;
+  font-weight: 600;
+  line-height: 1.35;
+  white-space: normal;
+  text-wrap: pretty;
+}
+
+.inventory-review-hint-ready {
+  color: rgba(18, 101, 61, 0.78);
+}
+
 .form-section-note {
   margin: -4px 0 2px;
   color: var(--muted);

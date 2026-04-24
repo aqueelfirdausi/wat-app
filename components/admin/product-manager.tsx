@@ -48,11 +48,60 @@ type InventorySessionState = {
   statusPickOnly?: boolean;
   needsAttentionOnly?: boolean;
   featuredOnly?: boolean;
+  reviewFilter?: InventoryReviewFilter;
   sortBy?: string;
   categoryFilter?: string;
   stockFilter?: string;
   searchQuery?: string;
 };
+
+type InventoryReviewFilter = "all" | "needs_review" | "good_to_share";
+
+const REVIEW_STALE_DAYS = 14;
+
+function getInventoryReviewState(product: Product, now = new Date()) {
+  const cues: string[] = [];
+  const normalizedStockStatus = normalizeStockStatus(product.stockStatus);
+
+  if (!product.imageUrl?.trim()) {
+    cues.push("add image");
+  }
+
+  if (!Number.isFinite(product.price) || product.price <= 0) {
+    cues.push("check price");
+  }
+
+  if (normalizedStockStatus === "sold_out" && isProductVisibleInFeed(product)) {
+    cues.push("sold out in Feed");
+  }
+
+  if (normalizedStockStatus === "low_stock") {
+    cues.push("low stock");
+  }
+
+  if (!product.featured) {
+    cues.push("not featured");
+  }
+
+  if (!product.categoryName?.trim()) {
+    cues.push("add category");
+  }
+
+  if (!product.updatedAt) {
+    cues.push("check update date");
+  } else {
+    const daysSinceUpdate = Math.floor((now.getTime() - product.updatedAt.getTime()) / 86400000);
+
+    if (daysSinceUpdate >= REVIEW_STALE_DAYS) {
+      cues.push("older update");
+    }
+  }
+
+  return {
+    needsReview: cues.length > 0,
+    cues
+  };
+}
 
 export function ProductManager({ actor }: ProductManagerProps) {
   const router = useRouter();
@@ -70,6 +119,7 @@ export function ProductManager({ actor }: ProductManagerProps) {
   const [statusPickOnly, setStatusPickOnly] = useState(false);
   const [chosenOnly, setChosenOnly] = useState(false);
   const [needsAttentionOnly, setNeedsAttentionOnly] = useState(false);
+  const [reviewFilter, setReviewFilter] = useState<InventoryReviewFilter>("all");
   const [sortBy, setSortBy] = useState("storefront_order");
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [openActionsMenuId, setOpenActionsMenuId] = useState<string | null>(null);
@@ -155,12 +205,14 @@ export function ProductManager({ actor }: ProductManagerProps) {
     const validCategories = new Set(products.map((product) => product.categoryName).filter(Boolean));
     const validSortValues = new Set(["storefront_order", "updated_newest", "updated_oldest", "price_low", "price_high"]);
     const validStockValues = new Set(["all", ...STOCK_STATUSES]);
+    const validReviewValues = new Set<InventoryReviewFilter>(["all", "needs_review", "good_to_share"]);
 
     setSelectedIds((restored.selectedIds ?? []).filter((id) => validIds.has(id)));
     setChosenOnly(Boolean(restored.chosenOnly));
     setStatusPickOnly(Boolean(restored.statusPickOnly));
     setNeedsAttentionOnly(Boolean(restored.needsAttentionOnly));
     setFeaturedOnly(Boolean(restored.featuredOnly));
+    setReviewFilter(validReviewValues.has(restored.reviewFilter ?? "all") ? restored.reviewFilter ?? "all" : "all");
     setSortBy(validSortValues.has(restored.sortBy ?? "") ? restored.sortBy ?? "storefront_order" : "storefront_order");
     setCategoryFilter(validCategories.has(restored.categoryFilter ?? "") ? restored.categoryFilter ?? "all" : "all");
     const restoredStockFilter =
@@ -182,6 +234,7 @@ export function ProductManager({ actor }: ProductManagerProps) {
       !statusPickOnly &&
       !needsAttentionOnly &&
       !featuredOnly &&
+      reviewFilter === "all" &&
       sortBy === "storefront_order" &&
       categoryFilter === "all" &&
       stockFilter === "all" &&
@@ -198,6 +251,7 @@ export function ProductManager({ actor }: ProductManagerProps) {
       statusPickOnly,
       needsAttentionOnly,
       featuredOnly,
+      reviewFilter,
       sortBy,
       categoryFilter,
       stockFilter,
@@ -211,6 +265,7 @@ export function ProductManager({ actor }: ProductManagerProps) {
     featuredOnly,
     hasLoadedInventory,
     needsAttentionOnly,
+    reviewFilter,
     searchQuery,
     selectedIds,
     statusPickOnly,
@@ -316,12 +371,26 @@ export function ProductManager({ actor }: ProductManagerProps) {
         product.categoryName.toLowerCase().includes(normalizedQuery);
       const matchesCategory = categoryFilter === "all" || product.categoryName === categoryFilter;
       const matchesStock = stockFilter === "all" || normalizeStockStatus(product.stockStatus) === stockFilter;
-    const matchesFeatured = !featuredOnly || product.featured;
+      const matchesFeatured = !featuredOnly || product.featured;
       const matchesStatusPick = !statusPickOnly || product.statusPick;
       const matchesChosen = !chosenOnly || product.chosenForToday;
       const matchesNeedsAttention = !needsAttentionOnly || !getReadinessState(product).ready;
+      const reviewState = getInventoryReviewState(product);
+      const matchesReview =
+        reviewFilter === "all" ||
+        (reviewFilter === "needs_review" && reviewState.needsReview) ||
+        (reviewFilter === "good_to_share" && !reviewState.needsReview);
 
-      return matchesQuery && matchesCategory && matchesStock && matchesFeatured && matchesStatusPick && matchesChosen && matchesNeedsAttention;
+      return (
+        matchesQuery &&
+        matchesCategory &&
+        matchesStock &&
+        matchesFeatured &&
+        matchesStatusPick &&
+        matchesChosen &&
+        matchesNeedsAttention &&
+        matchesReview
+      );
     });
 
     nextProducts.sort((first, second) => {
@@ -355,7 +424,7 @@ export function ProductManager({ actor }: ProductManagerProps) {
     });
 
     return nextProducts;
-  }, [categoryFilter, chosenOnly, featuredOnly, needsAttentionOnly, products, searchQuery, sortBy, statusPickOnly, stockFilter]);
+  }, [categoryFilter, chosenOnly, featuredOnly, needsAttentionOnly, products, reviewFilter, searchQuery, sortBy, statusPickOnly, stockFilter]);
 
   const hasActiveFilters =
     searchQuery.trim().length > 0 ||
@@ -365,6 +434,7 @@ export function ProductManager({ actor }: ProductManagerProps) {
     statusPickOnly ||
     chosenOnly ||
     needsAttentionOnly ||
+    reviewFilter !== "all" ||
     sortBy !== "storefront_order";
 
   function clearFilters() {
@@ -375,6 +445,7 @@ export function ProductManager({ actor }: ProductManagerProps) {
     setStatusPickOnly(false);
     setChosenOnly(false);
     setNeedsAttentionOnly(false);
+    setReviewFilter("all");
     setSortBy("storefront_order");
   }
 
@@ -411,6 +482,7 @@ export function ProductManager({ actor }: ProductManagerProps) {
     setStatusPickOnly(false);
     setChosenOnly(false);
     setNeedsAttentionOnly(false);
+    setReviewFilter("all");
     setSortBy("storefront_order");
     setSelectedIds([]);
     setRestoredStateNotice(false);
@@ -908,6 +980,10 @@ export function ProductManager({ actor }: ProductManagerProps) {
     () => filteredProducts.filter((product) => !getReadinessState(product).ready).length,
     [filteredProducts]
   );
+  const visibleGoodToShareCount = useMemo(
+    () => filteredProducts.filter((product) => !getInventoryReviewState(product).needsReview).length,
+    [filteredProducts]
+  );
   const hasWorkingState =
     selectedIds.length > 0 ||
     chosenOnly ||
@@ -998,6 +1074,14 @@ export function ProductManager({ actor }: ProductManagerProps) {
                 <option value="updated_oldest">Updated oldest</option>
                 <option value="price_low">Price low to high</option>
                 <option value="price_high">Price high to low</option>
+              </select>
+            </label>
+            <label>
+              <span>Review</span>
+              <select value={reviewFilter} onChange={(event) => setReviewFilter(event.target.value as InventoryReviewFilter)}>
+                <option value="all">All</option>
+                <option value="needs_review">Needs review</option>
+                <option value="good_to_share">Good to share</option>
               </select>
             </label>
             <label className="checkbox-row manager-checkbox">
@@ -1096,6 +1180,9 @@ export function ProductManager({ actor }: ProductManagerProps) {
           <span>
             <strong>{visibleNeedsAttentionCount}</strong> needs attention
           </span>
+          <span>
+            <strong>{visibleGoodToShareCount}</strong> good to share
+          </span>
           {chosenProduct ? (
             <span>
               <strong>{visibleChosenCount}</strong> chosen today
@@ -1115,9 +1202,11 @@ export function ProductManager({ actor }: ProductManagerProps) {
             const isBrandNewToday = isNewToday(product);
             const isRecentlyAdded = !isBrandNewToday && isNewArrival(product);
             const readiness = getReadinessState(product);
+            const reviewState = getInventoryReviewState(product);
             const normalizedStockStatus = normalizeStockStatus(product.stockStatus);
             const isFeedVisible = isProductVisibleInFeed(product);
             const missingSummary = readiness.missing.slice(0, 2).join(" + ");
+            const reviewSummary = reviewState.cues.slice(0, 3).join(" + ");
             const isStatusPick = product.statusPick;
             const isTopPick = readiness.ready && (product.featured || isStatusPick);
             const isChosen = product.chosenForToday;
@@ -1176,6 +1265,9 @@ export function ProductManager({ actor }: ProductManagerProps) {
                       </div>
                       <span>{product.categoryName}</span>
                       {!readiness.ready ? <span className="inventory-readiness-hint">Missing {missingSummary}</span> : null}
+                      <span className={reviewState.needsReview ? "inventory-review-hint" : "inventory-review-hint inventory-review-hint-ready"}>
+                        {reviewState.needsReview ? `Review: ${reviewSummary}` : "Ready to share"}
+                      </span>
                     </div>
                   </div>
                 </div>
