@@ -1,9 +1,16 @@
 const DEFAULT_APP_TITLE = "WAT App";
 const DEFAULT_APP_DESCRIPTION = "Daily live products from WhatsApp Status";
 const DEFAULT_PUBLIC_APP_URL = "https://watapp.pk";
+const LEGACY_HOSTED_APP_URL_PATTERN = /wat-app--wat-app-727c6\.asia-southeast1\.hosted\.app/i;
 
 export function getPublicAppUrl() {
-  return process.env.NEXT_PUBLIC_APP_URL?.trim().replace(/\/$/, "") || DEFAULT_PUBLIC_APP_URL;
+  const configuredUrl = process.env.NEXT_PUBLIC_APP_URL?.trim().replace(/\/$/, "");
+
+  if (!configuredUrl || LEGACY_HOSTED_APP_URL_PATTERN.test(configuredUrl)) {
+    return DEFAULT_PUBLIC_APP_URL;
+  }
+
+  return configuredUrl;
 }
 
 export function getMetadataBase() {
