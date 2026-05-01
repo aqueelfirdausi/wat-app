@@ -1,9 +1,9 @@
 const DEFAULT_APP_TITLE = "WAT App";
 const DEFAULT_APP_DESCRIPTION = "Daily live products from WhatsApp Status";
-const LOCAL_FALLBACK_APP_URL = "http://localhost:3000";
+const DEFAULT_PUBLIC_APP_URL = "https://watapp.pk";
 
 export function getPublicAppUrl() {
-  return process.env.NEXT_PUBLIC_APP_URL?.trim().replace(/\/$/, "") || LOCAL_FALLBACK_APP_URL;
+  return process.env.NEXT_PUBLIC_APP_URL?.trim().replace(/\/$/, "") || DEFAULT_PUBLIC_APP_URL;
 }
 
 export function getMetadataBase() {

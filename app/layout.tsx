@@ -30,6 +30,11 @@ export const metadata: Metadata = {
     title: "WAT App",
     description: getDefaultMeta().description,
     images: [buildMetadataUrl("/opengraph-image")]
+  },
+  icons: {
+    icon: [{ url: "/branding/wat-logo.png", type: "image/png" }],
+    shortcut: ["/branding/wat-logo.png"],
+    apple: [{ url: "/branding/wat-logo.png", type: "image/png" }]
   }
 };
 
