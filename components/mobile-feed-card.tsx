@@ -26,14 +26,15 @@ export function MobileFeedCard({ product, analyticsContext = "feed" }: MobileFee
   const isFreshToday = isFreshProduct(product);
   const isRecentlyAdded = !isFreshToday && isNewArrival(product);
   const isSoldOut = isProductSoldOut(product);
+  const hasProductImage = Boolean(product.imageUrl);
   const supportingLine = getProductSupportingLine(product);
   const secondaryBadge = product.featured ? "Featured" : isFreshToday ? "Fresh today" : isRecentlyAdded ? "New" : null;
 
   return (
     <article className={isSoldOut ? "mobile-feed-card mobile-feed-card-sold-out" : "mobile-feed-card"}>
       <Link href={buildProductPath(product.slug)} className="mobile-feed-link">
-        <div className="mobile-feed-media">
-          {product.imageUrl ? (
+        <div className={hasProductImage ? "mobile-feed-media" : "mobile-feed-media mobile-feed-media-placeholder"}>
+          {hasProductImage ? (
             <Image
               src={product.imageUrl}
               alt={product.name}
@@ -42,7 +43,11 @@ export function MobileFeedCard({ product, analyticsContext = "feed" }: MobileFee
               className="mobile-feed-image"
             />
           ) : (
-            <div className="mobile-feed-image mobile-feed-image-fallback">{product.categoryName || "WAT"}</div>
+            <div className="mobile-feed-image mobile-feed-image-fallback">
+              <span className="product-image-fallback-mark" aria-hidden="true" />
+              <span className="product-image-fallback-label">Photo coming soon</span>
+              <span className="product-image-fallback-context">{storeBrand?.name || product.categoryName || "WAT App"}</span>
+            </div>
           )}
           <div className="mobile-feed-overlay" />
           <div className="mobile-feed-topline">

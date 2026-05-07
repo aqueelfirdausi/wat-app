@@ -1,7 +1,8 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { FirebaseStatus } from "@/components/firebase-status";
 import { MobileFeedCard } from "@/components/mobile-feed-card";
 import { ProductCard } from "@/components/product-card";
@@ -9,7 +10,17 @@ import { trackAnalyticsEvent } from "@/lib/analytics";
 import { STORE_BRANDS, resolveProductBrand } from "@/lib/brands";
 import { fetchCategories, fetchProducts, subscribeToCategories, subscribeToProducts } from "@/lib/firebase/firestore";
 import { Category, Product } from "@/lib/types";
-import { compareProductsForStorefront, isFreshProduct, isProductVisibleInFeed, isProductVisibleOnStorefront, normalizeStockStatus } from "@/lib/utils";
+import {
+  buildProductPath,
+  compareProductsForStorefront,
+  formatCurrency,
+  getStockStatusClassName,
+  getStockStatusLabel,
+  isFreshProduct,
+  isProductVisibleInFeed,
+  isProductVisibleOnStorefront,
+  normalizeStockStatus
+} from "@/lib/utils";
 
 type DeferredInstallPrompt = Event & {
   prompt: () => Promise<void>;
@@ -22,7 +33,8 @@ type DeferredInstallPrompt = Event & {
 const INSTALL_HINT_STORAGE_KEY = "watapp-install-hint-dismissed";
 const STOREFRONT_MODE_STORAGE_KEY = "watapp-storefront-mode";
 const STOREFRONT_PREFERRED_MODE_STORAGE_KEY = "watapp-storefront-preferred-mode";
-const FEED_HINT_DISMISSED_STORAGE_KEY = "watapp-feed-hint-dismissed";
+const FEED_HINT_SEEN_STORAGE_KEY = "watapp-feed-hint-seen";
+const LEGACY_FEED_HINT_DISMISSED_STORAGE_KEY = "watapp-feed-hint-dismissed";
 
 function getInstallGuidance() {
   if (typeof window === "undefined") {
@@ -69,6 +81,7 @@ export function HomepageClient() {
   const [storefrontMode, setStorefrontMode] = useState<"catalog" | "feed">("catalog");
   const [showFeedHint, setShowFeedHint] = useState(false);
   const [hasResolvedStorefrontMode, setHasResolvedStorefrontMode] = useState(false);
+  const heroLivePicksStripRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     let productsUnsubscribe: undefined | (() => void);
@@ -155,8 +168,10 @@ export function HomepageClient() {
       window.localStorage.setItem(STOREFRONT_MODE_STORAGE_KEY, resolvedMode);
     }
 
-    const feedHintDismissed = window.localStorage.getItem(FEED_HINT_DISMISSED_STORAGE_KEY) === "true";
-    if (!feedHintDismissed && resolvedMode !== "feed") {
+    const feedHintSeen =
+      window.localStorage.getItem(FEED_HINT_SEEN_STORAGE_KEY) === "true" ||
+      window.localStorage.getItem(LEGACY_FEED_HINT_DISMISSED_STORAGE_KEY) === "true";
+    if (!feedHintSeen && resolvedMode === "catalog") {
       setShowFeedHint(true);
     }
 
@@ -207,6 +222,24 @@ export function HomepageClient() {
     () => visibleProducts.filter((item) => normalizeStockStatus(item.stockStatus) !== "sold_out").length,
     [visibleProducts]
   );
+  const heroLivePicks = useMemo(() => {
+    const sortedProducts = [...visibleProducts].sort(compareProductsForStorefront);
+    const picked = new Map<string, Product>();
+    const addProducts = (items: Product[]) => {
+      items.forEach((product) => {
+        if (picked.size < 4) {
+          picked.set(product.id, product);
+        }
+      });
+    };
+
+    addProducts(sortedProducts.filter((product) => isFreshProduct(product)));
+    addProducts(sortedProducts.filter((product) => product.featured));
+    addProducts(sortedProducts.filter((product) => normalizeStockStatus(product.stockStatus) !== "sold_out"));
+    addProducts(sortedProducts);
+
+    return Array.from(picked.values()).slice(0, 4);
+  }, [visibleProducts]);
   const firstProductSectionId = featuredProducts.length
     ? "featured-products"
     : freshProducts.length
@@ -228,7 +261,7 @@ export function HomepageClient() {
       window.localStorage.setItem(STOREFRONT_MODE_STORAGE_KEY, nextMode);
 
       if (nextMode === "feed") {
-        window.localStorage.setItem(FEED_HINT_DISMISSED_STORAGE_KEY, "true");
+        window.localStorage.setItem(FEED_HINT_SEEN_STORAGE_KEY, "true");
         setShowFeedHint(false);
         trackAnalyticsEvent({
           eventName: "feed_view",
@@ -241,10 +274,23 @@ export function HomepageClient() {
 
   function dismissFeedHint() {
     if (typeof window !== "undefined") {
-      window.localStorage.setItem(FEED_HINT_DISMISSED_STORAGE_KEY, "true");
+      window.localStorage.setItem(FEED_HINT_SEEN_STORAGE_KEY, "true");
     }
 
     setShowFeedHint(false);
+  }
+
+  function scrollHeroLivePicks(direction: "previous" | "next") {
+    const strip = heroLivePicksStripRef.current;
+    if (!strip) {
+      return;
+    }
+
+    const scrollAmount = Math.max(220, Math.round(strip.clientWidth * 0.82));
+    strip.scrollBy({
+      left: direction === "previous" ? -scrollAmount : scrollAmount,
+      behavior: "smooth"
+    });
   }
 
   async function handleInstallHintAction() {
@@ -274,16 +320,17 @@ export function HomepageClient() {
       })),
     [visibleCategories, visibleProducts]
   );
+  const hasFeedModeOption = true;
 
   return (
     <main className="public-shell">
       <FirebaseStatus />
       <header className="platform-header">
         <div className="platform-mark">
-          <div className="platform-logo-wrap">
-            <Image src="/branding/wat-logo.png" alt="WAT App" width={44} height={44} className="platform-logo" />
+          <div className="platform-logo-wrap" aria-label="WAT App">
+            <Image src="/branding/wat-app-icon.svg" alt="" width={34} height={34} className="platform-logo" aria-hidden="true" />
           </div>
-          <div>
+          <div className="platform-title-block">
             <p className="platform-kicker">WAT App</p>
             <strong>What&apos;s Available Today</strong>
           </div>
@@ -296,6 +343,9 @@ export function HomepageClient() {
       <section className="hero-section">
         <div className="hero-copy">
           <span className="eyebrow">Daily stock from WhatsApp Status</span>
+          <p className="hero-urdu-line" lang="ur" dir="rtl">
+            آج کیا دستیاب ہے؟
+          </p>
           <h1>Browse today&apos;s live stock fast.</h1>
           <p>Check what&apos;s available now, see today&apos;s pricing clearly, and move into WhatsApp when you&apos;re ready to confirm.</p>
           <div className="hero-actions">
@@ -305,11 +355,6 @@ export function HomepageClient() {
             <a href="#brand-stores" className="secondary-link">
               Shop by brand
             </a>
-          </div>
-          <div className="hero-trust-bar">
-            <span>Updated through the day</span>
-            <span>Posted price shown clearly</span>
-            <span>Confirm on WhatsApp before ordering</span>
           </div>
           <div className="hero-summary-strip" aria-label="Live stock summary">
             <span>
@@ -325,8 +370,157 @@ export function HomepageClient() {
               <strong>{readyTodayCount}</strong> ready today
             </span>
           </div>
+          {heroLivePicks.length ? (
+            <div className="hero-live-picks" aria-label="Today's live product picks">
+              <div className="hero-live-picks-heading">
+                <strong>Today&apos;s Live Picks</strong>
+                <span>Live stock highlights</span>
+                {heroLivePicks.length > 1 ? (
+                  <div className="hero-live-picks-controls" aria-label="Today&apos;s Live Picks carousel controls">
+                    <button type="button" aria-label="Previous live pick" onClick={() => scrollHeroLivePicks("previous")}>
+                      ‹
+                    </button>
+                    <button type="button" aria-label="Next live pick" onClick={() => scrollHeroLivePicks("next")}>
+                      ›
+                    </button>
+                  </div>
+                ) : null}
+              </div>
+              <div className="hero-live-picks-strip" ref={heroLivePicksStripRef}>
+                {heroLivePicks.map((product) => (
+                  <Link key={product.id} href={buildProductPath(product.slug)} className="hero-live-pick-card">
+                    <div className="hero-live-pick-media">
+                      {product.imageUrl ? (
+                        <Image
+                          src={product.imageUrl}
+                          alt={product.name}
+                          fill
+                          sizes="132px"
+                          className="hero-live-pick-image"
+                        />
+                      ) : (
+                        <div className="hero-live-pick-image-fallback">
+                          <span className="product-image-fallback-mark" aria-hidden="true" />
+                        </div>
+                      )}
+                    </div>
+                    <div className="hero-live-pick-copy">
+                      <span className={`hero-live-pick-stock ${getStockStatusClassName(product.stockStatus)}`}>
+                        {getStockStatusLabel(product.stockStatus)}
+                      </span>
+                      <strong>{product.name}</strong>
+                      <span>{formatCurrency(product.price, product.currency)}</span>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          ) : null}
         </div>
       </section>
+
+      <section className="section-block section-tight category-filter-section">
+        <div className="section-heading">
+          <h2>Browse by category</h2>
+          <p>Tap a category to narrow today&apos;s live stock without losing the quick scan flow.</p>
+        </div>
+        <div className="category-strip">
+          <button className={activeCategory === "All" ? "category-chip active" : "category-chip"} onClick={() => setActiveCategory("All")}>
+            All
+          </button>
+          {visibleCategories.map((category) => (
+            <button
+              key={category.id}
+              className={activeCategory === category.name ? "category-chip active" : "category-chip"}
+              onClick={() => setActiveCategory(category.name)}
+            >
+              {category.name}
+            </button>
+          ))}
+        </div>
+      </section>
+
+      <section className="section-block section-tight">
+        <div className="storefront-mode-panel" aria-label="Storefront view mode">
+          <div className="storefront-mode-copy">
+            <p className="eyebrow">
+              <span className="storefront-mode-desktop-copy">Storefront mode</span>
+              <span className="storefront-mode-mobile-copy">Browse view</span>
+            </p>
+            <strong>
+              <span className="storefront-mode-desktop-copy">Choose the view that feels easiest to browse right now.</span>
+              <span className="storefront-mode-mobile-copy">Choose how to scan today&apos;s stock.</span>
+            </strong>
+            <p>
+              <span className="storefront-mode-desktop-copy">Catalog and Feed show the same live products, pricing, and WhatsApp path. Switch anytime without losing your place.</span>
+              <span className="storefront-mode-mobile-copy">Same products, different browsing style.</span>
+            </p>
+          </div>
+          <div className="storefront-mode-toggle" role="tablist" aria-label="Choose storefront mode">
+            <button
+              type="button"
+              role="tab"
+              aria-selected={storefrontMode === "catalog"}
+              className={storefrontMode === "catalog" ? "storefront-mode-chip active" : "storefront-mode-chip"}
+              onClick={() => handleStorefrontModeChange("catalog")}
+            >
+              Catalog
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={storefrontMode === "feed"}
+              className={storefrontMode === "feed" ? "storefront-mode-chip active" : "storefront-mode-chip"}
+              onClick={() => handleStorefrontModeChange("feed")}
+            >
+              Feed
+            </button>
+          </div>
+          {hasResolvedStorefrontMode && showFeedHint && storefrontMode === "catalog" && hasFeedModeOption ? (
+            <div className="feed-hint-banner" role="status" aria-live="polite">
+              <p>New: try Feed for quick browsing</p>
+              <button type="button" className="feed-hint-dismiss" onClick={dismissFeedHint}>
+                Got it
+              </button>
+            </div>
+          ) : null}
+          <div className="storefront-mode-reassurance" aria-label="Storefront reassurance">
+            <span>Same live stock in both views</span>
+            <span>Availability stays visible</span>
+            <span>WhatsApp ordering works the same way</span>
+          </div>
+        </div>
+      </section>
+
+      {hasResolvedStorefrontMode && storefrontMode === "feed" ? (
+        <section className="section-block mobile-feed-section" id={firstProductSectionId}>
+          <div className="section-heading mobile-feed-heading">
+            <h2>Live mobile feed</h2>
+            <p>A cleaner, image-first flow for faster mobile scanning, with the same availability cues and WhatsApp ordering path.</p>
+          </div>
+          <div className="mobile-feed-list">
+            {feedProducts.length ? (
+              feedProducts.map((product) => <MobileFeedCard key={product.id} product={product} analyticsContext="feed" />)
+            ) : (
+              <div className="empty-state">Feed items will appear here once live products are ready for browsing.</div>
+            )}
+          </div>
+        </section>
+      ) : null}
+
+      {(!hasResolvedStorefrontMode || storefrontMode === "catalog") && featuredProducts.length ? (
+        <section className="section-block" id="featured-products">
+          <div className="section-heading">
+            <h2>Featured today</h2>
+            <p>Important live items surfaced first so casual visitors can trust what deserves attention today.</p>
+          </div>
+          <div className="product-grid">
+            {featuredProducts.map((product) => (
+              <ProductCard key={product.id} product={product} analyticsContext="catalog" />
+            ))}
+          </div>
+        </section>
+      ) : null}
 
       {showInstallHint && !showInstallGuide ? (
         <section className="install-hint" aria-label="Save WAT App for daily stock checks">
@@ -379,113 +573,6 @@ export function HomepageClient() {
             >
               Done
             </button>
-          </div>
-        </section>
-      ) : null}
-
-      <section className="section-block section-tight">
-        <div className="section-heading">
-          <h2>Browse by category</h2>
-          <p>Tap a category to narrow today&apos;s live stock without losing the quick scan flow.</p>
-        </div>
-        <div className="category-strip">
-          <button className={activeCategory === "All" ? "category-chip active" : "category-chip"} onClick={() => setActiveCategory("All")}>
-            All
-          </button>
-          {visibleCategories.map((category) => (
-            <button
-              key={category.id}
-              className={activeCategory === category.name ? "category-chip active" : "category-chip"}
-              onClick={() => setActiveCategory(category.name)}
-            >
-              {category.name}
-            </button>
-          ))}
-        </div>
-      </section>
-
-      <section className="section-block section-tight">
-        <div className="storefront-mode-panel" aria-label="Storefront view mode">
-          <div className="storefront-mode-copy">
-            <p className="eyebrow">Storefront mode</p>
-            <strong>Choose the view that feels easiest to browse right now.</strong>
-            <p>Catalog and Feed show the same live products, pricing, and WhatsApp path. Switch anytime without losing your place.</p>
-          </div>
-          <div className="storefront-mode-toggle" role="tablist" aria-label="Choose storefront mode">
-            <button
-              type="button"
-              role="tab"
-              aria-selected={storefrontMode === "catalog"}
-              className={storefrontMode === "catalog" ? "storefront-mode-chip active" : "storefront-mode-chip"}
-              onClick={() => handleStorefrontModeChange("catalog")}
-            >
-              Catalog
-            </button>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={storefrontMode === "feed"}
-              className={storefrontMode === "feed" ? "storefront-mode-chip active" : "storefront-mode-chip"}
-              onClick={() => handleStorefrontModeChange("feed")}
-            >
-              Feed
-            </button>
-          </div>
-          <div className="storefront-mode-reassurance" aria-label="Storefront reassurance">
-            <span>Same live stock in both views</span>
-            <span>Availability stays visible</span>
-            <span>WhatsApp ordering works the same way</span>
-          </div>
-        </div>
-        {hasResolvedStorefrontMode && showFeedHint && storefrontMode !== "feed" ? (
-          <div className="feed-hint-banner" role="status" aria-live="polite">
-            <div className="feed-hint-copy">
-              <span className="feed-hint-kicker">New</span>
-              <strong>Try Feed for quick browsing.</strong>
-              <p>See the latest items in a faster image-first view, then move into the same product details and WhatsApp flow as usual.</p>
-            </div>
-            <div className="feed-hint-actions">
-              <button
-                type="button"
-                className="secondary-link feed-hint-open"
-                onClick={() => handleStorefrontModeChange("feed")}
-              >
-                Open Feed
-              </button>
-              <button type="button" className="feed-hint-dismiss" onClick={dismissFeedHint} aria-label="Dismiss Feed hint">
-                Not now
-              </button>
-            </div>
-          </div>
-        ) : null}
-      </section>
-
-      {hasResolvedStorefrontMode && storefrontMode === "feed" ? (
-        <section className="section-block mobile-feed-section" id={firstProductSectionId}>
-          <div className="section-heading mobile-feed-heading">
-            <h2>Live mobile feed</h2>
-            <p>A cleaner, image-first flow for faster mobile scanning, with the same availability cues and WhatsApp ordering path.</p>
-          </div>
-          <div className="mobile-feed-list">
-            {feedProducts.length ? (
-              feedProducts.map((product) => <MobileFeedCard key={product.id} product={product} analyticsContext="feed" />)
-            ) : (
-              <div className="empty-state">Feed items will appear here once live products are ready for browsing.</div>
-            )}
-          </div>
-        </section>
-      ) : null}
-
-      {(!hasResolvedStorefrontMode || storefrontMode === "catalog") && featuredProducts.length ? (
-        <section className="section-block" id="featured-products">
-          <div className="section-heading">
-            <h2>Featured today</h2>
-            <p>Important live items surfaced first so casual visitors can trust what deserves attention today.</p>
-          </div>
-          <div className="product-grid">
-            {featuredProducts.map((product) => (
-              <ProductCard key={product.id} product={product} analyticsContext="catalog" />
-            ))}
           </div>
         </section>
       ) : null}
@@ -561,6 +648,12 @@ export function HomepageClient() {
       </section>
 
       {error ? <div className="inline-error">{error}</div> : null}
+
+      <footer className="developer-credit" aria-label="Developer credit">
+        <span className="developer-credit-byline">Developed by Aqueel Ahmed Firdausi</span>
+        <span className="developer-credit-studio">A novart.io build</span>
+        <Image src="/branding/novart-logo-dark.png" alt="novart.io" width={1024} height={1024} className="developer-credit-logo" />
+      </footer>
     </main>
   );
 }

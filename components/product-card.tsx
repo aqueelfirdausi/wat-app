@@ -42,7 +42,11 @@ export function ProductCard({ product, analyticsContext = "catalog" }: ProductCa
               className="product-image"
             />
           ) : (
-            <div className="product-image product-image-fallback">{product.categoryName || "WAT"}</div>
+            <div className="product-image product-image-fallback">
+              <span className="product-image-fallback-mark" aria-hidden="true" />
+              <span className="product-image-fallback-label">Photo coming soon</span>
+              <span className="product-image-fallback-context">{storeBrand?.name || product.categoryName || "WAT App"}</span>
+            </div>
           )}
           <span className={`stock-pill ${getStockStatusClassName(product.stockStatus)}`}>
             {getStockStatusLabel(product.stockStatus)}

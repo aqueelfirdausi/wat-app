@@ -32,9 +32,9 @@ export const metadata: Metadata = {
     images: [buildMetadataUrl("/opengraph-image")]
   },
   icons: {
-    icon: [{ url: "/branding/wat-logo.png", type: "image/png" }],
-    shortcut: ["/branding/wat-logo.png"],
-    apple: [{ url: "/branding/wat-logo.png", type: "image/png" }]
+    icon: [{ url: "/icon.svg", type: "image/svg+xml" }],
+    shortcut: ["/icon.svg"],
+    apple: [{ url: "/branding/wat-app-icon.svg", type: "image/svg+xml" }]
   }
 };
 
