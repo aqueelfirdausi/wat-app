@@ -536,6 +536,15 @@ export function HomepageClient() {
             <button type="button" className="primary-link" onClick={handleInstallHintAction}>
               Save app
             </button>
+            <a
+              href="https://github.com/aqueelfirdausi/wat-app/releases/download/v1.0/app-debug.apk"
+              className="apk-download-link"
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={dismissInstallHint}
+            >
+              Download APK
+            </a>
           </div>
         </section>
       ) : null}
