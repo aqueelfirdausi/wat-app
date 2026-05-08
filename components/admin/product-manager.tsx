@@ -128,6 +128,7 @@ export function ProductManager({ actor, canDelete = false }: ProductManagerProps
   const [openActionsMenuId, setOpenActionsMenuId] = useState<string | null>(null);
   const [copiedProductId, setCopiedProductId] = useState<string | null>(null);
   const [quickActionBusyId, setQuickActionBusyId] = useState<string | null>(null);
+  const [showFilters, setShowFilters] = useState(false);
   const [quickActionFeedback, setQuickActionFeedback] = useState<{ productId: string; message: string } | null>(null);
   const [bulkActionBusy, setBulkActionBusy] = useState<string | null>(null);
   const [bulkActionFeedback, setBulkActionFeedback] = useState("");
@@ -1046,6 +1047,14 @@ export function ProductManager({ actor, canDelete = false }: ProductManagerProps
               placeholder="Search by product name or category"
             />
           </label>
+          <button
+            className="manager-filters-toggle"
+            type="button"
+            onClick={() => setShowFilters((v) => !v)}
+          >
+            {showFilters ? "Hide filters" : "Filters"}
+          </button>
+          {showFilters ? (
           <div className="manager-filters">
             <label>
               <span>Category</span>
@@ -1125,6 +1134,7 @@ export function ProductManager({ actor, canDelete = false }: ProductManagerProps
               </button>
             ) : null}
           </div>
+          ) : null}
         </div>
         <div className="manager-state-row">
           <p className="manager-tip">Tip: storefront order is the default so you can review what customers are most likely to notice first today.</p>

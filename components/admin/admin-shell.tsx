@@ -26,12 +26,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
       <aside className="admin-sidebar">
         <div>
           <p className="sidebar-eyebrow">WAT App Admin</p>
-          <h2>{isProductEditor ? "Product workspace" : "Owner workspace"}</h2>
-          <p className="sidebar-copy">
-            {isProductEditor
-              ? "Product editors can manage daily catalog items, stock, visibility, and featured status."
-              : "The owner manages uploads, pricing, stock, and platform control. Team members are customer-facing WhatsApp contacts."}
-          </p>
+          <h2>{isProductEditor ? "Products" : "WAT App"}</h2>
         </div>
         <nav className="admin-nav">
           {visibleLinks.map((link) => (
