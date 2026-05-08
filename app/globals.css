@@ -482,19 +482,24 @@ button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  gap: 7px;
   min-height: 40px;
-  padding: 0 14px;
-  font-size: 0.82rem;
-  color: var(--muted);
+  padding: 0 16px;
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: #1f1a14;
+  border: 1.5px solid #1f1a14;
   border-radius: 8px;
+  background: transparent;
   text-decoration: none;
   white-space: nowrap;
-  transition: color 0.15s;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
 }
 
 .apk-download-link:hover {
-  color: var(--brand-dark);
-  text-decoration: underline;
+  background: #1f1a14;
+  color: #fff;
+  text-decoration: none;
 }
 
 .install-guide {
@@ -2310,7 +2315,8 @@ textarea:focus-visible {
     grid-column: 1 / -1;
     width: 100%;
     min-height: 36px;
-    font-size: 0.78rem;
+    font-size: 0.8rem;
+    padding: 0 12px;
   }
 
   .install-hint .primary-link,
