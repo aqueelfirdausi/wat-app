@@ -25,3 +25,4 @@ android/local.properties
 
 # Service account credentials — never commit
 service-account.json
+*-firebase-adminsdk-*.json
