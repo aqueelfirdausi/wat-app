@@ -18,6 +18,7 @@ import {
   writeBatch
 } from "firebase/firestore";
 import { deleteObject, getDownloadURL, ref, uploadBytes } from "firebase/storage";
+import { AdminRole } from "@/lib/admin-roles";
 import { inferBrandFromCategory } from "@/lib/brands";
 import { db, storage } from "@/lib/firebase/client";
 import { DEFAULT_CURRENCY } from "@/lib/constants";
@@ -29,6 +30,7 @@ type Actor = {
   uid: string;
   name: string;
   email: string;
+  role?: AdminRole | null;
 };
 
 function ensureDb() {
@@ -173,6 +175,7 @@ export async function ensureUserProfile(actor: Actor) {
       uid: actor.uid,
       name: actor.name,
       email: actor.email,
+      ...(actor.role ? { role: actor.role, isAdmin: actor.role === "admin" } : {}),
       lastSeenAt: serverTimestamp()
     },
     { merge: true }
@@ -492,6 +495,10 @@ export async function updateChosenForToday(product: Product, nextChosen: boolean
 }
 
 export async function removeProduct(product: Product, actor: Actor) {
+  if (actor.role !== "admin") {
+    throw new Error("Only owner admins can permanently delete products.");
+  }
+
   const firestore = ensureDb();
 
   if (product.imagePath) {

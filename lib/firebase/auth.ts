@@ -2,19 +2,15 @@
 
 import { GoogleAuthProvider, User, onAuthStateChanged, signInWithPopup, signOut } from "firebase/auth";
 import { doc, getDoc, serverTimestamp, setDoc } from "firebase/firestore";
+import { getAdminRoleForEmail, normalizeAdminEmail } from "@/lib/admin-roles";
 import { auth, db } from "@/lib/firebase/client";
 
-const APPROVED_ADMIN_EMAILS = ["aqueelfirdausi@gmail.com", "abdullahbinaqueel@gmail.com"];
+export async function getAdminAccessRole(user: Pick<User, "uid" | "email" | "displayName">) {
+  const normalizedEmail = normalizeAdminEmail(user.email);
+  const role = getAdminRoleForEmail(normalizedEmail);
 
-function normalizeEmail(email?: string | null) {
-  return email?.trim().toLowerCase() ?? "";
-}
-
-export async function hasAdminAccess(user: Pick<User, "uid" | "email" | "displayName">) {
-  const normalizedEmail = normalizeEmail(user.email);
-
-  if (!APPROVED_ADMIN_EMAILS.includes(normalizedEmail)) {
-    return false;
+  if (!role) {
+    return null;
   }
 
   if (!db) {
@@ -31,19 +27,20 @@ export async function hasAdminAccess(user: Pick<User, "uid" | "email" | "display
         uid: user.uid,
         email: normalizedEmail,
         name: user.displayName ?? normalizedEmail,
-        isAdmin: true,
+        role,
+        isAdmin: role === "admin",
         active: true,
         updatedAt: serverTimestamp()
       },
       { merge: true }
     );
 
-    return true;
+    return role;
   }
 
   const data = snapshot.data();
-  if (data.active === false || data.isAdmin === false) {
-    return false;
+  if (data.active === false || (role === "admin" && data.isAdmin === false)) {
+    return null;
   }
 
   await setDoc(
@@ -52,14 +49,19 @@ export async function hasAdminAccess(user: Pick<User, "uid" | "email" | "display
       uid: user.uid,
       email: normalizedEmail,
       name: user.displayName ?? data.name ?? normalizedEmail,
-      isAdmin: true,
+      role,
+      isAdmin: role === "admin",
       active: true,
       updatedAt: serverTimestamp()
     },
     { merge: true }
   );
 
-  return true;
+  return role;
+}
+
+export async function hasAdminAccess(user: Pick<User, "uid" | "email" | "displayName">) {
+  return Boolean(await getAdminAccessRole(user));
 }
 
 export function subscribeToAuth(callback: (user: User | null) => void) {
@@ -82,9 +84,9 @@ export async function loginWithGoogle() {
   });
 
   const credential = await signInWithPopup(auth, provider);
-  const allowed = await hasAdminAccess(credential.user);
+  const role = await getAdminAccessRole(credential.user);
 
-  if (!allowed) {
+  if (!role) {
     await signOut(auth);
     throw new Error("This Google account is not approved for admin access.");
   }

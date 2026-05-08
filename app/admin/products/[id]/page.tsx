@@ -9,7 +9,7 @@ import { Product } from "@/lib/types";
 
 export default function EditProductPage() {
   const { id } = useParams<{ id: string }>();
-  const { user } = useAuth();
+  const { role, user } = useAuth();
   const [product, setProduct] = useState<Product | null>(null);
   const [error, setError] = useState("");
 
@@ -38,7 +38,8 @@ export default function EditProductPage() {
       actor={{
         uid: user.uid,
         name: user.displayName || user.email || "Team Member",
-        email: user.email || ""
+        email: user.email || "",
+        role
       }}
     />
   );

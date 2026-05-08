@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { AdminRole } from "@/lib/admin-roles";
 import { inferBrandFromCategory } from "@/lib/brands";
 import { STORE_BRANDS } from "@/lib/brands";
 import { PRODUCT_BRANDS, PRODUCT_CONDITIONS, STOCK_STATUSES } from "@/lib/constants";
@@ -18,6 +19,7 @@ type ProductFormProps = {
     uid: string;
     name: string;
     email: string;
+    role: AdminRole | null;
   };
   initialProduct?: Product;
 };

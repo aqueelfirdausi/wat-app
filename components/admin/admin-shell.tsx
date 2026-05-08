@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { logoutUser } from "@/lib/firebase/auth";
 import { useAuth } from "@/components/providers/auth-provider";
+import { canAccessAdminPath } from "@/lib/admin-roles";
 
 const links = [
   { href: "/admin", label: "Dashboard" },
@@ -15,18 +16,24 @@ const links = [
 
 export function AdminShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const { user } = useAuth();
+  const { role, user } = useAuth();
+  const visibleLinks = links.filter((link) => canAccessAdminPath(role, link.href));
+  const isProductEditor = role === "product_editor";
 
   return (
     <div className="admin-shell">
       <aside className="admin-sidebar">
         <div>
           <p className="sidebar-eyebrow">WAT App Admin</p>
-          <h2>Owner workspace</h2>
-          <p className="sidebar-copy">The owner manages uploads, pricing, stock, and platform control. Team members are customer-facing WhatsApp contacts.</p>
+          <h2>{isProductEditor ? "Product workspace" : "Owner workspace"}</h2>
+          <p className="sidebar-copy">
+            {isProductEditor
+              ? "Product editors can manage daily catalog items, stock, visibility, and featured status."
+              : "The owner manages uploads, pricing, stock, and platform control. Team members are customer-facing WhatsApp contacts."}
+          </p>
         </div>
         <nav className="admin-nav">
-          {links.map((link) => (
+          {visibleLinks.map((link) => (
             <Link key={link.href} href={link.href} className={pathname === link.href ? "admin-nav-link active" : "admin-nav-link"}>
               {link.label}
             </Link>

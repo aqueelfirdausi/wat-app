@@ -2,16 +2,19 @@
 
 import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { User } from "firebase/auth";
-import { hasAdminAccess, logoutUser, subscribeToAuth } from "@/lib/firebase/auth";
+import { AdminRole } from "@/lib/admin-roles";
+import { getAdminAccessRole, logoutUser, subscribeToAuth } from "@/lib/firebase/auth";
 
 type AuthContextValue = {
   user: User | null;
+  role: AdminRole | null;
   isAdmin: boolean;
   loading: boolean;
 };
 
 const AuthContext = createContext<AuthContextValue>({
   user: null,
+  role: null,
   isAdmin: false,
   loading: true
 });
@@ -38,6 +41,7 @@ function withAccessTimeout<T>(promise: Promise<T>) {
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
+  const [role, setRole] = useState<AdminRole | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
   const accessCheckIdRef = useRef(0);
@@ -55,6 +59,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
 
         setUser(null);
+        setRole(null);
         setIsAdmin(false);
         setLoading(false);
         return;
@@ -62,25 +67,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       setLoading(true);
 
-      withAccessTimeout(hasAdminAccess(nextUser))
-        .then(async (allowed) => {
+      withAccessTimeout(getAdminAccessRole(nextUser))
+        .then(async (nextRole) => {
           if (!active || accessCheckIdRef.current !== accessCheckId) {
             return;
           }
 
-          if (!allowed) {
+          if (!nextRole) {
             await logoutUser();
             if (!active || accessCheckIdRef.current !== accessCheckId) {
               return;
             }
 
             setUser(null);
+            setRole(null);
             setIsAdmin(false);
             setLoading(false);
             return;
           }
 
           setUser(nextUser);
+          setRole(nextRole);
           setIsAdmin(true);
           setLoading(false);
         })
@@ -90,6 +97,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           }
 
           setUser(null);
+          setRole(null);
           setIsAdmin(false);
           setLoading(false);
         });
@@ -104,10 +112,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const value = useMemo(
     () => ({
       user,
+      role,
       isAdmin,
       loading
     }),
-    [isAdmin, loading, user]
+    [isAdmin, loading, role, user]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

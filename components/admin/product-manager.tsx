@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import QRCode from "qrcode";
+import { AdminRole } from "@/lib/admin-roles";
 import { STOCK_STATUSES } from "@/lib/constants";
 import {
   removeProduct,
@@ -35,7 +36,9 @@ type ProductManagerProps = {
     uid: string;
     name: string;
     email: string;
+    role: AdminRole | null;
   };
+  canDelete?: boolean;
 };
 
 const SAVE_FEEDBACK_STORAGE_KEY = "watapp-admin-save-feedback";
@@ -103,7 +106,7 @@ function getInventoryReviewState(product: Product, now = new Date()) {
   };
 }
 
-export function ProductManager({ actor }: ProductManagerProps) {
+export function ProductManager({ actor, canDelete = false }: ProductManagerProps) {
   const router = useRouter();
   const [products, setProducts] = useState<Product[]>([]);
   const [hasLoadedInventory, setHasLoadedInventory] = useState(false);
@@ -1595,17 +1598,19 @@ export function ProductManager({ actor }: ProductManagerProps) {
                         >
                           Download status image
                         </button>
-                        <button
-                          className="actions-menu-item actions-menu-item-danger"
-                          type="button"
-                          role="menuitem"
-                          onClick={() => {
-                            closeActionsMenu();
-                            handleDelete(product);
-                          }}
-                        >
-                          Delete
-                        </button>
+                        {canDelete ? (
+                          <button
+                            className="actions-menu-item actions-menu-item-danger"
+                            type="button"
+                            role="menuitem"
+                            onClick={() => {
+                              closeActionsMenu();
+                              handleDelete(product);
+                            }}
+                          >
+                            Delete
+                          </button>
+                        ) : null}
                       </div>
                     ) : null}
                   </div>
