@@ -1,9 +1,14 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "@/app/globals.css";
 import { AuthProvider } from "@/components/providers/auth-provider";
 import { buildMetadataUrl, getDefaultMeta, getMetadataBase } from "@/lib/metadata";
 
+export const viewport: Viewport = {
+  themeColor: "#16c16b"
+};
+
 export const metadata: Metadata = {
+  manifest: "/manifest.json",
   metadataBase: getMetadataBase(),
   title: "WAT App",
   description: getDefaultMeta().description,
