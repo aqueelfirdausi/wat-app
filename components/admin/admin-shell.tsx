@@ -9,6 +9,7 @@ import { canAccessAdminPath } from "@/lib/admin-roles";
 const links = [
   { href: "/admin", label: "Dashboard" },
   { href: "/admin/products", label: "Products" },
+  { href: "/admin/stock", label: "Quick Stock" },
   { href: "/admin/products/new", label: "Add Product" },
   { href: "/admin/analytics", label: "Analytics" },
   { href: "/admin/logs", label: "Activity Log" }

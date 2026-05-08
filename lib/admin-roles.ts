@@ -27,7 +27,7 @@ export function canAccessAdminPath(role: AdminRole | null, pathname: string) {
   }
 
   if (role === "product_editor") {
-    return pathname === "/admin/products" || pathname.startsWith("/admin/products/");
+    return pathname === "/admin/products" || pathname.startsWith("/admin/products/") || pathname === "/admin/stock";
   }
 
   return false;
