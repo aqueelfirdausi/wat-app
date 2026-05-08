@@ -3541,11 +3541,12 @@ textarea {
   gap: 10px;
   padding: 12px 14px;
   border: 1px solid rgba(233, 220, 203, 0.92);
+  border-bottom: 1px solid var(--color-border, #e8e2d8);
   border-radius: var(--radius-panel);
   background:
     linear-gradient(180deg, rgba(255, 253, 248, 0.98), rgba(255, 249, 241, 0.98)),
     radial-gradient(circle at top right, rgba(31, 143, 88, 0.05), transparent 40%);
-  box-shadow: 0 12px 26px rgba(44, 27, 3, 0.05);
+  box-shadow: 0 2px 8px rgba(44, 27, 3, 0.04);
   transition: border-color 0.18s ease, box-shadow 0.18s ease;
 }
 
@@ -3563,11 +3564,12 @@ textarea {
 }
 
 .inventory-row-card-chosen {
-  border-color: rgba(241, 177, 77, 0.24);
+  border-color: rgba(22, 193, 107, 0.22);
+  border-left: 3px solid #16c16b;
   background:
-    linear-gradient(180deg, rgba(255, 253, 248, 0.99), rgba(255, 249, 240, 0.98)),
-    radial-gradient(circle at top right, rgba(241, 177, 77, 0.1), transparent 42%);
-  box-shadow: 0 15px 32px rgba(31, 26, 20, 0.07);
+    linear-gradient(180deg, rgba(247, 253, 250, 0.99), rgba(240, 252, 246, 0.98)),
+    radial-gradient(circle at top right, rgba(22, 193, 107, 0.07), transparent 42%);
+  box-shadow: 0 2px 8px rgba(31, 26, 20, 0.05);
 }
 
 .inventory-row-card-chosen:hover {
@@ -3680,11 +3682,11 @@ textarea {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 3px 6px;
-  border-radius: var(--radius-pill);
+  padding: 2px 7px;
+  border-radius: 20px;
   background: rgba(241, 177, 77, 0.13);
   color: rgba(126, 88, 20, 0.88);
-  font-size: 0.62rem;
+  font-size: 10px;
   font-weight: 650;
   line-height: 1.05;
   white-space: nowrap;
@@ -3702,11 +3704,13 @@ textarea {
 }
 
 .table-badge-ready {
+  display: none;
   background: rgba(31, 143, 88, 0.07);
   color: rgba(18, 101, 61, 0.84);
 }
 
 .table-badge-top-pick {
+  display: none;
   background: rgba(31, 143, 88, 0.06);
   color: rgba(18, 101, 61, 0.82);
 }
@@ -3735,6 +3739,7 @@ textarea {
 }
 
 .inventory-review-hint {
+  display: none;
   color: rgba(97, 83, 65, 0.92);
   font-size: 0.74rem;
   font-weight: 600;
@@ -3744,6 +3749,7 @@ textarea {
 }
 
 .inventory-review-hint-ready {
+  display: none;
   color: rgba(18, 101, 61, 0.78);
 }
 
@@ -4133,10 +4139,10 @@ textarea {
 .quick-meta-chip,
 .priority-stepper-button,
 .priority-stepper-value {
-  min-height: 30px;
+  min-height: 32px;
   border-radius: var(--radius-pill);
   font-size: 0.72rem;
-  font-weight: 700;
+  font-weight: 500;
   line-height: 1;
 }
 
