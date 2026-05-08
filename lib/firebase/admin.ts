@@ -1,8 +1,7 @@
 // Firebase Admin SDK — server-side only. Never import this in client components.
-// On Firebase App Hosting / Cloud Run, Application Default Credentials (ADC)
-// are available automatically — no service account file needed.
-// For local development, set GOOGLE_APPLICATION_CREDENTIALS to a service account key path.
-import { App, getApps, initializeApp } from "firebase-admin/app";
+// Local dev:  set GOOGLE_APPLICATION_CREDENTIALS=./service-account.json in .env.local
+// Production: Application Default Credentials (ADC) on Firebase App Hosting / Cloud Run
+import { App, cert, getApps, initializeApp } from "firebase-admin/app";
 import { getAuth } from "firebase-admin/auth";
 import { getFirestore } from "firebase-admin/firestore";
 import { getMessaging } from "firebase-admin/messaging";
@@ -11,7 +10,16 @@ const FIRESTORE_DATABASE_ID = "watapp";
 
 function getOrInitAdminApp(): App {
   const apps = getApps();
-  return apps.length ? apps[0] : initializeApp();
+  if (apps.length) return apps[0];
+
+  const credPath = process.env.GOOGLE_APPLICATION_CREDENTIALS;
+  if (credPath) {
+    // Local dev: explicitly load service account from file path
+    return initializeApp({ credential: cert(credPath) });
+  }
+
+  // Production: use ADC (automatically available on Firebase App Hosting)
+  return initializeApp();
 }
 
 export function adminAuth() {
