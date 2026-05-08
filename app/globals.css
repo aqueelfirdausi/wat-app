@@ -3428,9 +3428,10 @@ textarea {
   position: relative;
   display: grid;
   grid-template-columns: auto 60px minmax(0, 1fr);
-  align-items: start;
+  align-items: flex-start;
   gap: 10px;
   min-width: 0;
+  overflow: hidden;
 }
 
 .row-select-toggle {
@@ -3500,15 +3501,14 @@ textarea {
 }
 
 .product-row-name {
-  display: -webkit-box;
-  overflow: hidden;
   font-size: 15px;
   font-weight: 600;
   line-height: 1.3;
   color: var(--text);
-  text-wrap: balance;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
+  white-space: normal;
+  overflow: visible;
+  text-overflow: unset;
+  word-break: break-word;
 }
 
 .product-row-badges {
@@ -3579,6 +3579,10 @@ textarea {
 .inventory-meta-cell,
 .inventory-actions-cell {
   min-width: 0;
+}
+
+.inventory-product-cell {
+  overflow: hidden;
 }
 
 .inventory-actions-cell {
