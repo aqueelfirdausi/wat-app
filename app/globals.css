@@ -4931,3 +4931,112 @@ textarea {
 .manager-filters-toggle:hover {
   background: var(--color-surface-raised, #f7f3eb);
 }
+
+/* ── Storefront notification prompt ─────────────────────────────── */
+.notification-prompt {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 0 auto;
+  padding: 16px 18px;
+  max-width: var(--content-max, 680px);
+  border-radius: var(--radius-panel);
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.82);
+  box-shadow: 0 4px 16px rgba(44, 27, 3, 0.06);
+}
+
+.notification-prompt-copy {
+  display: grid;
+  gap: 3px;
+}
+
+.notification-prompt-copy strong {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.notification-prompt-copy p {
+  font-size: 0.8rem;
+  color: var(--muted);
+  margin: 0;
+  line-height: 1.45;
+}
+
+.notification-prompt-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.notification-prompt .primary-link,
+.notification-prompt .secondary-link {
+  min-height: 38px;
+  padding: 0 14px;
+  font-size: 0.85rem;
+}
+
+/* ── Admin notifications panel ───────────────────────────────────── */
+.notification-panel-hint {
+  font-size: 0.875rem;
+  color: var(--muted);
+  margin: 0 0 20px;
+  line-height: 1.55;
+}
+
+.notification-form {
+  display: grid;
+  gap: 16px;
+  max-width: 480px;
+}
+
+.notification-form-field {
+  display: grid;
+  gap: 6px;
+}
+
+.notification-form-label {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: 0.02em;
+}
+
+.notification-form-optional {
+  font-weight: 400;
+  color: var(--muted);
+}
+
+.notification-form-input {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.9);
+  font-size: 0.9rem;
+  color: var(--text);
+  outline: none;
+  transition: border-color 0.15s;
+  font-family: inherit;
+}
+
+.notification-form-input:focus {
+  border-color: var(--brand);
+}
+
+.notification-form-input:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.notification-form-textarea {
+  resize: vertical;
+  min-height: 80px;
+}
+
+.notification-form-submit {
+  justify-self: start;
+  min-height: 44px;
+  padding: 0 22px;
+}

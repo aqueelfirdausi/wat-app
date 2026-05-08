@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { FirebaseStatus } from "@/components/firebase-status";
+import { NotificationPrompt } from "@/components/storefront/notification-prompt";
 import { MobileFeedCard } from "@/components/mobile-feed-card";
 import { ProductCard } from "@/components/product-card";
 import { trackAnalyticsEvent } from "@/lib/analytics";
@@ -325,6 +326,7 @@ export function HomepageClient() {
   return (
     <main className="public-shell">
       <FirebaseStatus />
+      <NotificationPrompt />
       <header className="platform-header">
         <div className="platform-mark">
           <div className="platform-logo-wrap" aria-label="WAT App">
