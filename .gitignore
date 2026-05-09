@@ -26,3 +26,9 @@ android/local.properties
 # Service account credentials — never commit
 service-account.json
 *-firebase-adminsdk-*.json
+
+# TypeScript build cache
+tsconfig.tsbuildinfo
+
+# Local task files
+broadcast-task.md
