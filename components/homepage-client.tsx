@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { FirebaseStatus } from "@/components/firebase-status";
+import { BroadcastDrawer } from "@/components/storefront/broadcast-drawer";
 import { NotificationPrompt } from "@/components/storefront/notification-prompt";
 import { MobileFeedCard } from "@/components/mobile-feed-card";
 import { ProductCard } from "@/components/product-card";
@@ -337,6 +338,7 @@ export function HomepageClient() {
             <strong>What&apos;s Available Today</strong>
           </div>
         </div>
+        <BroadcastDrawer />
         <a href={`#${firstProductSectionId}`} className="primary-link">
           Open today&apos;s stock
         </a>

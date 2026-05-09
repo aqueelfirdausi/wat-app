@@ -580,6 +580,33 @@ export function subscribeToAnalyticsEvents(startDate: Date, callback: (events: A
   );
 }
 
+export type Broadcast = {
+  id: string;
+  title: string;
+  body: string;
+  sentAt: string;
+};
+
+export function subscribeToBroadcasts(callback: (broadcasts: Broadcast[]) => void) {
+  const firestore = ensureDb();
+  return onSnapshot(
+    query(collection(firestore, "broadcasts"), orderBy("sentAt", "desc"), limit(20)),
+    (snapshot) => {
+      callback(
+        snapshot.docs.map((item) => {
+          const data = item.data();
+          return {
+            id: item.id,
+            title: String(data.title ?? ""),
+            body: String(data.body ?? ""),
+            sentAt: String(data.sentAt ?? ""),
+          };
+        })
+      );
+    }
+  );
+}
+
 export async function seedSettings() {
   const firestore = ensureDb();
   await setDoc(

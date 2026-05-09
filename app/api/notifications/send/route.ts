@@ -71,5 +71,13 @@ export async function POST(request: NextRequest) {
     failed += result.failureCount;
   }
 
+  // Save broadcast to Firestore for the storefront drawer
+  await db.collection("broadcasts").add({
+    title,
+    body: notifBody,
+    sentAt: new Date().toISOString(),
+    sentBy: decodedToken.email ?? "",
+  });
+
   return NextResponse.json({ sent, failed, total: tokens.length });
 }
