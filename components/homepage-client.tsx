@@ -83,6 +83,8 @@ export function HomepageClient() {
   const [storefrontMode, setStorefrontMode] = useState<"catalog" | "feed">("catalog");
   const [showFeedHint, setShowFeedHint] = useState(false);
   const [hasResolvedStorefrontMode, setHasResolvedStorefrontMode] = useState(false);
+  const [hasLoadedProducts, setHasLoadedProducts] = useState(false);
+  const [showScrollTop, setShowScrollTop] = useState(false);
   const heroLivePicksStripRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -90,7 +92,7 @@ export function HomepageClient() {
     let categoriesUnsubscribe: undefined | (() => void);
 
     fetchProducts()
-      .then(setProducts)
+      .then((prods) => { setProducts(prods); setHasLoadedProducts(true); })
       .catch((err: Error) => setError(err.message));
 
     fetchCategories()
@@ -98,7 +100,7 @@ export function HomepageClient() {
       .catch((err: Error) => setError(err.message));
 
     try {
-      productsUnsubscribe = subscribeToProducts(setProducts);
+      productsUnsubscribe = subscribeToProducts((prods) => { setProducts(prods); setHasLoadedProducts(true); });
       categoriesUnsubscribe = subscribeToCategories(setCategories);
     } catch (err) {
       const message = err instanceof Error ? err.message : "Unable to connect to Firebase.";
@@ -192,6 +194,14 @@ export function HomepageClient() {
         dedupeKey: "feed_view"
       });
     }
+  }, []);
+
+  useEffect(() => {
+    function onScroll() {
+      setShowScrollTop(window.scrollY > 400);
+    }
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
   const visibleProducts = useMemo(() => products.filter((product) => isProductVisibleOnStorefront(product)), [products]);
@@ -505,9 +515,14 @@ export function HomepageClient() {
           <div className="mobile-feed-list">
             {feedProducts.length ? (
               feedProducts.map((product) => <MobileFeedCard key={product.id} product={product} analyticsContext="feed" />)
-            ) : (
-              <div className="empty-state">Feed items will appear here once live products are ready for browsing.</div>
-            )}
+            ) : hasLoadedProducts ? (
+              <div className="empty-state">
+                <div>
+                  <p>Nothing available right now</p>
+                  <p>Check back later, we post new stock every day.</p>
+                </div>
+              </div>
+            ) : null}
           </div>
         </section>
       ) : null}
@@ -621,7 +636,16 @@ export function HomepageClient() {
             </p>
           </div>
           <div className="product-grid">
-            {latestProducts.length ? latestProducts.map((product) => <ProductCard key={product.id} product={product} analyticsContext="catalog" />) : <div className="empty-state">Products will appear here once your team starts adding stock.</div>}
+            {latestProducts.length ? (
+              latestProducts.map((product) => <ProductCard key={product.id} product={product} analyticsContext="catalog" />)
+            ) : hasLoadedProducts ? (
+              <div className="empty-state" style={{ gridColumn: "1 / -1" }}>
+                <div>
+                  <p>Nothing available right now</p>
+                  <p>Check back later, we post new stock every day.</p>
+                </div>
+              </div>
+            ) : null}
           </div>
         </section>
       ) : null}
@@ -664,6 +688,15 @@ export function HomepageClient() {
       </section>
 
       {error ? <div className="inline-error">{error}</div> : null}
+
+      <button
+        type="button"
+        className={`scroll-top-btn${showScrollTop ? " visible" : ""}`}
+        onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+        aria-label="Scroll to top"
+      >
+        ↑
+      </button>
 
       <footer className="developer-credit" aria-label="Developer credit">
         <span className="developer-credit-byline">Developed by Aqueel Ahmed Firdausi</span>
