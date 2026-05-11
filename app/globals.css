@@ -5138,3 +5138,16 @@ textarea {
   margin-bottom: 12px;
   letter-spacing: 0.01em;
 }
+
+/* Sticky category filter bar */
+.category-bar-sticky {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: rgba(247, 243, 235, 0.94);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  padding-top: 8px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+}

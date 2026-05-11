@@ -455,7 +455,7 @@ export function HomepageClient() {
         </div>
       </section>
 
-      <section className="section-block section-tight category-filter-section">
+      <section className="section-block section-tight category-filter-section category-bar-sticky">
         <div className="section-heading">
           <h2>Browse by category</h2>
           <p>Tap a category to narrow today&apos;s live stock without losing the quick scan flow.</p>
