@@ -645,7 +645,19 @@ export function HomepageClient() {
                   <p>Check back later, we post new stock every day.</p>
                 </div>
               </div>
-            ) : null}
+            ) : (
+              <>
+                {Array.from({ length: 6 }).map((_, i) => (
+                  <div key={i} className="skeleton-card" aria-hidden="true">
+                    <div className="skeleton-image skeleton-shimmer" />
+                    <div className="skeleton-body">
+                      <div className="skeleton-line skeleton-shimmer" />
+                      <div className="skeleton-line skeleton-line-short skeleton-shimmer" />
+                    </div>
+                  </div>
+                ))}
+              </>
+            )}
           </div>
         </section>
       ) : null}
