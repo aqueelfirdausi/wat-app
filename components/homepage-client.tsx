@@ -106,7 +106,7 @@ export function HomepageClient() {
       .then((prods) => {
         setProducts(prods);
         setHasLoadedProducts(true);
-        const dates = prods.filter((p) => isProductVisibleOnStorefront(p) && p.updatedAt instanceof Date).map((p) => p.updatedAt as Date);
+        const dates = prods.filter((p) => isProductVisibleOnStorefront(p) && p.updatedAt != null).map((p) => p.updatedAt as Date);
         setLastUpdatedAt(dates.length ? dates.reduce((a, b) => (a > b ? a : b)) : null);
       })
       .catch((err: Error) => setError(err.message));
@@ -119,7 +119,7 @@ export function HomepageClient() {
       productsUnsubscribe = subscribeToProducts((prods) => {
         setProducts(prods);
         setHasLoadedProducts(true);
-        const dates = prods.filter((p) => isProductVisibleOnStorefront(p) && p.updatedAt instanceof Date).map((p) => p.updatedAt as Date);
+        const dates = prods.filter((p) => isProductVisibleOnStorefront(p) && p.updatedAt != null).map((p) => p.updatedAt as Date);
         setLastUpdatedAt(dates.length ? dates.reduce((a, b) => (a > b ? a : b)) : null);
       });
       categoriesUnsubscribe = subscribeToCategories(setCategories);
