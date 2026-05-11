@@ -354,6 +354,7 @@ export function HomepageClient() {
     [visibleCategories, visibleProducts]
   );
   const hasFeedModeOption = true;
+  const visibleCount = products.filter((p) => p.storefrontVisible === true).length;
 
   return (
     <main className="public-shell">
@@ -658,6 +659,9 @@ export function HomepageClient() {
           </div>
           {hasLoadedProducts && lastUpdatedAt ? (
             <p className="last-updated-line">{formatLastUpdated(lastUpdatedAt)}</p>
+          ) : null}
+          {hasLoadedProducts && visibleCount > 0 ? (
+            <p className="product-count-line">{visibleCount} {visibleCount === 1 ? "product" : "products"} live</p>
           ) : null}
           <div className="product-grid">
             {latestProducts.length ? (

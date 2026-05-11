@@ -5131,3 +5131,10 @@ textarea {
   margin-bottom: 12px;
   letter-spacing: 0.01em;
 }
+
+.product-count-line {
+  font-size: 12px;
+  color: var(--muted);
+  margin-bottom: 12px;
+  letter-spacing: 0.01em;
+}
