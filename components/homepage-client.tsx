@@ -625,7 +625,7 @@ export function HomepageClient() {
       {!hasResolvedStorefrontMode || storefrontMode === "catalog" ? (
         <section
           className="section-block"
-          id={!featuredProducts.length && !freshProducts.length ? "latest-products" : undefined}
+          id={hasLoadedProducts && !featuredProducts.length && !freshProducts.length ? "latest-products" : undefined}
         >
           <div className="section-heading">
             <h2>{featuredProducts.length || freshProducts.length ? "More live items" : "Live stock today"}</h2>
