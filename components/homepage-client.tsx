@@ -633,7 +633,7 @@ export function HomepageClient() {
       {(!hasResolvedStorefrontMode || storefrontMode === "catalog") && freshProducts.length ? (
         <section className="section-block section-fresh" id="fresh-products">
           <div className="section-heading">
-            <h2>Fresh today</h2>
+            <h2>Fresh today <span className="fresh-count-badge">({freshProducts.length})</span></h2>
             <p>Newest additions or updates from today, surfaced early so repeat visitors can spot fresh stock quickly.</p>
           </div>
           <div className="product-grid">
