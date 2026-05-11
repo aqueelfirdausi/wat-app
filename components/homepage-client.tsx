@@ -72,6 +72,16 @@ function getInstallGuidance() {
   };
 }
 
+function formatLastUpdated(date: Date): string {
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+  const timeStr = date.toLocaleTimeString("en-PK", { hour: "numeric", minute: "2-digit", hour12: true });
+  if (diffDays === 0) return `Updated today at ${timeStr}`;
+  if (diffDays === 1) return `Updated yesterday at ${timeStr}`;
+  return `Updated ${diffDays} days ago`;
+}
+
 export function HomepageClient() {
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -84,6 +94,7 @@ export function HomepageClient() {
   const [showFeedHint, setShowFeedHint] = useState(false);
   const [hasResolvedStorefrontMode, setHasResolvedStorefrontMode] = useState(false);
   const [hasLoadedProducts, setHasLoadedProducts] = useState(false);
+  const [lastUpdatedAt, setLastUpdatedAt] = useState<Date | null>(null);
   const [showScrollTop, setShowScrollTop] = useState(false);
   const heroLivePicksStripRef = useRef<HTMLDivElement | null>(null);
 
@@ -92,7 +103,12 @@ export function HomepageClient() {
     let categoriesUnsubscribe: undefined | (() => void);
 
     fetchProducts()
-      .then((prods) => { setProducts(prods); setHasLoadedProducts(true); })
+      .then((prods) => {
+        setProducts(prods);
+        setHasLoadedProducts(true);
+        const dates = prods.filter((p) => isProductVisibleOnStorefront(p) && p.updatedAt instanceof Date).map((p) => p.updatedAt as Date);
+        setLastUpdatedAt(dates.length ? dates.reduce((a, b) => (a > b ? a : b)) : null);
+      })
       .catch((err: Error) => setError(err.message));
 
     fetchCategories()
@@ -100,7 +116,12 @@ export function HomepageClient() {
       .catch((err: Error) => setError(err.message));
 
     try {
-      productsUnsubscribe = subscribeToProducts((prods) => { setProducts(prods); setHasLoadedProducts(true); });
+      productsUnsubscribe = subscribeToProducts((prods) => {
+        setProducts(prods);
+        setHasLoadedProducts(true);
+        const dates = prods.filter((p) => isProductVisibleOnStorefront(p) && p.updatedAt instanceof Date).map((p) => p.updatedAt as Date);
+        setLastUpdatedAt(dates.length ? dates.reduce((a, b) => (a > b ? a : b)) : null);
+      });
       categoriesUnsubscribe = subscribeToCategories(setCategories);
     } catch (err) {
       const message = err instanceof Error ? err.message : "Unable to connect to Firebase.";
@@ -635,6 +656,9 @@ export function HomepageClient() {
                 : "Live stock from across the WAT App stores, ready for quick detail checks and WhatsApp confirmation."}
             </p>
           </div>
+          {hasLoadedProducts && lastUpdatedAt ? (
+            <p className="last-updated-line">{formatLastUpdated(lastUpdatedAt)}</p>
+          ) : null}
           <div className="product-grid">
             {latestProducts.length ? (
               latestProducts.map((product) => <ProductCard key={product.id} product={product} analyticsContext="catalog" />)

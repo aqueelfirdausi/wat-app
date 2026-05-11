@@ -5123,3 +5123,11 @@ textarea {
 .skeleton-line-short {
   width: 45%;
 }
+
+/* Last updated timestamp */
+.last-updated-line {
+  font-size: 12px;
+  color: var(--muted);
+  margin-bottom: 12px;
+  letter-spacing: 0.01em;
+}
