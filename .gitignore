@@ -32,3 +32,4 @@ tsconfig.tsbuildinfo
 
 # Local task files
 broadcast-task.md
+.claude/settings.local.json
