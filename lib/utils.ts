@@ -209,16 +209,32 @@ export function buildPublicProductUrl(slug: string, currentOrigin?: string) {
 }
 
 export function parseFirebaseDate(value: unknown): Date | null {
-  if (!value) {
+  if (value == null) {
     return null;
   }
 
-  if (value instanceof Date) {
-    return value;
+  // Duck-type check for Date (handles cross-realm Date instances where instanceof fails)
+  if (typeof (value as { getTime?: unknown }).getTime === "function") {
+    const d = value as Date;
+    return isNaN(d.getTime()) ? null : d;
   }
 
-  if (typeof value === "object" && value !== null && "toDate" in value && typeof value.toDate === "function") {
-    return value.toDate();
+  // Firestore Timestamp objects with .toDate()
+  if (
+    typeof value === "object" &&
+    "toDate" in value &&
+    typeof (value as { toDate: unknown }).toDate === "function"
+  ) {
+    return (value as { toDate: () => Date }).toDate();
+  }
+
+  // Plain serialised Firestore Timestamp { seconds: number, nanoseconds: number }
+  if (
+    typeof value === "object" &&
+    "seconds" in value &&
+    typeof (value as { seconds: unknown }).seconds === "number"
+  ) {
+    return new Date((value as { seconds: number }).seconds * 1000);
   }
 
   return null;
