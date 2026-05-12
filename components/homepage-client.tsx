@@ -460,19 +460,21 @@ export function HomepageClient() {
           <h2>Browse by category</h2>
           <p>Tap a category to narrow today&apos;s live stock without losing the quick scan flow.</p>
         </div>
-        <div className="category-strip">
-          <button className={activeCategory === "All" ? "category-chip active" : "category-chip"} onClick={() => setActiveCategory("All")}>
-            All
-          </button>
-          {visibleCategories.map((category) => (
-            <button
-              key={category.id}
-              className={activeCategory === category.name ? "category-chip active" : "category-chip"}
-              onClick={() => setActiveCategory(category.name)}
-            >
-              {category.name}
+        <div className="category-strip-wrapper">
+          <div className="category-strip">
+            <button className={activeCategory === "All" ? "category-chip active" : "category-chip"} onClick={() => setActiveCategory("All")}>
+              All
             </button>
-          ))}
+            {visibleCategories.map((category) => (
+              <button
+                key={category.id}
+                className={activeCategory === category.name ? "category-chip active" : "category-chip"}
+                onClick={() => setActiveCategory(category.name)}
+              >
+                {category.name}
+              </button>
+            ))}
+          </div>
         </div>
       </section>
 

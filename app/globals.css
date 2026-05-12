@@ -742,6 +742,23 @@ textarea:focus-visible {
   display: none;
 }
 
+.category-strip-wrapper {
+  position: relative;
+  overflow: hidden;
+}
+
+.category-strip-wrapper::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 56px;
+  background: linear-gradient(to right, transparent, rgba(247, 243, 235, 0.94));
+  pointer-events: none;
+  z-index: 1;
+}
+
 .brand-grid {
   display: grid;
   gap: 16px;
