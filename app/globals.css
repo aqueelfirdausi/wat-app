@@ -28,14 +28,14 @@
 
 html {
   max-width: 100%;
-  overflow-x: hidden;
+  overflow-x: clip;
   scroll-behavior: smooth;
 }
 
 body {
   margin: 0;
   max-width: 100%;
-  overflow-x: hidden;
+  overflow-x: clip;
   background:
     radial-gradient(circle at top, rgba(241, 177, 77, 0.22), transparent 34%),
     linear-gradient(180deg, #fbf8f2 0%, var(--bg) 100%);
