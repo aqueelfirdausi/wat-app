@@ -1,0 +1,85 @@
+# Session 12 Task — Feed View Complete Overhaul
+
+## Goal
+Bring the Feed view up to the same polish standard as the Catalog view.
+This is the last major visual debt before commercialization.
+
+## Scope — do all of these in order
+
+### 1. Inspect first
+Read the full feed view section of `components/homepage-client.tsx` before touching anything.
+Identify: the feed container, each feed card element, the section heading, the "View details" link, and any existing empty state.
+
+---
+
+### 2. Card separators
+Add a subtle horizontal separator between feed items.
+- A single `border-bottom` line on each feed card (except the last)
+- Use `var(--border)` or the nearest existing border token — inspect globals.css first, do not invent a new color
+- No box-shadow. No card elevation. Just a calm divider line.
+- Target only the feed card wrapper element — do not touch catalog cards
+
+---
+
+### 3. "View details" link styling
+Currently unstyled or inconsistent.
+- Should look like a quiet text link — not a button
+- Color: `var(--muted)` or a subdued version of the CTA green — inspect existing link styles first and match
+- Font size: 13px
+- No underline by default — underline on hover/focus only
+- `pointer-events: auto` confirmed (no overlay interference)
+
+---
+
+### 4. Section heading + subtitle tightening
+The "Live mobile feed" heading area needs tightening.
+- Inspect current heading and any subtitle/description text
+- Reduce excess vertical spacing if present — do not add spacing
+- Font weight and size should feel consistent with other section headings on the page
+- If there is a subtitle line, it should use `var(--muted)` and be 13–14px
+- Do not change heading copy
+
+---
+
+### 5. Feed view empty state
+- Inspect whether an empty state already exists for the Feed view
+- If it exists: verify it renders correctly (same guard pattern as Catalog: `hasLoadedProducts && feedProducts.length === 0`)
+- If it is missing: add it
+  - Copy: "Nothing in the feed right now / Check back later."
+  - Style: same as Catalog empty state — centered, `var(--muted)`, no illustration, no icons, text only
+  - Guard must be behind `hasLoadedProducts` — no flash on load
+
+---
+
+### 6. Feed skeleton
+Add shimmer skeleton cards to the Feed view while Firestore is loading.
+- Condition: `hasLoadedProducts === false`
+- Show 3 skeleton cards (feed items are taller than catalog cards — 3 is enough)
+- Skeleton card dimensions should approximate a real feed card
+- Use the same shimmer animation already defined in globals.css for catalog skeletons (`skeleton-shimmer` keyframe, warm-tinted `#e8e8e4` / `#f0f0ec`, `1.4s ease-in-out infinite`)
+- Do not define a new animation — reuse what exists
+- Add a new CSS class `feed-skeleton-card` for any feed-specific sizing differences
+
+---
+
+## Rules for this session
+- Inspect `homepage-client.tsx` and `globals.css` fully before writing any code
+- No Tailwind — custom CSS only
+- Do not touch Catalog view, header, footer, broadcast drawer, or any admin page
+- Do not touch the design system tokens (CTA green, surface colors, etc.)
+- No instanceof Date — not applicable here but rule stands
+- pointer-events: none on any CSS overlay above interactive elements
+- npm run lint before commit
+- npm run typecheck before commit (feed touches display logic)
+- Commit message: `Session 12 polish — feed view complete overhaul`
+- Do NOT push to GitHub — local only until I visually confirm on mobile
+
+## Validation checklist (I will confirm each before pushing)
+- [ ] Card separators visible between feed items, not after last item
+- [ ] "View details" link styled quietly — not a button
+- [ ] Section heading spacing feels tight and consistent
+- [ ] Feed empty state renders when no feed products (test by temporarily hiding all)
+- [ ] Feed skeleton shows while loading (test by throttling network or adding artificial delay)
+- [ ] Catalog view regression check — catalog skeletons, sticky bar, fresh badge, pills fade all intact
+- [ ] Broadcast drawer regression check — opens, reads, closes correctly
+- [ ] Novart.io footer intact
