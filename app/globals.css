@@ -5177,3 +5177,58 @@ textarea {
   padding-bottom: 8px;
   border-bottom: 1px solid var(--border);
 }
+
+/* ─── Feed view overhaul — Session 12 ─────────────────────────── */
+
+/* Card separators — border between feed items, not after the last */
+.mobile-feed-card:not(:last-child) {
+  border-bottom: 1px solid var(--border);
+}
+
+/* "View details" — quiet text link, not a button */
+.mobile-feed-details {
+  min-height: auto;
+  width: fit-content;
+  padding: 4px 0;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  font-size: 13px;
+  color: var(--muted);
+  text-decoration: none;
+  justify-self: center;
+}
+
+.mobile-feed-details:hover,
+.mobile-feed-details:focus-visible {
+  text-decoration: underline;
+  color: var(--muted);
+}
+
+/* Feed section heading — tighter subtitle */
+.mobile-feed-heading p {
+  font-size: 13px;
+}
+
+/* Feed skeleton cards */
+.feed-skeleton-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: calc(var(--radius-card) + 2px);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 14px 32px rgba(44, 27, 3, 0.07);
+}
+
+.feed-skeleton-image {
+  height: 280px;
+  flex-shrink: 0;
+}
+
+.feed-skeleton-action {
+  height: 52px;
+  border-radius: var(--radius-pill);
+  margin: 0 16px 16px;
+}

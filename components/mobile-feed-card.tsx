@@ -80,7 +80,7 @@ export function MobileFeedCard({ product, analyticsContext = "feed" }: MobileFee
           analyticsContext={analyticsContext}
           className={isSoldOut ? "secondary-button mobile-feed-whatsapp mobile-feed-whatsapp-muted" : "whatsapp-button mobile-feed-whatsapp"}
         />
-        <Link href={buildProductPath(product.slug)} className="secondary-link mobile-feed-details">
+        <Link href={buildProductPath(product.slug)} className="mobile-feed-details">
           View details
         </Link>
       </div>

@@ -542,11 +542,24 @@ export function HomepageClient() {
             ) : hasLoadedProducts ? (
               <div className="empty-state">
                 <div>
-                  <p>Nothing available right now</p>
-                  <p>Check back later, we post new stock every day.</p>
+                  <p>Nothing in the feed right now</p>
+                  <p>Check back later.</p>
                 </div>
               </div>
-            ) : null}
+            ) : (
+              <>
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <div key={i} className="feed-skeleton-card" aria-hidden="true">
+                    <div className="feed-skeleton-image skeleton-shimmer" />
+                    <div className="skeleton-body">
+                      <div className="skeleton-line skeleton-shimmer" />
+                      <div className="skeleton-line skeleton-line-short skeleton-shimmer" />
+                    </div>
+                    <div className="feed-skeleton-action skeleton-shimmer" />
+                  </div>
+                ))}
+              </>
+            )}
           </div>
         </section>
       ) : null}
