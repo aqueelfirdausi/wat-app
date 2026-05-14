@@ -585,6 +585,8 @@ export type Broadcast = {
   title: string;
   body: string;
   sentAt: string;
+  productId?: string;
+  productImageUrl?: string;
 };
 
 export function subscribeToBroadcasts(callback: (broadcasts: Broadcast[]) => void) {
@@ -600,6 +602,12 @@ export function subscribeToBroadcasts(callback: (broadcasts: Broadcast[]) => voi
             title: String(data.title ?? ""),
             body: String(data.body ?? ""),
             sentAt: String(data.sentAt ?? ""),
+            ...(typeof data.productId === "string" && data.productId.length > 0
+              ? { productId: data.productId }
+              : {}),
+            ...(typeof data.productImageUrl === "string" && data.productImageUrl.length > 0
+              ? { productImageUrl: data.productImageUrl }
+              : {}),
           };
         })
       );

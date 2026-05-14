@@ -1,7 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import Image from "next/image";
+import { useEffect, useState } from "react";
 import { useAuth } from "@/components/providers/auth-provider";
+import { fetchProducts } from "@/lib/firebase/firestore";
+import type { Product } from "@/lib/types";
 
 type SendStatus =
   | { type: "idle" }
@@ -14,6 +17,28 @@ export function NotificationsPanel() {
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const [status, setStatus] = useState<SendStatus>({ type: "idle" });
+  const [products, setProducts] = useState<Product[]>([]);
+  const [productsLoading, setProductsLoading] = useState(true);
+  const [selectedProductId, setSelectedProductId] = useState("");
+
+  useEffect(() => {
+    let cancelled = false;
+    fetchProducts()
+      .then((all) => {
+        if (cancelled) return;
+        const live = all
+          .filter((p) => p.storefrontVisible === true)
+          .sort((a, b) => a.name.localeCompare(b.name));
+        setProducts(live);
+      })
+      .catch(() => {
+        // silent — picker just stays empty, admin can still send without a product
+      })
+      .finally(() => {
+        if (!cancelled) setProductsLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, []);
 
   async function handleSend(e: React.FormEvent) {
     e.preventDefault();
@@ -28,7 +53,11 @@ export function NotificationsPanel() {
           "Content-Type": "application/json",
           Authorization: `Bearer ${idToken}`,
         },
-        body: JSON.stringify({ title: title.trim(), body: body.trim() }),
+        body: JSON.stringify({
+          title: title.trim(),
+          body: body.trim(),
+          ...(selectedProductId ? { productId: selectedProductId } : {}),
+        }),
       });
       const data = (await res.json()) as { sent?: number; message?: string; error?: string };
       if (!res.ok) {
@@ -38,6 +67,7 @@ export function NotificationsPanel() {
       setStatus({ type: "success", sent: data.sent ?? 0 });
       setTitle("");
       setBody("");
+      setSelectedProductId("");
     } catch (err) {
       setStatus({
         type: "error",
@@ -89,6 +119,50 @@ export function NotificationsPanel() {
               rows={3}
               disabled={status.type === "sending"}
             />
+          </div>
+          <div className="notification-form-field">
+            <label className="notification-form-label" htmlFor="notif-product">
+              Attach product <span className="notification-form-optional">(optional)</span>
+            </label>
+            <select
+              id="notif-product"
+              className="notification-form-input"
+              value={selectedProductId}
+              onChange={(e) => setSelectedProductId(e.target.value)}
+              disabled={productsLoading || status.type === "sending"}
+            >
+              <option value="">— None —</option>
+              {products.map((p) => (
+                <option key={p.id} value={p.id}>{p.name}</option>
+              ))}
+            </select>
+            {selectedProductId && (() => {
+              const picked = products.find((p) => p.id === selectedProductId);
+              if (!picked) return null;
+              return (
+                <div style={{ display:"flex", alignItems:"center", gap:12, marginTop:8 }}>
+                  <div style={{ width:48, height:48, borderRadius:8, overflow:"hidden", flexShrink:0, background:"#f5f5f2", position:"relative" }}>
+                    <Image
+                      src={picked.imageUrl}
+                      alt=""
+                      width={48}
+                      height={48}
+                      style={{ width:"100%", height:"100%", objectFit:"cover", display:"block" }}
+                      unoptimized
+                    />
+                  </div>
+                  <div style={{ flex:1, fontSize:13, color:"#666" }}>{picked.name}</div>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedProductId("")}
+                    aria-label="Remove product"
+                    disabled={status.type === "sending"}
+                  >
+                    ✕
+                  </button>
+                </div>
+              );
+            })()}
           </div>
           {status.type === "error" && <div className="inline-error">{status.message}</div>}
           {status.type === "success" && (

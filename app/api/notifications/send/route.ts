@@ -25,22 +25,41 @@ export async function POST(request: NextRequest) {
   }
 
   // Parse and validate body
-  let body: { title?: string; body?: string };
+  let body: { title?: string; body?: string; productId?: string };
   try {
-    body = (await request.json()) as { title?: string; body?: string };
+    body = (await request.json()) as { title?: string; body?: string; productId?: string };
   } catch {
     return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
   }
 
   const title = body.title?.trim();
   const notifBody = body.body?.trim() ?? "";
+  const productId: string | null =
+    typeof body.productId === "string" && body.productId.trim().length > 0
+      ? body.productId.trim()
+      : null;
 
   if (!title) {
     return NextResponse.json({ error: "Title is required" }, { status: 400 });
   }
 
-  // Fetch all stored FCM tokens
+  // Resolve product image if a productId was supplied
   const db = adminDb();
+  let productImageUrl: string | null = null;
+
+  if (productId) {
+    const productDoc = await db.collection("products").doc(productId).get();
+    if (!productDoc.exists) {
+      return NextResponse.json({ error: "Selected product not found" }, { status: 400 });
+    }
+    const imageUrl = productDoc.data()?.imageUrl;
+    if (typeof imageUrl !== "string" || imageUrl.trim().length === 0) {
+      return NextResponse.json({ error: "Selected product has no image" }, { status: 400 });
+    }
+    productImageUrl = imageUrl.trim();
+  }
+
+  // Fetch all stored FCM tokens
   const tokensSnap = await db.collection("fcm_tokens").get();
   const tokens = tokensSnap.docs
     .map((d) => d.data().token as string)
@@ -72,12 +91,17 @@ export async function POST(request: NextRequest) {
   }
 
   // Save broadcast to Firestore for the storefront drawer
-  await db.collection("broadcasts").add({
+  const broadcastDoc: Record<string, unknown> = {
     title,
     body: notifBody,
     sentAt: new Date().toISOString(),
     sentBy: decodedToken.email ?? "",
-  });
+  };
+  if (productId && productImageUrl) {
+    broadcastDoc.productId = productId;
+    broadcastDoc.productImageUrl = productImageUrl;
+  }
+  await db.collection("broadcasts").add(broadcastDoc);
 
   return NextResponse.json({ sent, failed, total: tokens.length });
 }

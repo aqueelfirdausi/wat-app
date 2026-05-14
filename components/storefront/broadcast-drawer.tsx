@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useEffect, useState } from "react";
 import { type Broadcast, subscribeToBroadcasts } from "@/lib/firebase/firestore";
 
@@ -113,7 +114,20 @@ export function BroadcastDrawer() {
               return (
                 <div key={b.id} style={{ padding:"12px 20px", display:"flex", gap:12, alignItems:"flex-start", borderBottom:"0.5px solid #f5f5f2", background:isUnread ? "#fffcfc" : "transparent" }}>
                   <span style={{ width:6, height:6, borderRadius:"50%", background:isUnread ? "#e24242" : "transparent", flexShrink:0, marginTop:5 }} aria-hidden="true" />
-                  <div style={{ width:36, height:36, borderRadius:10, background:isUnread ? "#fff5f5" : "#f5f5f2", display:"flex", alignItems:"center", justifyContent:"center", fontSize:16, flexShrink:0 }}>📦</div>
+                  {b.productImageUrl ? (
+                    <div style={{ width:36, height:36, borderRadius:10, overflow:"hidden", flexShrink:0, background:isUnread ? "#fff5f5" : "#f5f5f2", position:"relative" }}>
+                      <Image
+                        src={b.productImageUrl}
+                        alt=""
+                        width={36}
+                        height={36}
+                        style={{ width:"100%", height:"100%", objectFit:"cover", display:"block" }}
+                        unoptimized
+                      />
+                    </div>
+                  ) : (
+                    <div style={{ width:36, height:36, borderRadius:10, background:isUnread ? "#fff5f5" : "#f5f5f2", display:"flex", alignItems:"center", justifyContent:"center", fontSize:16, flexShrink:0 }}>📦</div>
+                  )}
                   <div style={{ flex:1 }}>
                     <p style={{ fontSize:13, fontWeight:isUnread ? 600 : 500, color:isUnread ? "#111" : "#666", marginBottom:2 }}>{b.title}</p>
                     {b.body && <p style={{ fontSize:12, color:isUnread ? "#777" : "#aaa", lineHeight:1.45 }}>{b.body}</p>}
