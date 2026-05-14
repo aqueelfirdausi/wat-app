@@ -47,7 +47,7 @@ export function NotificationPrompt() {
     <div className="notification-prompt" role="status" aria-live="polite">
       <div className="notification-prompt-copy">
         <strong>Get notified when new stock drops</strong>
-        <p>One notification per day at most. Tap enable or ignore to skip.</p>
+        <p>We send one update a day at most. Tap Enable to stay in the loop.</p>
       </div>
       <div className="notification-prompt-actions">
         <button

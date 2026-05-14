@@ -52,11 +52,11 @@ export function NotificationsPanel() {
         <div className="panel-header">
           <div>
             <p className="eyebrow">Owner only</p>
-            <h1>Send notification</h1>
+            <h1>Send broadcast</h1>
           </div>
         </div>
         <p className="notification-panel-hint">
-          Sends a push notification to all subscribers. Use only when fresh stock is ready. Maximum one per day.
+          Sends a broadcast to all subscribers. Use only when fresh stock is ready. Maximum one per day.
         </p>
         <form className="notification-form" onSubmit={handleSend}>
           <div className="notification-form-field">
@@ -101,7 +101,7 @@ export function NotificationsPanel() {
             className="primary-button notification-form-submit"
             disabled={!title.trim() || status.type === "sending"}
           >
-            {status.type === "sending" ? "Sending…" : "Send notification"}
+            {status.type === "sending" ? "Sending…" : "Send broadcast"}
           </button>
         </form>
       </section>
