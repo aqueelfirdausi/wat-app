@@ -61,96 +61,97 @@ export default async function ProductOpenGraphImage({ params }: Props) {
           height: "100%",
           display: "flex",
           flexDirection: "column",
-          justifyContent: "space-between",
-          padding: "56px 64px",
+          alignItems: "center",
+          justifyContent: "center",
+          padding: "60px 80px",
           background:
             "linear-gradient(135deg, rgba(251,248,242,1) 0%, rgba(247,243,235,1) 42%, rgba(255,248,239,1) 100%)",
-          fontFamily: "Segoe UI, sans-serif"
+          fontFamily: "Segoe UI, sans-serif",
+          textAlign: "center"
         }}
       >
-        {/* Top: category label */}
-        <div
-          style={{
-            display: "flex",
-            fontSize: "22px",
-            fontWeight: 600,
-            color: "#9d8f7f",
-            letterSpacing: "0.06em",
-            textTransform: "uppercase"
-          }}
-        >
-          {product?.categoryName ?? ""}
-        </div>
-
-        {/* Middle: name + price + stock */}
-        <div
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            gap: "24px",
-            flex: 1,
-            justifyContent: "center"
-          }}
-        >
+        {/* Category label */}
+        {product?.categoryName ? (
           <div
             style={{
               display: "flex",
-              fontSize: name.length > 40 ? "62px" : "80px",
-              fontWeight: 900,
-              lineHeight: 1.05,
-              letterSpacing: "-0.03em",
-              color: "#1f1a14",
-              maxWidth: "1000px"
+              fontSize: "22px",
+              fontWeight: 600,
+              color: "#9d8f7f",
+              letterSpacing: "0.06em",
+              textTransform: "uppercase",
+              marginBottom: "28px",
+              textAlign: "center"
             }}
           >
-            {name}
+            {product.categoryName}
           </div>
+        ) : null}
 
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "24px"
-            }}
-          >
-            {price ? (
-              <div
-                style={{
-                  display: "flex",
-                  fontSize: "44px",
-                  fontWeight: 800,
-                  color: "#1f1a14",
-                  letterSpacing: "-0.02em"
-                }}
-              >
-                {price}
-              </div>
-            ) : null}
-            {stockLabel ? (
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  padding: "8px 22px",
-                  borderRadius: "999px",
-                  background: `${stockColor}1a`,
-                  fontSize: "28px",
-                  fontWeight: 700,
-                  color: stockColor
-                }}
-              >
-                {stockLabel}
-              </div>
-            ) : null}
-          </div>
+        {/* Product name */}
+        <div
+          style={{
+            display: "flex",
+            fontSize: name.length > 40 ? "62px" : "80px",
+            fontWeight: 900,
+            lineHeight: 1.05,
+            letterSpacing: "-0.03em",
+            color: "#1f1a14",
+            textAlign: "center",
+            marginBottom: "28px"
+          }}
+        >
+          {name}
         </div>
 
-        {/* Bottom: WAT App branding */}
+        {/* Price + stock badge */}
         <div
           style={{
             display: "flex",
             alignItems: "center",
-            justifyContent: "flex-end",
+            justifyContent: "center",
+            gap: "24px",
+            marginBottom: "56px"
+          }}
+        >
+          {price ? (
+            <div
+              style={{
+                display: "flex",
+                fontSize: "44px",
+                fontWeight: 800,
+                color: "#1f1a14",
+                letterSpacing: "-0.02em",
+                textAlign: "center"
+              }}
+            >
+              {price}
+            </div>
+          ) : null}
+          {stockLabel ? (
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                padding: "8px 22px",
+                borderRadius: "999px",
+                background: `${stockColor}1a`,
+                fontSize: "28px",
+                fontWeight: 700,
+                color: stockColor
+              }}
+            >
+              {stockLabel}
+            </div>
+          ) : null}
+        </div>
+
+        {/* WAT App branding */}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
             gap: "14px"
           }}
         >
@@ -176,7 +177,9 @@ export default async function ProductOpenGraphImage({ params }: Props) {
             style={{
               display: "flex",
               flexDirection: "column",
-              gap: "2px"
+              alignItems: "center",
+              gap: "2px",
+              textAlign: "center"
             }}
           >
             <span
