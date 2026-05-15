@@ -14,89 +14,129 @@ type ProductPageProps = {
 };
 
 export async function generateMetadata({ params }: ProductPageProps): Promise<Metadata> {
-  const { slug } = await params;
-  const product = await fetchProductMetadataBySlug(slug, { revalidate: false });
-  const productUrl = buildMetadataUrl(`/product/${slug}`);
+  // Site-level fallback image — always available from app/opengraph-image.tsx.
+  const siteImageUrl = buildMetadataUrl("/opengraph-image");
 
-  if (!product) {
-    return {
-      title: "Product unavailable | WAT App",
-      description: "This product link is no longer available.",
-      robots: {
-        index: false,
-        follow: false,
-        googleBot: {
+  // Returned when the product cannot be found OR when the fetch throws.
+  // Must have at minimum a title, description, and og:image so crawlers
+  // never see a blank preview card.
+  const siteFallback: Metadata = {
+    title: "WAT App",
+    description: "Browse today's live stock",
+    openGraph: {
+      title: "WAT App",
+      description: "Browse today's live stock",
+      siteName: "WAT App",
+      type: "website",
+      images: [{ url: siteImageUrl, width: 1200, height: 630, alt: "WAT App" }]
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: "WAT App",
+      description: "Browse today's live stock",
+      images: [siteImageUrl]
+    }
+  };
+
+  try {
+    const { slug } = await params;
+    // includeHidden: true — fetch metadata even when storefrontVisible is false
+    // so hidden products still produce valid OG tags. The page component uses
+    // the same function without this flag and calls notFound() for hidden items.
+    const product = await fetchProductMetadataBySlug(slug, { revalidate: false, includeHidden: true });
+    const productUrl = buildMetadataUrl(`/product/${slug}`);
+
+    if (!product) {
+      return {
+        title: "Product unavailable | WAT App",
+        description: "This product link is no longer available.",
+        robots: {
           index: false,
           follow: false,
-          noimageindex: true
+          googleBot: {
+            index: false,
+            follow: false,
+            noimageindex: true
+          }
+        },
+        alternates: {
+          canonical: productUrl
+        },
+        openGraph: {
+          title: "Product unavailable | WAT App",
+          description: "This product link is no longer available.",
+          url: productUrl,
+          siteName: "WAT App",
+          type: "website",
+          images: [{ url: siteImageUrl, width: 1200, height: 630, alt: "WAT App" }]
+        },
+        twitter: {
+          card: "summary_large_image",
+          title: "Product unavailable | WAT App",
+          description: "This product link is no longer available.",
+          images: [siteImageUrl]
         }
-      },
+      };
+    }
+
+    const title = buildProductMetadataTitle(product.name);
+
+    // "Rs 4,500 · In stock" — price + stock status
+    const priceStr = new Intl.NumberFormat("en-PK", {
+      style: "currency",
+      currency: product.currency || "PKR",
+      maximumFractionDigits: 0
+    }).format(product.price);
+    const stockLabel =
+      product.stockStatus === "in_stock"
+        ? "In stock"
+        : product.stockStatus === "low_stock"
+          ? "Low stock"
+          : product.stockStatus === "sold_out"
+            ? "Sold out"
+            : "Available";
+    const description = `${priceStr} · ${stockLabel}`;
+
+    // Route the image through our own domain so WhatsApp's bot can fetch it.
+    // Firebase Storage URLs are not reliably accessible to link-preview crawlers.
+    const rawImageUrl = getAbsolutePublicImageUrl(product.imageUrl);
+    const imageUrl = rawImageUrl
+      ? `${buildMetadataUrl("/api/og-image")}?url=${encodeURIComponent(rawImageUrl)}`
+      : undefined;
+
+    // Always include an og:image — fall back to the site image when the
+    // product has no uploaded photo so crawlers never see a blank card.
+    const ogImages = imageUrl
+      ? [{ url: imageUrl, alt: product.name }]
+      : [{ url: siteImageUrl, width: 1200, height: 630, alt: "WAT App" }];
+
+    return {
+      title,
+      description,
       alternates: {
         canonical: productUrl
       },
       openGraph: {
-        title: "Product unavailable | WAT App",
-        description: "This product link is no longer available.",
+        title,
+        description,
         url: productUrl,
         siteName: "WAT App",
-        type: "website"
+        type: "website",
+        images: ogImages
       },
       twitter: {
-        card: "summary",
-        title: "Product unavailable | WAT App",
-        description: "This product link is no longer available."
+        card: "summary_large_image",
+        title,
+        description,
+        images: [imageUrl ?? siteImageUrl]
       }
     };
+  } catch {
+    // fetchProductMetadataBySlug threw (network error, Firestore timeout,
+    // cold-start timeout, etc.). Return a minimal but valid OG response so
+    // crawlers always get something meaningful instead of a blank card.
+    return siteFallback;
   }
-
-  const title = buildProductMetadataTitle(product.name);
-
-  // "Rs 4,500 · In stock" — price + stock status
-  const priceStr = new Intl.NumberFormat("en-PK", {
-    style: "currency",
-    currency: product.currency || "PKR",
-    maximumFractionDigits: 0
-  }).format(product.price);
-  const stockLabel =
-    product.stockStatus === "in_stock"
-      ? "In stock"
-      : product.stockStatus === "low_stock"
-        ? "Low stock"
-        : product.stockStatus === "sold_out"
-          ? "Sold out"
-          : "Available";
-  const description = `${priceStr} · ${stockLabel}`;
-
-  // Route the image through our own domain so WhatsApp's bot can fetch it.
-  // Firebase Storage URLs are not reliably accessible to link-preview crawlers.
-  const rawImageUrl = getAbsolutePublicImageUrl(product.imageUrl);
-  const imageUrl = rawImageUrl
-    ? `${buildMetadataUrl("/api/og-image")}?url=${encodeURIComponent(rawImageUrl)}`
-    : undefined;
-
-  return {
-    title,
-    description,
-    alternates: {
-      canonical: productUrl
-    },
-    openGraph: {
-      title,
-      description,
-      url: productUrl,
-      siteName: "WAT App",
-      type: "website",
-      ...(imageUrl
-        ? { images: [{ url: imageUrl, alt: product.name }] }
-        : {})
-    },
-    twitter: {
-      card: "summary_large_image",
-      title,
-      description,
-      ...(imageUrl ? { images: [imageUrl] } : {})
-    }
-  };
 }
 
 export default async function ProductPage({ params }: ProductPageProps) {
