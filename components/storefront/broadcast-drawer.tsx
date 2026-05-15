@@ -79,9 +79,12 @@ export function BroadcastDrawer() {
         }
         .broadcast-drawer {
           position: fixed; bottom: 0; left: 0; right: 0;
-          background: #fff; border-radius: 24px 24px 0 0;
+          background: rgba(255,255,255,0.97);
+          backdrop-filter: blur(20px);
+          -webkit-backdrop-filter: blur(20px);
+          border-radius: 24px 24px 0 0;
           transform: translateY(100%);
-          transition: transform 0.35s cubic-bezier(0.32,0.72,0,1);
+          transition: transform 380ms cubic-bezier(0.32,0.72,0,1);
           z-index: 101; max-height: 80vh;
           display: flex; flex-direction: column;
           padding-bottom: env(safe-area-inset-bottom, 16px);
@@ -118,12 +121,12 @@ export function BroadcastDrawer() {
       {open && <div className="broadcast-overlay" onClick={() => setOpen(false)} aria-hidden="true" />}
 
       <div className={`broadcast-drawer${open ? " open" : ""}`} role="dialog" aria-label="Broadcasts" aria-modal="true">
-        <div style={{ width:36, height:4, background:"#ddd", borderRadius:2, margin:"12px auto 0", flexShrink:0 }} aria-hidden="true" />
+        <div style={{ width:40, height:4, background:"#ddd", borderRadius:2, margin:"12px auto 0", flexShrink:0 }} aria-hidden="true" />
         <div style={{ padding:"14px 20px 12px", display:"flex", alignItems:"center", justifyContent:"space-between", borderBottom:"0.5px solid #f0f0ec", flexShrink:0 }}>
           <strong style={{ fontSize:16, color:"#111" }}>Broadcasts</strong>
           <div style={{ display:"flex", alignItems:"center", gap:12 }}>
             {hasUnread && (
-              <button type="button" onClick={markAllRead} style={{ fontSize:12, color:"#16c16b", fontWeight:500, background:"none", border:"none", cursor:"pointer" }}>
+              <button type="button" onClick={markAllRead} style={{ fontSize:12, color:"#007aff", fontWeight:500, background:"none", border:"none", cursor:"pointer" }}>
                 Mark all read
               </button>
             )}
@@ -132,67 +135,63 @@ export function BroadcastDrawer() {
         </div>
         <div style={{ overflowY:"auto", flex:1 }}>
           {broadcasts.length === 0 ? (
-            <p style={{ padding:"40px 20px", textAlign:"center", color:"#aaa", fontSize:13 }}>No broadcasts yet.</p>
+            <p style={{ padding:"40px 20px", textAlign:"center", color:"#8e8e93", fontSize:13 }}>No broadcasts yet.</p>
           ) : (
             broadcasts.filter((b) => !dismissed.has(b.id)).map((b) => {
               const isUnread = mounted && !dismissed.has(b.id);
-              const rowStyle = { position:"relative" as const, padding:"12px 20px 12px 20px", display:"flex", gap:12, alignItems:"flex-start", background:isUnread ? "#fffcfc" : "transparent" };
-              const dismissBtn = (
-                <button
-                  type="button"
-                  aria-label="Dismiss broadcast"
-                  onPointerDown={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    console.log("dismiss tapped", b.id);
-                    const next = new Set(dismissed);
-                    next.add(b.id);
-                    setDismissed(next);
-                    writeDismissed(next);
-                  }}
-                  style={{ position:"absolute", top:0, right:0, background:"none", border:"none", cursor:"pointer", fontSize:14, color:"#bbb", lineHeight:1, padding:12, minWidth:44, minHeight:44, display:"flex", alignItems:"center", justifyContent:"center" }}
-                >✕</button>
+              const thumbBg = isUnread ? "#fff5f5" : "#f5f5f2";
+              const thumbnail = (
+                <div style={{ width:56, height:56, borderRadius:"50%", overflow:"hidden", background:thumbBg, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
+                  {b.productImageUrl
+                    ? <Image src={b.productImageUrl} alt="" width={56} height={56} style={{ width:"100%", height:"100%", objectFit:"cover", display:"block" }} unoptimized />
+                    : <span style={{ fontSize:22 }}>📦</span>}
+                </div>
               );
-              const rowInner = (
-                <>
-                  <span style={{ width:6, height:6, borderRadius:"50%", background:isUnread ? "#e24242" : "transparent", flexShrink:0, marginTop:5 }} aria-hidden="true" />
-                  {b.productImageUrl ? (
-                    <div style={{ width:36, height:36, borderRadius:10, overflow:"hidden", flexShrink:0, background:isUnread ? "#fff5f5" : "#f5f5f2", position:"relative" }}>
-                      <Image
-                        src={b.productImageUrl}
-                        alt=""
-                        width={36}
-                        height={36}
-                        style={{ width:"100%", height:"100%", objectFit:"cover", display:"block" }}
-                        unoptimized
-                      />
-                    </div>
-                  ) : (
-                    <div style={{ width:36, height:36, borderRadius:10, background:isUnread ? "#fff5f5" : "#f5f5f2", display:"flex", alignItems:"center", justifyContent:"center", fontSize:16, flexShrink:0 }}>📦</div>
-                  )}
-                  <div style={{ flex:1, paddingRight:16 }}>
-                    <p style={{ fontSize:13, fontWeight:isUnread ? 600 : 500, color:isUnread ? "#111" : "#666", marginBottom:2 }}>{b.title}</p>
-                    {b.body && <p style={{ fontSize:12, color:isUnread ? "#777" : "#aaa", lineHeight:1.45 }}>{b.body}</p>}
-                    <p style={{ fontSize:10, color:isUnread ? "#e24242" : "#bbb", marginTop:4 }}>{formatTime(b.sentAt)}</p>
+              const textBlock = (
+                <div style={{ flex:1, minWidth:0 }}>
+                  <div style={{ display:"flex", alignItems:"center", gap:5, marginBottom:2 }}>
+                    <span style={{ width:8, height:8, borderRadius:"50%", background:isUnread ? "#ff3b30" : "transparent", flexShrink:0 }} aria-hidden="true" />
+                    <p style={{ fontSize:13, fontWeight:isUnread ? 600 : 500, color:isUnread ? "#111" : "#666", margin:0, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{b.title}</p>
                   </div>
-                  {b.productSlug && <span style={{ fontSize:14, color:"#999", flexShrink:0, alignSelf:"center" }}>›</span>}
-                </>
+                  {b.body && <p style={{ fontSize:12, color:isUnread ? "#777" : "#aaa", lineHeight:1.45, margin:"0 0 2px" }}>{b.body}</p>}
+                  <p style={{ fontSize:10, color:isUnread ? "#ff3b30" : "#bbb", margin:0 }}>{formatTime(b.sentAt)}</p>
+                </div>
               );
-              return b.productSlug ? (
-                <Link key={b.id} href={`/product/${b.productSlug}`} className="broadcast-row" style={{ ...rowStyle, textDecoration:"none" }} onClick={(e) => e.stopPropagation()}>
-                  {rowInner}
-                  {dismissBtn}
-                </Link>
-              ) : (
-                <div key={b.id} className="broadcast-row" style={rowStyle}>
-                  {rowInner}
-                  {dismissBtn}
+              const innerStyle = { flex:1, display:"flex", alignItems:"center", gap:12, minWidth:0, padding:"10px 16px 10px 0", textDecoration:"none" as const };
+              return (
+                <div key={b.id} className="broadcast-row" style={{ display:"flex", alignItems:"center", background:isUnread ? "#fffcfc" : "transparent" }}>
+                  {/* dismiss — outside Link, far left */}
+                  <button
+                    type="button"
+                    aria-label="Dismiss broadcast"
+                    onPointerDown={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      const next = new Set(dismissed);
+                      next.add(b.id);
+                      setDismissed(next);
+                      writeDismissed(next);
+                    }}
+                    style={{ flexShrink:0, background:"none", border:"none", cursor:"pointer", fontSize:14, color:"#c7c7cc", lineHeight:1, width:40, minHeight:44, display:"flex", alignItems:"center", justifyContent:"center" }}
+                  >✕</button>
+                  {/* content — Link if navigable, div otherwise */}
+                  {b.productSlug ? (
+                    <Link href={`/product/${b.productSlug}`} style={innerStyle}>
+                      {textBlock}
+                      {thumbnail}
+                    </Link>
+                  ) : (
+                    <div style={innerStyle}>
+                      {textBlock}
+                      {thumbnail}
+                    </div>
+                  )}
                 </div>
               );
             })
           )}
           {!hasUnread && broadcasts.length > 0 && (
-            <p style={{ textAlign:"center", padding:"12px 20px", fontSize:11, color:"#bbb" }}>All caught up ✓</p>
+            <p style={{ textAlign:"center", padding:"12px 20px", fontSize:11, color:"#8e8e93" }}>All caught up ✓</p>
           )}
         </div>
       </div>
