@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { ProductDetailClient } from "@/components/product-detail-client";
 import { fetchProductMetadataBySlug } from "@/lib/firebase/firestore-server";
-import { buildMetadataUrl, buildProductMetadataTitle, getAbsolutePublicImageUrl } from "@/lib/metadata";
+import { buildMetadataUrl, buildProductMetadataTitle } from "@/lib/metadata";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -97,18 +97,9 @@ export async function generateMetadata({ params }: ProductPageProps): Promise<Me
             : "Available";
     const description = `${priceStr} · ${stockLabel}`;
 
-    // Route the image through our own domain so WhatsApp's bot can fetch it.
-    // Firebase Storage URLs are not reliably accessible to link-preview crawlers.
-    const rawImageUrl = getAbsolutePublicImageUrl(product.imageUrl);
-    const imageUrl = rawImageUrl
-      ? `${buildMetadataUrl("/api/og-image")}?url=${encodeURIComponent(rawImageUrl)}`
-      : undefined;
-
-    // Always include an og:image — fall back to the site image when the
-    // product has no uploaded photo so crawlers never see a blank card.
-    const ogImages = imageUrl
-      ? [{ url: imageUrl, alt: product.name }]
-      : [{ url: siteImageUrl, width: 1200, height: 630, alt: "WAT App" }];
+    // TEMP TEST: hardcode og:image to static site image to isolate whether
+    // the proxy URL is causing WhatsApp preview failures.
+    const ogImage = "https://watapp.pk/opengraph-image";
 
     return {
       title,
@@ -122,13 +113,13 @@ export async function generateMetadata({ params }: ProductPageProps): Promise<Me
         url: productUrl,
         siteName: "WAT App",
         type: "website",
-        images: ogImages
+        images: [{ url: ogImage, width: 1200, height: 630, alt: product.name }]
       },
       twitter: {
         card: "summary_large_image",
         title,
         description,
-        images: [imageUrl ?? siteImageUrl]
+        images: [ogImage]
       }
     };
   } catch {
