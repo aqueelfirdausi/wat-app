@@ -619,6 +619,15 @@ export function subscribeToBroadcasts(callback: (broadcasts: Broadcast[]) => voi
   );
 }
 
+export async function deleteAllBroadcasts() {
+  const firestore = ensureDb();
+  const snapshot = await getDocs(collection(firestore, "broadcasts"));
+  if (snapshot.empty) return;
+  const batch = writeBatch(firestore);
+  snapshot.docs.forEach((d) => batch.delete(d.ref));
+  await batch.commit();
+}
+
 export async function seedSettings() {
   const firestore = ensureDb();
   await setDoc(

@@ -3,7 +3,7 @@
 import Image from "next/image";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/components/providers/auth-provider";
-import { fetchProducts } from "@/lib/firebase/firestore";
+import { fetchProducts, subscribeToBroadcasts, deleteAllBroadcasts, type Broadcast } from "@/lib/firebase/firestore";
 import type { Product } from "@/lib/types";
 
 type SendStatus =
@@ -20,6 +20,8 @@ export function NotificationsPanel() {
   const [products, setProducts] = useState<Product[]>([]);
   const [productsLoading, setProductsLoading] = useState(true);
   const [selectedProductId, setSelectedProductId] = useState("");
+  const [broadcasts, setBroadcasts] = useState<Broadcast[]>([]);
+  const [clearing, setClearing] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -38,6 +40,11 @@ export function NotificationsPanel() {
         if (!cancelled) setProductsLoading(false);
       });
     return () => { cancelled = true; };
+  }, []);
+
+  useEffect(() => {
+    const unsub = subscribeToBroadcasts(setBroadcasts);
+    return unsub;
   }, []);
 
   async function handleSend(e: React.FormEvent) {
@@ -75,6 +82,39 @@ export function NotificationsPanel() {
       });
     }
   }
+
+  function handleRebroadcast(b: Broadcast) {
+    setTitle(b.title);
+    setBody(b.body ?? "");
+    setSelectedProductId(b.productId ?? "");
+    setStatus({ type: "idle" });
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  async function handleClearAll() {
+    if (!window.confirm("Delete all broadcasts? This cannot be undone.")) return;
+    setClearing(true);
+    try {
+      await deleteAllBroadcasts();
+    } finally {
+      setClearing(false);
+    }
+  }
+
+  function formatSentAt(sentAt: string) {
+    try {
+      const date = new Date(sentAt);
+      const diffHours = (Date.now() - date.getTime()) / 3600000;
+      const timeStr = date.toLocaleTimeString("en-PK", { hour: "numeric", minute: "2-digit" });
+      if (diffHours < 24) return `Today · ${timeStr}`;
+      return `Yesterday · ${timeStr}`;
+    } catch {
+      return sentAt;
+    }
+  }
+
+  const cutoff = new Date(Date.now() - 48 * 3600 * 1000).toISOString();
+  const recentBroadcasts = broadcasts.filter((b) => b.sentAt >= cutoff);
 
   return (
     <div className="dashboard-stack">
@@ -185,6 +225,63 @@ export function NotificationsPanel() {
             {status.type === "sending" ? "Sending…" : "Send broadcast"}
           </button>
         </form>
+      </section>
+
+      <section className="panel-card">
+        <div className="panel-header">
+          <div>
+            <p className="eyebrow">Last 48 hours</p>
+            <h2 style={{ fontSize:18, margin:0 }}>Broadcast history</h2>
+          </div>
+          {broadcasts.length > 0 && (
+            <button
+              type="button"
+              className="secondary-link"
+              onClick={handleClearAll}
+              disabled={clearing}
+              style={{ fontSize:13 }}
+            >
+              {clearing ? "Clearing…" : "Clear all"}
+            </button>
+          )}
+        </div>
+
+        {recentBroadcasts.length === 0 ? (
+          <p style={{ fontSize:13, color:"#aaa", padding:"12px 0" }}>No broadcasts in the last 48 hours.</p>
+        ) : (
+          <div style={{ display:"flex", flexDirection:"column", gap:1 }}>
+            {recentBroadcasts.map((b) => (
+              <div key={b.id} style={{ display:"flex", alignItems:"center", gap:12, padding:"10px 0", borderBottom:"0.5px solid #f0f0ec" }}>
+                {b.productImageUrl ? (
+                  <div style={{ width:40, height:40, borderRadius:8, overflow:"hidden", flexShrink:0, background:"#f5f5f2" }}>
+                    <Image
+                      src={b.productImageUrl}
+                      alt=""
+                      width={40}
+                      height={40}
+                      style={{ width:"100%", height:"100%", objectFit:"cover", display:"block" }}
+                      unoptimized
+                    />
+                  </div>
+                ) : (
+                  <div style={{ width:40, height:40, borderRadius:8, background:"#f5f5f2", display:"flex", alignItems:"center", justifyContent:"center", fontSize:18, flexShrink:0 }}>📦</div>
+                )}
+                <div style={{ flex:1, minWidth:0 }}>
+                  <p style={{ fontSize:13, fontWeight:600, color:"#111", marginBottom:b.body ? 2 : 0, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{b.title}</p>
+                  {b.body && <p style={{ fontSize:12, color:"#888", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{b.body}</p>}
+                </div>
+                <span style={{ fontSize:11, color:"#bbb", flexShrink:0 }}>{formatSentAt(b.sentAt)}</span>
+                <button
+                  type="button"
+                  onClick={() => handleRebroadcast(b)}
+                  aria-label="Pre-fill form with this broadcast"
+                  title="Rebroadcast"
+                  style={{ background:"none", border:"none", cursor:"pointer", fontSize:16, color:"#aaa", flexShrink:0, padding:"0 2px", lineHeight:1 }}
+                >↺</button>
+              </div>
+            ))}
+          </div>
+        )}
       </section>
     </div>
   );
