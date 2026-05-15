@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { ProductDetailClient } from "@/components/product-detail-client";
 import { fetchProductMetadataBySlug } from "@/lib/firebase/firestore-server";
-import { buildMetadataUrl, buildProductMetaDescription, buildProductMetadataImageUrl, buildProductMetadataTitle } from "@/lib/metadata";
+import { buildMetadataUrl, buildProductMetadataTitle, getAbsolutePublicImageUrl } from "@/lib/metadata";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -49,16 +49,26 @@ export async function generateMetadata({ params }: ProductPageProps): Promise<Me
     };
   }
 
-  const description = buildProductMetaDescription({
-    categoryName: product.categoryName,
-    condition: product.condition,
-    price: product.price,
-    currency: product.currency,
-    description: product.description
-  });
-
   const title = buildProductMetadataTitle(product.name);
-  const imageUrl = buildProductMetadataImageUrl(slug);
+
+  // "Rs 4,500 · In stock" — price + stock status
+  const priceStr = new Intl.NumberFormat("en-PK", {
+    style: "currency",
+    currency: product.currency || "PKR",
+    maximumFractionDigits: 0
+  }).format(product.price);
+  const stockLabel =
+    product.stockStatus === "in_stock"
+      ? "In stock"
+      : product.stockStatus === "low_stock"
+        ? "Low stock"
+        : product.stockStatus === "sold_out"
+          ? "Sold out"
+          : "Available";
+  const description = `${priceStr} · ${stockLabel}`;
+
+  // Use the product's own image URL directly (already an absolute https:// URL)
+  const imageUrl = getAbsolutePublicImageUrl(product.imageUrl);
 
   return {
     title,
@@ -72,21 +82,15 @@ export async function generateMetadata({ params }: ProductPageProps): Promise<Me
       url: productUrl,
       siteName: "WAT App",
       type: "website",
-      images: [
-        {
-          url: imageUrl,
-          type: "image/png",
-          width: 1200,
-          height: 630,
-          alt: product.name
-        }
-      ]
+      ...(imageUrl
+        ? { images: [{ url: imageUrl, alt: product.name }] }
+        : {})
     },
     twitter: {
       card: "summary_large_image",
       title,
       description,
-      images: [imageUrl]
+      ...(imageUrl ? { images: [imageUrl] } : {})
     }
   };
 }
