@@ -712,6 +712,9 @@ export function ProductManager({ actor, canDelete = false }: ProductManagerProps
     const selectedProducts = products.filter((product) => selectedIds.includes(product.id));
 
     if (!selectedProducts.length) {
+      if (selectedIds.length > 0) {
+        setError("Selection mismatch — please deselect and re-select products, then try again.");
+      }
       return;
     }
 
@@ -773,6 +776,12 @@ export function ProductManager({ actor, canDelete = false }: ProductManagerProps
   }
 
   async function handleBulkStorefrontVisibility(nextStorefrontVisible: boolean) {
+    // Optimistic update — reflect change immediately; onSnapshot will correct if Firestore disagrees
+    setProducts((prev) =>
+      prev.map((p) =>
+        selectedIds.includes(p.id) ? { ...p, storefrontVisible: nextStorefrontVisible } : p
+      )
+    );
     await runBulkAction(
       nextStorefrontVisible ? "show" : "hide",
       async (product) =>
