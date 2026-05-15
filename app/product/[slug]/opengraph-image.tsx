@@ -1,10 +1,7 @@
-import { Buffer } from "node:buffer";
 import { ImageResponse } from "next/og";
 import { fetchProductMetadataBySlug } from "@/lib/firebase/firestore-server";
-import { buildProductMetaDescription, getAbsolutePublicImageUrl } from "@/lib/metadata";
 
-export const dynamic = "force-dynamic";
-export const runtime = "nodejs";
+export const runtime = "edge";
 
 export const size = {
   width: 1200,
@@ -13,58 +10,48 @@ export const size = {
 
 export const contentType = "image/png";
 
-type ProductImageProps = {
-  params: Promise<{
-    slug: string;
-  }>;
+type Props = {
+  params: Promise<{ slug: string }>;
 };
 
-async function buildEmbeddedProductImageSrc(imageUrl?: string) {
-  const publicImageUrl = getAbsolutePublicImageUrl(imageUrl);
-
-  if (!publicImageUrl) {
-    return null;
-  }
-
-  try {
-    const response = await fetch(publicImageUrl, {
-      headers: {
-        Accept: "image/*"
-      },
-      cache: "no-store"
-    });
-
-    if (!response.ok) {
-      return null;
-    }
-
-    const contentType = response.headers.get("content-type")?.split(";")[0]?.trim() ?? "image/jpeg";
-
-    if (!contentType.startsWith("image/")) {
-      return null;
-    }
-
-    const imageBuffer = Buffer.from(await response.arrayBuffer());
-    return `data:${contentType};base64,${imageBuffer.toString("base64")}`;
-  } catch {
-    return null;
-  }
-}
-
-export default async function ProductOpenGraphImage({ params }: ProductImageProps) {
+export default async function ProductOpenGraphImage({ params }: Props) {
   const { slug } = await params;
-  const product = await fetchProductMetadataBySlug(slug, { revalidate: false });
-  const productImageSrc = await buildEmbeddedProductImageSrc(product?.imageUrl);
 
-  const description = product
-    ? buildProductMetaDescription({
-        categoryName: product.categoryName,
-        condition: product.condition,
-        price: product.price,
-        currency: product.currency,
-        description: product.description
-      })
-    : "This product link is no longer available.";
+  // includeHidden: true — generate a valid image even for hidden products
+  // revalidate: 3600 — allow edge/CDN caching for 1 hour
+  const product = await fetchProductMetadataBySlug(slug, {
+    revalidate: 3600,
+    includeHidden: true
+  }).catch(() => null);
+
+  const name = product?.name ?? "Product";
+
+  const price =
+    product?.price != null
+      ? new Intl.NumberFormat("en-PK", {
+          style: "currency",
+          currency: product.currency || "PKR",
+          maximumFractionDigits: 0
+        }).format(product.price)
+      : null;
+
+  const stockLabel =
+    product?.stockStatus === "in_stock"
+      ? "In stock"
+      : product?.stockStatus === "low_stock"
+        ? "Low stock"
+        : product?.stockStatus === "sold_out"
+          ? "Sold out"
+          : null;
+
+  const stockColor =
+    product?.stockStatus === "in_stock"
+      ? "#16c16b"
+      : product?.stockStatus === "low_stock"
+        ? "#e07b00"
+        : product?.stockStatus === "sold_out"
+          ? "#c0392b"
+          : "#6d6253";
 
   return new ImageResponse(
     (
@@ -73,139 +60,138 @@ export default async function ProductOpenGraphImage({ params }: ProductImageProp
           width: "100%",
           height: "100%",
           display: "flex",
-          padding: "42px",
+          flexDirection: "column",
+          justifyContent: "space-between",
+          padding: "56px 64px",
           background:
-            "linear-gradient(135deg, rgba(251,248,242,1) 0%, rgba(247,243,235,1) 48%, rgba(255,248,239,1) 100%)",
-          color: "#1f1a14",
-          fontFamily: "Segoe UI, sans-serif",
-          gap: "28px"
+            "linear-gradient(135deg, rgba(251,248,242,1) 0%, rgba(247,243,235,1) 42%, rgba(255,248,239,1) 100%)",
+          fontFamily: "Segoe UI, sans-serif"
         }}
       >
+        {/* Top: category label */}
         <div
           style={{
-            flex: 1,
             display: "flex",
-            flexDirection: "column",
-            justifyContent: "space-between",
-            padding: "12px 0"
+            fontSize: "22px",
+            fontWeight: 600,
+            color: "#9d8f7f",
+            letterSpacing: "0.06em",
+            textTransform: "uppercase"
           }}
         >
-          <div style={{ display: "flex", flexDirection: "column", gap: "18px" }}>
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "12px",
-                color: "#12653d",
-                fontSize: "19px",
-                fontWeight: 700,
-                letterSpacing: "0.16em",
-                textTransform: "uppercase"
-              }}
-            >
-              <span>WAT App</span>
-              <span style={{ color: "#6d6253", letterSpacing: "0.08em" }}>Product link</span>
-            </div>
-            <div style={{ fontSize: "60px", fontWeight: 900, lineHeight: 1.02, letterSpacing: "-0.05em" }}>
-              {product?.name ?? "Product unavailable"}
-            </div>
-            <div style={{ fontSize: "28px", color: "#6d6253", lineHeight: 1.45 }}>{description}</div>
+          {product?.categoryName ?? ""}
+        </div>
+
+        {/* Middle: name + price + stock */}
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: "24px",
+            flex: 1,
+            justifyContent: "center"
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              fontSize: name.length > 40 ? "62px" : "80px",
+              fontWeight: 900,
+              lineHeight: 1.05,
+              letterSpacing: "-0.03em",
+              color: "#1f1a14",
+              maxWidth: "1000px"
+            }}
+          >
+            {name}
           </div>
 
-          <div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
-            {product?.categoryName ? (
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "24px"
+            }}
+          >
+            {price ? (
               <div
                 style={{
                   display: "flex",
-                  alignItems: "center",
-                  padding: "10px 16px",
-                  borderRadius: "999px",
-                  background: "#f6eee3",
-                  fontSize: "20px",
-                  color: "#6d6253",
-                  fontWeight: 700
+                  fontSize: "44px",
+                  fontWeight: 800,
+                  color: "#1f1a14",
+                  letterSpacing: "-0.02em"
                 }}
               >
-                {product.categoryName}
+                {price}
               </div>
             ) : null}
-            {product?.condition ? (
+            {stockLabel ? (
               <div
                 style={{
                   display: "flex",
                   alignItems: "center",
-                  padding: "10px 16px",
+                  padding: "8px 22px",
                   borderRadius: "999px",
-                  background: "rgba(31, 143, 88, 0.1)",
-                  fontSize: "20px",
-                  color: "#12653d",
-                  fontWeight: 700
+                  background: `${stockColor}1a`,
+                  fontSize: "28px",
+                  fontWeight: 700,
+                  color: stockColor
                 }}
               >
-                {product.condition}
-              </div>
-            ) : null}
-            {product?.featured ? (
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  padding: "10px 16px",
-                  borderRadius: "999px",
-                  background: "rgba(241, 177, 77, 0.2)",
-                  fontSize: "20px",
-                  color: "#8a5d16",
-                  fontWeight: 700
-                }}
-              >
-                Featured
+                {stockLabel}
               </div>
             ) : null}
           </div>
         </div>
 
+        {/* Bottom: WAT App branding */}
         <div
           style={{
-            width: "380px",
-            borderRadius: "28px",
-            background: "#fffdf8",
-            border: "1px solid #e9dccb",
             display: "flex",
             alignItems: "center",
-            justifyContent: "center",
-            overflow: "hidden",
-            boxShadow: "0 18px 45px rgba(44, 27, 3, 0.08)"
+            justifyContent: "flex-end",
+            gap: "14px"
           }}
         >
-          {productImageSrc ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={productImageSrc}
-              alt={product?.name ?? "WAT App product preview"}
-              width="380"
-              height="546"
-              style={{ width: "100%", height: "100%", objectFit: "cover" }}
-            />
-          ) : (
-            <div
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              width: "54px",
+              height: "54px",
+              borderRadius: "14px",
+              background: "#fffdf8",
+              border: "1px solid #e9dccb",
+              boxShadow: "0 4px 12px rgba(44, 27, 3, 0.08)",
+              fontSize: "15px",
+              fontWeight: 800,
+              color: "#12653d"
+            }}
+          >
+            WAT
+          </div>
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              gap: "2px"
+            }}
+          >
+            <span
               style={{
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: "14px",
-                width: "100%",
-                height: "100%",
-                background: "linear-gradient(135deg, #efe3d1, #fff7ea)",
-                color: "#6d6253",
-                fontSize: "30px",
-                fontWeight: 700
+                fontSize: "18px",
+                fontWeight: 700,
+                color: "#12653d",
+                letterSpacing: "0.12em",
+                textTransform: "uppercase"
               }}
             >
-              <span>WAT App</span>
-              <span style={{ fontSize: "22px" }}>Product preview</span>
-            </div>
-          )}
+              WAT App
+            </span>
+            <span style={{ fontSize: "15px", color: "#9d8f7f" }}>watapp.pk</span>
+          </div>
         </div>
       </div>
     ),

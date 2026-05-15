@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { ProductDetailClient } from "@/components/product-detail-client";
 import { fetchProductMetadataBySlug } from "@/lib/firebase/firestore-server";
-import { buildMetadataUrl, buildProductMetadataTitle } from "@/lib/metadata";
+import { buildMetadataUrl, buildProductMetadataTitle, buildProductMetadataImageUrl } from "@/lib/metadata";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -97,13 +97,9 @@ export async function generateMetadata({ params }: ProductPageProps): Promise<Me
             : "Available";
     const description = `${priceStr} · ${stockLabel}`;
 
-    // Use the Firebase Storage URL directly — WhatsApp's crawler can fetch it
-    // without a proxy. The proxy route (/api/og-image) added latency that caused
-    // WhatsApp to timeout before loading the image. Fall back to the site image
-    // only when the product has no imageUrl.
-    const imageUrl =
-      product.imageUrl?.startsWith("https://") ? product.imageUrl : null;
-    const ogImage = imageUrl ?? "https://watapp.pk/opengraph-image";
+    // Served from our own domain via app/product/[slug]/opengraph-image.tsx.
+    // Edge runtime, text-only — no upstream image fetch, no latency issues.
+    const ogImage = buildProductMetadataImageUrl(slug);
 
     return {
       title,
@@ -117,7 +113,7 @@ export async function generateMetadata({ params }: ProductPageProps): Promise<Me
         url: productUrl,
         siteName: "WAT App",
         type: "website",
-        images: [{ url: ogImage, alt: product.name }]
+        images: [{ url: ogImage, width: 1200, height: 630, alt: product.name }]
       },
       twitter: {
         card: "summary_large_image",
