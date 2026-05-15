@@ -67,8 +67,12 @@ export async function generateMetadata({ params }: ProductPageProps): Promise<Me
           : "Available";
   const description = `${priceStr} · ${stockLabel}`;
 
-  // Use the product's own image URL directly (already an absolute https:// URL)
-  const imageUrl = getAbsolutePublicImageUrl(product.imageUrl);
+  // Route the image through our own domain so WhatsApp's bot can fetch it.
+  // Firebase Storage URLs are not reliably accessible to link-preview crawlers.
+  const rawImageUrl = getAbsolutePublicImageUrl(product.imageUrl);
+  const imageUrl = rawImageUrl
+    ? `${buildMetadataUrl("/api/og-image")}?url=${encodeURIComponent(rawImageUrl)}`
+    : undefined;
 
   return {
     title,
