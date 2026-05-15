@@ -97,9 +97,13 @@ export async function generateMetadata({ params }: ProductPageProps): Promise<Me
             : "Available";
     const description = `${priceStr} · ${stockLabel}`;
 
-    // TEMP TEST: hardcode og:image to static site image to isolate whether
-    // the proxy URL is causing WhatsApp preview failures.
-    const ogImage = "https://watapp.pk/opengraph-image";
+    // Use the Firebase Storage URL directly — WhatsApp's crawler can fetch it
+    // without a proxy. The proxy route (/api/og-image) added latency that caused
+    // WhatsApp to timeout before loading the image. Fall back to the site image
+    // only when the product has no imageUrl.
+    const imageUrl =
+      product.imageUrl?.startsWith("https://") ? product.imageUrl : null;
+    const ogImage = imageUrl ?? "https://watapp.pk/opengraph-image";
 
     return {
       title,
@@ -113,7 +117,7 @@ export async function generateMetadata({ params }: ProductPageProps): Promise<Me
         url: productUrl,
         siteName: "WAT App",
         type: "website",
-        images: [{ url: ogImage, width: 1200, height: 630, alt: product.name }]
+        images: [{ url: ogImage, alt: product.name }]
       },
       twitter: {
         card: "summary_large_image",
