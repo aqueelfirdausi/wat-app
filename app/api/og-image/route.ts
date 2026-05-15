@@ -3,6 +3,11 @@ import { NextRequest } from "next/server";
 // Only proxy images from Firebase Storage — prevents open-proxy abuse.
 const ALLOWED_HOSTNAME = "firebasestorage.googleapis.com";
 
+// Upstream fetch must complete within this window. WhatsApp's scraper
+// typically gives up after ~5s; 8s gives Firebase Storage room while
+// still returning before most bot timeouts.
+const FETCH_TIMEOUT_MS = 8000;
+
 export async function GET(request: NextRequest) {
   const source = request.nextUrl.searchParams.get("url")?.trim();
 
@@ -25,21 +30,35 @@ export async function GET(request: NextRequest) {
   try {
     const upstream = await fetch(parsedUrl.toString(), {
       headers: { Accept: "image/*" },
-      cache: "no-store"
+      cache: "no-store",
+      signal: AbortSignal.timeout(FETCH_TIMEOUT_MS)
     });
 
     if (!upstream.ok || !upstream.body) {
       return new Response("Unable to fetch image.", { status: 502 });
     }
 
+    const responseHeaders: Record<string, string> = {
+      "Content-Type": upstream.headers.get("content-type") ?? "image/jpeg",
+      "Cache-Control": "public, max-age=86400, s-maxage=86400"
+    };
+
+    // Forward Content-Length so scrapers (WhatsApp, Telegram, etc.) know
+    // the full payload size and don't abort chunked streams early.
+    const contentLength = upstream.headers.get("content-length");
+    if (contentLength) {
+      responseHeaders["Content-Length"] = contentLength;
+    }
+
     return new Response(upstream.body, {
       status: 200,
-      headers: {
-        "Content-Type": upstream.headers.get("content-type") ?? "image/jpeg",
-        "Cache-Control": "public, max-age=86400, s-maxage=86400"
-      }
+      headers: responseHeaders
     });
-  } catch {
-    return new Response("Image proxy request failed.", { status: 502 });
+  } catch (err) {
+    const isTimeout = err instanceof Error && err.name === "TimeoutError";
+    return new Response(
+      isTimeout ? "Image fetch timed out." : "Image proxy request failed.",
+      { status: 502 }
+    );
   }
 }
