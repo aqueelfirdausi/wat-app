@@ -46,6 +46,7 @@ export async function POST(request: NextRequest) {
   // Resolve product image if a productId was supplied
   const db = adminDb();
   let productImageUrl: string | null = null;
+  let productSlug: string | null = null;
 
   if (productId) {
     const productDoc = await db.collection("products").doc(productId).get();
@@ -57,6 +58,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Selected product has no image" }, { status: 400 });
     }
     productImageUrl = imageUrl.trim();
+    const slug = productDoc.data()?.slug;
+    if (typeof slug === "string" && slug.trim().length > 0) {
+      productSlug = slug.trim();
+    }
   }
 
   // Fetch all stored FCM tokens
@@ -100,6 +105,7 @@ export async function POST(request: NextRequest) {
   if (productId && productImageUrl) {
     broadcastDoc.productId = productId;
     broadcastDoc.productImageUrl = productImageUrl;
+    if (productSlug) broadcastDoc.productSlug = productSlug;
   }
   await db.collection("broadcasts").add(broadcastDoc);
 

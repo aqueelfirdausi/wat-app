@@ -128,7 +128,14 @@ export function NotificationsPanel() {
               id="notif-product"
               className="notification-form-input"
               value={selectedProductId}
-              onChange={(e) => setSelectedProductId(e.target.value)}
+              onChange={(e) => {
+                const id = e.target.value;
+                setSelectedProductId(id);
+                if (id && !title.trim()) {
+                  const picked = products.find((p) => p.id === id);
+                  if (picked) setTitle(picked.name);
+                }
+              }}
               disabled={productsLoading || status.type === "sending"}
             >
               <option value="">— None —</option>

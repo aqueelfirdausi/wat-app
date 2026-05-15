@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { type Broadcast, subscribeToBroadcasts } from "@/lib/firebase/firestore";
 
@@ -111,8 +112,9 @@ export function BroadcastDrawer() {
           ) : (
             broadcasts.map((b) => {
               const isUnread = mounted && b.sentAt > lastRead;
-              return (
-                <div key={b.id} style={{ padding:"12px 20px", display:"flex", gap:12, alignItems:"flex-start", borderBottom:"0.5px solid #f5f5f2", background:isUnread ? "#fffcfc" : "transparent" }}>
+              const rowStyle = { padding:"12px 20px", display:"flex", gap:12, alignItems:"flex-start", borderBottom:"0.5px solid #f5f5f2", background:isUnread ? "#fffcfc" : "transparent" };
+              const rowInner = (
+                <>
                   <span style={{ width:6, height:6, borderRadius:"50%", background:isUnread ? "#e24242" : "transparent", flexShrink:0, marginTop:5 }} aria-hidden="true" />
                   {b.productImageUrl ? (
                     <div style={{ width:36, height:36, borderRadius:10, overflow:"hidden", flexShrink:0, background:isUnread ? "#fff5f5" : "#f5f5f2", position:"relative" }}>
@@ -133,6 +135,16 @@ export function BroadcastDrawer() {
                     {b.body && <p style={{ fontSize:12, color:isUnread ? "#777" : "#aaa", lineHeight:1.45 }}>{b.body}</p>}
                     <p style={{ fontSize:10, color:isUnread ? "#e24242" : "#bbb", marginTop:4 }}>{formatTime(b.sentAt)}</p>
                   </div>
+                  {b.productSlug && <span style={{ fontSize:14, color:"#999", flexShrink:0, alignSelf:"center" }}>›</span>}
+                </>
+              );
+              return b.productSlug ? (
+                <Link key={b.id} href={`/product/${b.productSlug}`} style={{ ...rowStyle, textDecoration:"none" }} onClick={(e) => e.stopPropagation()}>
+                  {rowInner}
+                </Link>
+              ) : (
+                <div key={b.id} style={rowStyle}>
+                  {rowInner}
                 </div>
               );
             })
