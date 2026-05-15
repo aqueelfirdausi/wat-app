@@ -5,17 +5,33 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { type Broadcast, subscribeToBroadcasts } from "@/lib/firebase/firestore";
 
-const LAST_READ_KEY = "watapp-broadcasts-last-read";
+const DISMISSED_KEY = "watapp-broadcasts-dismissed";
+
+function readDismissed(): Set<string> {
+  try {
+    const raw = window.localStorage.getItem(DISMISSED_KEY);
+    if (!raw) return new Set();
+    const parsed = JSON.parse(raw) as unknown;
+    if (!Array.isArray(parsed)) return new Set();
+    return new Set(parsed.filter((x): x is string => typeof x === "string"));
+  } catch {
+    return new Set();
+  }
+}
+
+function writeDismissed(ids: Set<string>) {
+  window.localStorage.setItem(DISMISSED_KEY, JSON.stringify([...ids]));
+}
 
 export function BroadcastDrawer() {
   const [broadcasts, setBroadcasts] = useState<Broadcast[]>([]);
   const [open, setOpen] = useState(false);
-  const [lastRead, setLastRead] = useState("");
+  const [dismissed, setDismissed] = useState<Set<string>>(new Set());
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     setMounted(true);
-    setLastRead(window.localStorage.getItem(LAST_READ_KEY) ?? "");
+    setDismissed(readDismissed());
   }, []);
 
   useEffect(() => {
@@ -23,7 +39,7 @@ export function BroadcastDrawer() {
     return unsub;
   }, []);
 
-  const unreadCount = mounted ? broadcasts.filter((b) => b.sentAt > lastRead).length : 0;
+  const unreadCount = mounted ? broadcasts.filter((b) => !dismissed.has(b.id)).length : 0;
   const hasUnread = unreadCount > 0;
   const dotColor = hasUnread ? "#e24242" : "#16c16b";
   const btnBg = hasUnread ? "#fff5f5" : "#f0faf5";
@@ -31,9 +47,10 @@ export function BroadcastDrawer() {
   const labelColor = hasUnread ? "#e24242" : "#16c16b";
 
   function markAllRead() {
-    const now = new Date().toISOString();
-    setLastRead(now);
-    window.localStorage.setItem(LAST_READ_KEY, now);
+    const next = new Set(dismissed);
+    broadcasts.forEach((b) => next.add(b.id));
+    setDismissed(next);
+    writeDismissed(next);
   }
 
   function formatTime(sentAt: string) {
@@ -70,6 +87,13 @@ export function BroadcastDrawer() {
           padding-bottom: env(safe-area-inset-bottom, 16px);
         }
         .broadcast-drawer.open { transform: translateY(0); }
+        .broadcast-row {
+          border-bottom: 1px solid #ebebeb;
+          transition: background 150ms ease;
+        }
+        .broadcast-row:last-child { border-bottom: none; }
+        .broadcast-row:hover { background: #f9f9f9 !important; }
+        .broadcast-row:active { background: #f0f0f0 !important; }
       `}</style>
 
       <button
@@ -110,9 +134,25 @@ export function BroadcastDrawer() {
           {broadcasts.length === 0 ? (
             <p style={{ padding:"40px 20px", textAlign:"center", color:"#aaa", fontSize:13 }}>No broadcasts yet.</p>
           ) : (
-            broadcasts.map((b) => {
-              const isUnread = mounted && b.sentAt > lastRead;
-              const rowStyle = { padding:"12px 20px", display:"flex", gap:12, alignItems:"flex-start", borderBottom:"0.5px solid #f5f5f2", background:isUnread ? "#fffcfc" : "transparent" };
+            broadcasts.filter((b) => !dismissed.has(b.id)).map((b) => {
+              const isUnread = mounted && !dismissed.has(b.id);
+              const rowStyle = { position:"relative" as const, padding:"12px 20px 12px 20px", display:"flex", gap:12, alignItems:"flex-start", background:isUnread ? "#fffcfc" : "transparent" };
+              const dismissBtn = (
+                <button
+                  type="button"
+                  aria-label="Dismiss broadcast"
+                  onPointerDown={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    console.log("dismiss tapped", b.id);
+                    const next = new Set(dismissed);
+                    next.add(b.id);
+                    setDismissed(next);
+                    writeDismissed(next);
+                  }}
+                  style={{ position:"absolute", top:0, right:0, background:"none", border:"none", cursor:"pointer", fontSize:14, color:"#bbb", lineHeight:1, padding:12, minWidth:44, minHeight:44, display:"flex", alignItems:"center", justifyContent:"center" }}
+                >✕</button>
+              );
               const rowInner = (
                 <>
                   <span style={{ width:6, height:6, borderRadius:"50%", background:isUnread ? "#e24242" : "transparent", flexShrink:0, marginTop:5 }} aria-hidden="true" />
@@ -130,7 +170,7 @@ export function BroadcastDrawer() {
                   ) : (
                     <div style={{ width:36, height:36, borderRadius:10, background:isUnread ? "#fff5f5" : "#f5f5f2", display:"flex", alignItems:"center", justifyContent:"center", fontSize:16, flexShrink:0 }}>📦</div>
                   )}
-                  <div style={{ flex:1 }}>
+                  <div style={{ flex:1, paddingRight:16 }}>
                     <p style={{ fontSize:13, fontWeight:isUnread ? 600 : 500, color:isUnread ? "#111" : "#666", marginBottom:2 }}>{b.title}</p>
                     {b.body && <p style={{ fontSize:12, color:isUnread ? "#777" : "#aaa", lineHeight:1.45 }}>{b.body}</p>}
                     <p style={{ fontSize:10, color:isUnread ? "#e24242" : "#bbb", marginTop:4 }}>{formatTime(b.sentAt)}</p>
@@ -139,12 +179,14 @@ export function BroadcastDrawer() {
                 </>
               );
               return b.productSlug ? (
-                <Link key={b.id} href={`/product/${b.productSlug}`} style={{ ...rowStyle, textDecoration:"none" }} onClick={(e) => e.stopPropagation()}>
+                <Link key={b.id} href={`/product/${b.productSlug}`} className="broadcast-row" style={{ ...rowStyle, textDecoration:"none" }} onClick={(e) => e.stopPropagation()}>
                   {rowInner}
+                  {dismissBtn}
                 </Link>
               ) : (
-                <div key={b.id} style={rowStyle}>
+                <div key={b.id} className="broadcast-row" style={rowStyle}>
                   {rowInner}
+                  {dismissBtn}
                 </div>
               );
             })
