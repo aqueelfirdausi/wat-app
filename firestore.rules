@@ -2,36 +2,73 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // ── Storefront (public reads) ──────────────────────────
+    function isAdmin() {
+      return request.auth != null
+        && request.auth.token.email == 'aqueelfirdausi@gmail.com';
+    }
+
+    function isOwner(shopId) {
+      return request.auth != null && request.auth.uid == shopId;
+    }
+
+    function isActiveTenant(shopId) {
+      return isOwner(shopId)
+        && get(/databases/$(database)/documents/tenants/$(shopId)).data.status == 'active';
+    }
+
+    // ── Tenants ──────────────────────────────────────────────────────────
+    match /tenants/{shopId} {
+      allow read:   if isAdmin() || isOwner(shopId);
+      allow create: if isAdmin();
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // ── Public storefront ─────────────────────────────────────────────────
     match /products/{productId} {
-      allow read: if true;
-      allow write: if request.auth != null && request.auth.token.email == 'aqueelfirdausi@gmail.com';
+      allow read:   if true;
+      allow create: if isAdmin() || isActiveTenant(request.resource.data.shopId);
+      allow update: if isAdmin() || isActiveTenant(resource.data.shopId);
+      allow delete: if isAdmin() || isActiveTenant(resource.data.shopId);
     }
 
     match /categories/{categoryId} {
-      allow read: if true;
-      allow write: if request.auth != null && request.auth.token.email == 'aqueelfirdausi@gmail.com';
+      allow read:   if true;
+      allow create: if isAdmin() || isActiveTenant(request.resource.data.shopId);
+      allow update: if isAdmin() || isActiveTenant(resource.data.shopId);
+      allow delete: if isAdmin() || isActiveTenant(resource.data.shopId);
     }
 
     match /broadcasts/{broadcastId} {
-      allow read: if true;
-      allow write: if request.auth != null && request.auth.token.email == 'aqueelfirdausi@gmail.com';
+      allow read:   if true;
+      allow create: if isAdmin() || isActiveTenant(request.resource.data.shopId);
+      allow update: if isAdmin() || isActiveTenant(resource.data.shopId);
+      allow delete: if isAdmin() || isActiveTenant(resource.data.shopId);
     }
 
-    // ── Admin only ─────────────────────────────────────────
+    // ── Private collections ───────────────────────────────────────────────
     match /logs/{logId} {
-      allow read, write: if request.auth != null && request.auth.token.email == 'aqueelfirdausi@gmail.com';
+      allow read:   if isAdmin() || isOwner(resource.data.shopId);
+      allow create: if isAdmin() || isActiveTenant(request.resource.data.shopId);
+      allow update: if isAdmin() || isActiveTenant(resource.data.shopId);
+      allow delete: if isAdmin() || isOwner(resource.data.shopId);
     }
 
     match /analyticsEvents/{eventId} {
-      allow read, write: if request.auth != null && request.auth.token.email == 'aqueelfirdausi@gmail.com';
+      allow read:   if isAdmin() || isOwner(resource.data.shopId);
+      allow create: if isAdmin() || isActiveTenant(request.resource.data.shopId);
+      allow update: if isAdmin() || isActiveTenant(resource.data.shopId);
+      allow delete: if isAdmin() || isOwner(resource.data.shopId);
     }
 
     match /fcm_tokens/{tokenId} {
-      allow read, write: if request.auth != null && request.auth.token.email == 'aqueelfirdausi@gmail.com';
+      allow read:   if isAdmin() || isOwner(resource.data.shopId);
+      allow create: if isAdmin() || isActiveTenant(request.resource.data.shopId);
+      allow update: if isAdmin() || isActiveTenant(resource.data.shopId);
+      allow delete: if isAdmin() || isOwner(resource.data.shopId);
     }
 
-    // ── Deny everything else ───────────────────────────────
+    // ── Catch-all deny ────────────────────────────────────────────────────
     match /{document=**} {
       allow read, write: if false;
     }

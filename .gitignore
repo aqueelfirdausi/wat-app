@@ -34,4 +34,3 @@ tsconfig.tsbuildinfo
 broadcast-task.md
 .claude/settings.local.json
 ".claude/" 
-test-rules.mjs
