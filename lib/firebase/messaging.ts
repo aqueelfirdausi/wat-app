@@ -1,9 +1,7 @@
 "use client";
 
 import { getApps } from "firebase/app";
-import { collection, addDoc, getDocs, query, serverTimestamp, where } from "firebase/firestore";
 import { getMessaging, getToken, onMessage } from "firebase/messaging";
-import { db } from "@/lib/firebase/client";
 
 const VAPID_KEY = process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY;
 const FCM_SW_PATH = "/api/fcm-sw";
@@ -19,7 +17,7 @@ export async function requestNotificationPermission(): Promise<"granted" | "deni
   }
 
   const app = getFirebaseApp();
-  if (!app || !VAPID_KEY || !db) return "unsupported";
+  if (!app || !VAPID_KEY) return "unsupported";
 
   let permission = Notification.permission;
   if (permission === "default") {
@@ -46,17 +44,20 @@ export async function requestNotificationPermission(): Promise<"granted" | "deni
 }
 
 async function saveFcmToken(token: string): Promise<void> {
-  if (!db) return;
-  const tokensRef = collection(db, "fcm_tokens");
-  const snap = await getDocs(query(tokensRef, where("token", "==", token)));
-  if (!snap.empty) return;
   const ua = navigator.userAgent;
   const platform = /android/i.test(ua) ? "android" : /iphone|ipad|ipod/i.test(ua) ? "ios" : "web";
-  await addDoc(tokensRef, {
-    token,
-    createdAt: serverTimestamp(),
-    platform,
+
+  const response = await fetch("/api/notifications/subscribe", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({ token, platform })
   });
+
+  if (!response.ok) {
+    throw new Error("Notification registration is unavailable.");
+  }
 }
 
 export function subscribeForegroundMessages(callback: (payload: unknown) => void): () => void {

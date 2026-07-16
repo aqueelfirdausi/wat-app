@@ -32,6 +32,7 @@ There is no general automated test suite on the clean production baseline. Lint 
 - The migration is single-shop. Do not introduce `shopId`, tenant tables, tenant abstractions, or multi-tenant tests.
 - Firebase remains the authoritative data source until an explicitly approved cutover.
 - Vercel import remains blocked until an approved preview mutation gate exists.
+- Treat `WAT_MUTATIONS_ENABLED` as a server-only, fail-closed deployment safety switch. Never rename it with `NEXT_PUBLIC_`, expose it to browser code, or treat it as authorization.
 - LF-to-CRLF warnings on Windows are known and accepted.
 
 ## Design constraints

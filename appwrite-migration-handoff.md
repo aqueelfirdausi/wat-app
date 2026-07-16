@@ -34,6 +34,16 @@ Appwrite Auth and the `wat_staff` Team provide staff identity and authorization;
 - Authorization must preserve the `admin` and `product_editor` boundaries; only admins may permanently delete products.
 - Do not expose Appwrite API keys, session secrets, credentials, or private test output to browser bundles or Git.
 
+### Deployment mutation gate
+
+- `WAT_MUTATIONS_ENABLED` is a server-only deployment safety switch. It must never use the `NEXT_PUBLIC_` prefix or be exposed to browser code.
+- Only the exact value `true` enables approved server-side mutations. Missing, empty, malformed, and all other values fail closed.
+- The gate does not bypass authentication, authorization, validation, or role checks; it is not a role-permission mechanism.
+- Vercel Preview must use `WAT_MUTATIONS_ENABLED=false`.
+- The initial Vercel Production temporary-domain deployment must use `WAT_MUTATIONS_ENABLED=false`.
+- Current Firebase production requires `WAT_MUTATIONS_ENABLED=true` before this branch can replace its running code without disabling gated writes.
+- Future Appwrite mutations may be enabled only after explicit approval and successful permission tests.
+
 ## Migration and branch safety
 
 - Firebase remains authoritative during the migration. Do not change production reads or writes until a separately approved cutover.
@@ -41,5 +51,5 @@ Appwrite Auth and the `wat_staff` Team provide staff identity and authorization;
 - `appwrite-migration` is the active migration-development branch and is based directly on synchronized `main`.
 - `archive/stage-5-pre-appwrite` is the preservation branch for the pre-Appwrite `stage-5` workspace.
 - Never merge, rebase, or cherry-pick `stage-5` into `appwrite-migration`.
-- Vercel import is blocked until a preview mutation gate exists and has been approved.
+- This phase does not import into Vercel. A later explicitly approved import must keep both Preview and the initial Production temporary domain at `WAT_MUTATIONS_ENABLED=false`.
 - Do not change Firebase, Appwrite, Vercel, domains, or deployments without explicit owner authorization.

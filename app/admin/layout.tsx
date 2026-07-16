@@ -1,19 +1,20 @@
-"use client";
+import { AdminLayoutClient } from "@/components/admin/admin-layout-client";
+import { isMutationEnabled } from "@/lib/server/mutation-gate";
 
-import { usePathname } from "next/navigation";
-import { AdminShell } from "@/components/admin/admin-shell";
-import { AuthGuard } from "@/components/admin/auth-guard";
+export const dynamic = "force-dynamic";
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
-  const pathname = usePathname();
-
-  if (pathname === "/admin/login") {
-    return <>{children}</>;
+  if (!isMutationEnabled()) {
+    return (
+      <main className="admin-login-shell">
+        <section className="panel-card">
+          <p className="eyebrow">Temporarily unavailable</p>
+          <h1>Admin mutations are disabled</h1>
+          <p>This deployment is read-only. Use the approved production environment for catalogue changes.</p>
+        </section>
+      </main>
+    );
   }
 
-  return (
-    <AuthGuard>
-      <AdminShell>{children}</AdminShell>
-    </AuthGuard>
-  );
+  return <AdminLayoutClient>{children}</AdminLayoutClient>;
 }

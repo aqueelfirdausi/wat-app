@@ -9,7 +9,8 @@
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "seed:demo": "node scripts/seed-demo.mjs"
+    "seed:demo": "tsx --conditions=react-server scripts/seed-demo.mjs",
+    "test:mutation-gate": "tsx --conditions=react-server --test tests/mutation-gate.test.ts"
   },
   "dependencies": {
     "@capacitor/android": "^8.3.3",
@@ -23,7 +24,8 @@
     "next": "^15.3.0",
     "qrcode": "^1.5.4",
     "react": "^19.1.0",
-    "react-dom": "^19.1.0"
+    "react-dom": "^19.1.0",
+    "server-only": "^0.0.1"
   },
   "devDependencies": {
     "@types/node": "^22.15.3",
@@ -31,6 +33,7 @@
     "@types/react-dom": "^19.1.2",
     "eslint": "^9.25.1",
     "eslint-config-next": "^15.3.0",
+    "tsx": "^4.23.1",
     "typescript": "^5.8.3"
   }
 }

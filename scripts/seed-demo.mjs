@@ -36,6 +36,9 @@ function loadEnvFile(filename) {
 loadEnvFile(".env.local");
 loadEnvFile(".env");
 
+const { requireMutationEnabled } = await import("../lib/server/mutation-gate.ts");
+requireMutationEnabled();
+
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
   authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
