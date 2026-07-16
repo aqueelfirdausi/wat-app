@@ -10,7 +10,8 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "seed:demo": "tsx --conditions=react-server scripts/seed-demo.mjs",
-    "test:mutation-gate": "tsx --conditions=react-server --test tests/mutation-gate.test.ts"
+    "test:mutation-gate": "tsx --conditions=react-server --test tests/mutation-gate.test.ts",
+    "test:firebase-inventory": "node --test tests/firebase-inventory-readonly.test.mjs"
   },
   "dependencies": {
     "@capacitor/android": "^8.3.3",

@@ -31,7 +31,7 @@ There is no general automated test suite on the clean production baseline. Lint 
 - Preserve `archive/stage-5-pre-appwrite`; do not merge, rebase, or cherry-pick `stage-5` into the migration branch.
 - The migration is single-shop. Do not introduce `shopId`, tenant tables, tenant abstractions, or multi-tenant tests.
 - Firebase remains the authoritative data source until an explicitly approved cutover.
-- Vercel import remains blocked until an approved preview mutation gate exists.
+- The existing Vercel project must remain dormant after its first non-production-branch deployment was forced to Production. No further deployment attempt, bootstrap Production deployment, second project, custom domain, or configuration change is approved; resume only after an official Support response or explicit architecture decision.
 - Treat `WAT_MUTATIONS_ENABLED` as a server-only, fail-closed deployment safety switch. Never rename it with `NEXT_PUBLIC_`, expose it to browser code, or treat it as authorization.
 - LF-to-CRLF warnings on Windows are known and accepted.
 
