@@ -1,7 +1,7 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
+import { PublicProductImage } from "@/components/public-product-image";
 import { getStoreBrandById, resolveProductBrand } from "@/lib/brands";
 import { PublicProduct } from "@/lib/types";
 import {
@@ -34,11 +34,10 @@ export function ProductCard({ product, analyticsContext = "catalog" }: ProductCa
       <Link href={buildProductPath(product.slug)} className="product-card-link">
         <div className="product-image-wrap">
           {product.imageUrl ? (
-            <Image
+            <PublicProductImage
               src={product.imageUrl}
               alt={product.name}
               fill
-              sizes="(max-width: 768px) 100vw, 33vw"
               className="product-image"
             />
           ) : (

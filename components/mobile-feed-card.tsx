@@ -1,7 +1,7 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
+import { PublicProductImage } from "@/components/public-product-image";
 import { WhatsAppChooserButton } from "@/components/whatsapp-contact-chooser";
 import { getStoreBrandById, resolveProductBrand } from "@/lib/brands";
 import { PublicProduct } from "@/lib/types";
@@ -35,11 +35,10 @@ export function MobileFeedCard({ product, analyticsContext = "feed" }: MobileFee
       <Link href={buildProductPath(product.slug)} className="mobile-feed-link">
         <div className={hasProductImage ? "mobile-feed-media" : "mobile-feed-media mobile-feed-media-placeholder"}>
           {hasProductImage ? (
-            <Image
+            <PublicProductImage
               src={product.imageUrl}
               alt={product.name}
               fill
-              sizes="(max-width: 768px) 100vw, 560px"
               className="mobile-feed-image"
             />
           ) : (

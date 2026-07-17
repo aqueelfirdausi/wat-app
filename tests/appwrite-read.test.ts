@@ -8,6 +8,10 @@ import {
   mapAppwriteProductRow,
   type AppwriteReadTables
 } from "@/lib/appwrite/read";
+import type { AppwriteReadStorage } from "@/lib/appwrite/product-image";
+
+process.env.APPWRITE_ENDPOINT = "https://fra.cloud.appwrite.io/v1";
+process.env.APPWRITE_PROJECT_ID = "fixture-project";
 
 const visibleProduct = {
   $id: "internal-product-row-id",
@@ -57,6 +61,26 @@ function tablesWith(rows: Array<Record<string, unknown>>) {
   return { tables, calls };
 }
 
+const publicImageFile = {
+  $id: visibleProduct.imageFileId,
+  bucketId: "product_images",
+  $permissions: ['read("any")', 'read("team:wat_staff/admin")'],
+  name: "authorization-does-not-use-this-name.jpg",
+  mimeType: "image/jpeg",
+  sizeOriginal: 1024,
+  chunksTotal: 1,
+  chunksUploaded: 1
+};
+
+function storageWith(file: unknown = publicImageFile): AppwriteReadStorage {
+  return {
+    async getFile() {
+      if (file instanceof Error) throw file;
+      return file;
+    }
+  };
+}
+
 test("empty Appwrite product and category tables are valid", async () => {
   assert.deepEqual(await listAppwriteProducts(tablesWith([]).tables), []);
   assert.deepEqual(await listAppwriteCategories(tablesWith([]).tables), []);
@@ -80,11 +104,20 @@ test("public product listing includes only visible rows with public read permiss
     publicPermissionButHidden,
     visibleProduct
   ]);
-  const result = await listAppwriteProducts(tables);
+  const result = await listAppwriteProducts(tables, storageWith());
 
   assert.equal(result.length, 1);
   assert.equal(result[0].id, visibleProduct.slug);
   assert.equal(result[0].slug, visibleProduct.slug);
+  assert.equal(
+    result[0].imageUrl,
+    "https://fra.cloud.appwrite.io/v1/storage/buckets/product_images/files/internal-file-id/view?project=fixture-project"
+  );
+  const publicDto = JSON.stringify(result[0]);
+  assert.equal(publicDto.includes("internal-file-id"), true);
+  assert.equal(publicDto.includes("product_images"), true);
+  assert.equal(publicDto.includes(publicImageFile.name), false);
+  assert.equal(publicDto.includes('read(\\"any\\")'), false);
   assert.equal(calls[0].tableId, "products");
 });
 
@@ -144,15 +177,18 @@ test("malformed Appwrite products fail closed without leaking row contents", asy
 test("product detail returns visible public rows and hides all other rows", async () => {
   const found = await getAppwriteProductBySlug(
     visibleProduct.slug,
-    tablesWith([visibleProduct]).tables
+    tablesWith([visibleProduct]).tables,
+    storageWith()
   );
   const hidden = await getAppwriteProductBySlug(
     hiddenProduct.slug,
-    tablesWith([hiddenProduct]).tables
+    tablesWith([hiddenProduct]).tables,
+    storageWith()
   );
   const malformed = await getAppwriteProductBySlug(
     "malformed",
-    tablesWith([{ ...visibleProduct, price: "invalid" }]).tables
+    tablesWith([{ ...visibleProduct, price: "invalid" }]).tables,
+    storageWith()
   );
   const missing = await getAppwriteProductBySlug("missing", tablesWith([]).tables);
 

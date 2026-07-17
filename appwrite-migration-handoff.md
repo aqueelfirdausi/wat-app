@@ -282,3 +282,35 @@ platform, Firebase change, Vercel change, deployment, domain, production branch,
 or archive state was changed. See `APPWRITE-READ-ONLY-CATALOGUE-PHASE-3P.md` for
 the complete sanitized flow map, verification evidence, and remaining media
 boundary.
+
+## Phase 3Q read-only product-image delivery
+
+Phase 3Q adds a server-only, fail-closed product-image resolver. Public product
+rows with valid `imageFileId` values receive a direct anonymous Appwrite file
+view URL only after the existing data client confirms matching
+`product_images` metadata, exact public file permission, accepted JPEG/PNG/WebP
+MIME type, the 1 MiB size limit, complete upload state, and no deletion marker.
+Hidden/private products and missing, malformed, private, mismatched, wrong
+bucket, invalid MIME, oversized, incomplete, or deleted files retain the
+existing placeholder. A malformed or failed file reference never falls back to
+legacy media.
+
+The data API key is used only for server metadata lookup and never fetches or
+proxies file bytes. The public DTO still exposes only `imageUrl`; raw
+permissions, file metadata, bucket selection, and server configuration remain
+private. Browser delivery goes directly to Appwrite without a key, so Appwrite
+file permission remains authoritative at request time. No privileged proxy or
+browser SDK lookup was added.
+
+The prior safe non-Firebase HTTPS legacy policy remains available only when no
+file ID exists. Public hero, card, feed, and detail media use one scoped native
+image component so those temporary hosts do not require a global Next.js
+wildcard. In Appwrite mode, Next.js remote images are restricted to the exact
+configured Appwrite hostname and fixed `product_images` path. Open Graph media
+remains generic.
+
+Fixture, browser, build, Firebase-containment, mutation-gate, and secret scans
+passed. Live totals remained zero products, categories, and files, so no live
+file lifecycle was needed or authorized. No Appwrite mutation, Firebase change,
+Vercel action, deployment, domain, production-branch change, or archive change
+occurred. See `APPWRITE-PRODUCT-IMAGE-DELIVERY-PHASE-3Q.md`.

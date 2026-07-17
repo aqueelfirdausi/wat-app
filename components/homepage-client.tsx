@@ -7,6 +7,7 @@ import { FirebaseStatus } from "@/components/firebase-status";
 import { BroadcastDrawer } from "@/components/storefront/broadcast-drawer";
 import { MobileFeedCard } from "@/components/mobile-feed-card";
 import { ProductCard } from "@/components/product-card";
+import { PublicProductImage } from "@/components/public-product-image";
 import { trackAnalyticsEvent } from "@/lib/analytics";
 import { isBrowserFirebaseMode } from "@/lib/backend/browser";
 import { STORE_BRANDS, resolveProductBrand } from "@/lib/brands";
@@ -457,11 +458,10 @@ export function HomepageClient({
                   <Link key={product.id} href={buildProductPath(product.slug)} className="hero-live-pick-card">
                     <div className="hero-live-pick-media">
                       {product.imageUrl ? (
-                        <Image
+                        <PublicProductImage
                           src={product.imageUrl}
                           alt={product.name}
                           fill
-                          sizes="132px"
                           className="hero-live-pick-image"
                         />
                       ) : (

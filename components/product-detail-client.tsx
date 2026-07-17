@@ -1,8 +1,8 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { useEffect } from "react";
+import { PublicProductImage } from "@/components/public-product-image";
 import { WhatsAppChooserButton } from "@/components/whatsapp-contact-chooser";
 import { trackAnalyticsEvent } from "@/lib/analytics";
 import { getStoreBrandById, resolveProductBrand } from "@/lib/brands";
@@ -56,7 +56,7 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
       <section className="product-detail-layout">
           <div className="product-detail-media-card">
             {product.imageUrl ? (
-              <Image
+              <PublicProductImage
                 src={product.imageUrl}
                 alt={product.name}
                 width={880}

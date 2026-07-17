@@ -3,6 +3,12 @@ import "server-only";
 import { Query } from "node-appwrite";
 import { getAppwriteDataServices } from "@/lib/appwrite/server";
 import { APPWRITE_DEFAULT_RESOURCE_IDS } from "@/lib/appwrite/resources";
+import {
+  resolvePublicAppwriteProductImage,
+  safeLegacyProductImageUrl,
+  type AppwriteReadStorage
+} from "@/lib/appwrite/product-image";
+import { hasExactPublicReadPermission } from "@/lib/appwrite/public-permissions";
 import type { PublicCategory, PublicProduct } from "@/lib/types";
 
 type AppwriteRow = Record<string, unknown> & {
@@ -44,30 +50,10 @@ function appwriteDate(row: AppwriteRow, key: string) {
   return date;
 }
 
-function hasPublicReadPermission(row: AppwriteRow) {
-  return Array.isArray(row.$permissions) && row.$permissions.includes('read("any")');
-}
-
-function safeLegacyImageUrl(row: AppwriteRow) {
-  const value = optionalString(row, "legacyImageUrl");
-  if (!value) return "";
-
-  try {
-    const url = new URL(value);
-    const hostname = url.hostname.toLowerCase();
-    const isFirebaseHost =
-      hostname === "firebasestorage.googleapis.com" ||
-      hostname.endsWith(".firebaseapp.com") ||
-      hostname.endsWith(".firebaseio.com") ||
-      hostname.endsWith(".googleapis.com");
-
-    return url.protocol === "https:" && !isFirebaseHost ? url.toString() : "";
-  } catch {
-    throw new Error("Invalid Appwrite row data.");
-  }
-}
-
-export function mapAppwriteProductRow(row: AppwriteRow): PublicProduct {
+export function mapAppwriteProductRow(
+  row: AppwriteRow,
+  resolvedImageUrl = safeLegacyProductImageUrl(row.legacyImageUrl)
+): PublicProduct {
   const brand = requiredString(row, "brand");
   const condition = requiredString(row, "condition");
   const stockStatus = requiredString(row, "stockStatus");
@@ -110,7 +96,7 @@ export function mapAppwriteProductRow(row: AppwriteRow): PublicProduct {
     storefrontVisible: requiredBoolean(row, "storefrontVisible"),
     feedVisible: requiredBoolean(row, "feedVisible"),
     sortPriority,
-    imageUrl: safeLegacyImageUrl(row),
+    imageUrl: resolvedImageUrl,
     createdAt: appwriteDate(row, "createdAt"),
     updatedAt: appwriteDate(row, "updatedAt")
   };
@@ -129,25 +115,50 @@ function defaultTables(): AppwriteReadTables {
   return getAppwriteDataServices().tables as unknown as AppwriteReadTables;
 }
 
-export async function listAppwriteProducts(tables: AppwriteReadTables = defaultTables()) {
+function defaultStorage(): AppwriteReadStorage {
+  return getAppwriteDataServices().storage as unknown as AppwriteReadStorage;
+}
+
+async function mapPublicProduct(
+  row: AppwriteRow,
+  storage?: AppwriteReadStorage
+) {
+  if (!hasExactPublicReadPermission(row.$permissions)) return null;
+  try {
+    const product = mapAppwriteProductRow(row, "");
+    if (!product.storefrontVisible) return null;
+    const imageUrl = await resolvePublicAppwriteProductImage({
+      productVisible: product.storefrontVisible,
+      productPermissions: row.$permissions,
+      imageFileId: row.imageFileId,
+      legacyImageUrl: row.legacyImageUrl,
+      storage: storage ?? defaultStorage()
+    });
+    return { ...product, imageUrl };
+  } catch {
+    return null;
+  }
+}
+
+export async function listAppwriteProducts(
+  tables: AppwriteReadTables = defaultTables(),
+  storage?: AppwriteReadStorage
+) {
   const result = await tables.listRows({
     databaseId: APPWRITE_DEFAULT_RESOURCE_IDS.database,
     tableId: APPWRITE_DEFAULT_RESOURCE_IDS.tables.products,
     queries: [Query.equal("storefrontVisible", true), Query.orderDesc("updatedAt")],
     total: false
   });
-  return result.rows.flatMap((row) => {
-    if (!hasPublicReadPermission(row)) return [];
-    try {
-      const product = mapAppwriteProductRow(row);
-      return product.storefrontVisible ? [product] : [];
-    } catch {
-      return [];
-    }
-  });
+  const products = await Promise.all(result.rows.map((row) => mapPublicProduct(row, storage)));
+  return products.filter((product): product is PublicProduct => product !== null);
 }
 
-export async function getAppwriteProductBySlug(slug: string, tables: AppwriteReadTables = defaultTables()) {
+export async function getAppwriteProductBySlug(
+  slug: string,
+  tables: AppwriteReadTables = defaultTables(),
+  storage?: AppwriteReadStorage
+) {
   if (!slug.trim()) return null;
   const result = await tables.listRows({
     databaseId: APPWRITE_DEFAULT_RESOURCE_IDS.database,
@@ -160,13 +171,8 @@ export async function getAppwriteProductBySlug(slug: string, tables: AppwriteRea
     total: false
   });
   const row = result.rows[0];
-  if (!row || !hasPublicReadPermission(row)) return null;
-  try {
-    const product = mapAppwriteProductRow(row);
-    return product.storefrontVisible ? product : null;
-  } catch {
-    return null;
-  }
+  if (!row) return null;
+  return mapPublicProduct(row, storage);
 }
 
 export async function listAppwriteCategories(tables: AppwriteReadTables = defaultTables()) {
@@ -177,7 +183,7 @@ export async function listAppwriteCategories(tables: AppwriteReadTables = defaul
     total: false
   });
   return result.rows.flatMap((row) => {
-    if (!hasPublicReadPermission(row)) return [];
+    if (!hasExactPublicReadPermission(row.$permissions)) return [];
     try {
       return [mapAppwriteCategoryRow(row)];
     } catch {
@@ -201,7 +207,7 @@ export async function getAppwriteCategoryBySlugOrId(
     total: false
   });
   const row = result.rows[0];
-  if (!row || !hasPublicReadPermission(row)) return null;
+  if (!row || !hasExactPublicReadPermission(row.$permissions)) return null;
   try {
     return mapAppwriteCategoryRow(row);
   } catch {

@@ -22,7 +22,7 @@ export function FirebaseStatus() {
 
   return (
     <div className="notice-banner">
-      Firebase is not configured yet. Add the values from <code>.env.local</code> to enable live products, login,
+      Firebase is not configured yet. Add the required local configuration to enable live products, login,
       uploads, and logs.
     </div>
   );
