@@ -40,11 +40,13 @@ function normalizeInventory(input: {
           key: String(column.key),
           type: String(column.type),
           required: Boolean(column.required),
+          ...(typeof column.array === "boolean" ? { array: column.array } : {}),
           ...(typeof column.size === "number" ? { size: column.size } : {}),
           ...(column.default !== undefined && column.default !== null
             ? { default: column.default as string | number | boolean }
             : {}),
           ...(Array.isArray(column.elements) ? { elements: column.elements.map(String) } : {}),
+          ...(typeof column.format === "string" ? { format: column.format } : {}),
           ...(typeof column.status === "string" ? { status: column.status } : {})
         };
       }) : [],

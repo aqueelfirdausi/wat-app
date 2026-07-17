@@ -200,3 +200,11 @@ Phase 3L locked the practical `products` and `categories` schemas against the in
 The repository now includes a metadata-only connectivity command plus a separately double-gated disposable private-category lifecycle. It also includes server-only, validated product/category read adapters with no Firebase fallback. Appwrite data services no longer require the provisional authentication key merely to initialize a data-only client.
 
 No Phase 3L Appwrite environment-variable names were present in the ignored local environment at implementation time. Consequently no live Appwrite inspection, resource creation, row lifecycle, local Appwrite-mode browser smoke run, user/key action, Firebase change, Vercel action, deployment, or domain change was performed. Live project state and resource existence remain unverified.
+
+## Phase 3N product schema normalization diagnosis
+
+Phase 3N proved that the five post-creation product findings were comparator false positives, not live-schema defects. Appwrite returns enum columns as `type=string` with `format=enum` and URL columns as `type=string` with `format=url`. The values, ordering, required flags, defaults, scalar shape, and availability of `brand`, `currency`, `condition`, `stockStatus`, and `legacyImageUrl` matched their creation inputs and the locked blueprint.
+
+Bootstrap normalization now retains `format` and `array`. The comparison canonicalizes only the two verified string-format representations and explicitly rejects arrays for scalar blueprints. Negative tests continue to reject wrong formats, enum values, defaults, ordering, and array shapes. A read-only bootstrap rerun classified the Team, database, bucket, `products`, and `categories` as exact matches with no conflict or write action.
+
+No live resource, column, index, permission, row, file, user, membership, key, authentication method, platform, Firebase resource, Vercel resource, deployment, or domain was changed during Phase 3N. See `APPWRITE-PRODUCT-SCHEMA-DIAGNOSIS-PHASE-3N.md` for the sanitized evidence.

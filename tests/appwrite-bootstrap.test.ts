@@ -1,12 +1,14 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
+  appwriteColumnMatchesBlueprint,
   buildBootstrapPlan,
   parseBootstrapArguments,
   sanitizeBootstrapText,
   validateBootstrapEnvironment,
   type BootstrapInventory
 } from "@/lib/appwrite/bootstrap";
+import type { AppwriteColumnBlueprint } from "@/lib/appwrite/table-blueprints";
 
 function inventory(overrides: Partial<BootstrapInventory> = {}): BootstrapInventory {
   return {
@@ -147,6 +149,70 @@ test("secret redaction removes supplied and labelled secrets", () => {
   assert.equal(result.includes("abc"), false);
   assert.equal(result.includes("bootstrap-secret"), false);
   assert.equal(result.includes("hunter2"), false);
+});
+
+test("Appwrite string format metadata round-trips enum and URL columns", () => {
+  const enumColumn = {
+    key: "brand",
+    kind: "enum",
+    elements: ["univercell", "eko"],
+    required: true
+  } satisfies AppwriteColumnBlueprint;
+  assert.equal(appwriteColumnMatchesBlueprint(enumColumn, {
+    key: "brand",
+    type: "string",
+    format: "enum",
+    required: true,
+    array: false,
+    elements: ["univercell", "eko"],
+    status: "available"
+  }), true);
+
+  const urlColumn = {
+    key: "legacyImageUrl",
+    kind: "url",
+    required: false
+  } satisfies AppwriteColumnBlueprint;
+  assert.equal(appwriteColumnMatchesBlueprint(urlColumn, {
+    key: "legacyImageUrl",
+    type: "string",
+    format: "url",
+    required: false,
+    array: false,
+    status: "available"
+  }), true);
+});
+
+test("column metadata normalization does not weaken schema validation", () => {
+  const enumColumn = {
+    key: "currency",
+    kind: "enum",
+    elements: ["PKR"],
+    required: false,
+    default: "PKR"
+  } satisfies AppwriteColumnBlueprint;
+  const base = {
+    key: "currency",
+    type: "string",
+    format: "enum",
+    required: false,
+    array: false,
+    elements: ["PKR"],
+    default: "PKR",
+    status: "available"
+  };
+
+  assert.equal(appwriteColumnMatchesBlueprint(enumColumn, { ...base, format: "url" }), false);
+  assert.equal(appwriteColumnMatchesBlueprint(enumColumn, { ...base, elements: ["USD"] }), false);
+  assert.equal(appwriteColumnMatchesBlueprint(enumColumn, { ...base, default: "USD" }), false);
+  assert.equal(appwriteColumnMatchesBlueprint(enumColumn, { ...base, array: true }), false);
+  assert.equal(appwriteColumnMatchesBlueprint({
+    ...enumColumn,
+    elements: ["PKR", "USD"]
+  }, {
+    ...base,
+    elements: ["USD", "PKR"]
+  }), false);
 });
 
 test("safe summary contains no inventory values beyond classifications", () => {

@@ -51,9 +51,11 @@ export type BootstrapInventory = {
       key: string;
       type: string;
       required: boolean;
+      array?: boolean;
       size?: number;
       default?: string | number | boolean;
       elements?: string[];
+      format?: string;
       status?: string;
     }>;
     indexes: Array<{
@@ -188,7 +190,7 @@ function classifyTable(tableId: string, inventory: BootstrapInventory): Bootstra
   const incompatibleColumns = blueprint.columns.flatMap((expected) => {
     const actual = table.columns.find((column) => column.key === expected.key);
     if (!actual) return [];
-    return columnMatches(expected, actual) ? [] : [expected.key];
+    return appwriteColumnMatchesBlueprint(expected, actual) ? [] : [expected.key];
   });
   const incompatibleIndexes = blueprint.indexes.flatMap((expected) => {
     const actual = table.indexes.find((index) => index.key === expected.key);
@@ -223,11 +225,21 @@ function classifyTable(tableId: string, inventory: BootstrapInventory): Bootstra
   };
 }
 
-function columnMatches(
+function normalizeColumnKind(
+  actual: BootstrapInventory["tables"][number]["columns"][number]
+) {
+  if (actual.type === "string" && (actual.format === "enum" || actual.format === "url")) {
+    return actual.format;
+  }
+  return actual.type;
+}
+
+export function appwriteColumnMatchesBlueprint(
   expected: AppwriteColumnBlueprint,
   actual: BootstrapInventory["tables"][number]["columns"][number]
 ) {
-  if (actual.type !== expected.kind || actual.required !== expected.required) return false;
+  if (normalizeColumnKind(actual) !== expected.kind || actual.required !== expected.required) return false;
+  if (actual.array === true) return false;
   if (expected.size !== undefined && actual.size !== expected.size) return false;
   if (expected.default !== undefined && actual.default !== expected.default) return false;
   if (expected.elements && JSON.stringify(actual.elements ?? []) !== JSON.stringify(expected.elements)) return false;
