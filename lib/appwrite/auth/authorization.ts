@@ -6,24 +6,26 @@ import {
 import type { AuthenticatedStaffIdentity } from "@/lib/appwrite/schema";
 
 export type AppwriteAccountSnapshot = {
-  id: string;
-  email: string;
-  name: string;
-  active: boolean;
+  id: unknown;
+  email: unknown;
+  name: unknown;
+  active: unknown;
 };
 
 export type AppwriteMembershipSnapshot = {
-  teamId: string;
-  confirmed: boolean;
-  roles: readonly string[];
+  teamId: unknown;
+  confirmed: unknown;
+  roles: unknown;
 };
 
 export type AuthorizationFailureCode =
   | "no_session"
   | "invalid_session"
+  | "expired_session"
   | "blocked_account"
   | "no_team_membership"
   | "unconfirmed_membership"
+  | "malformed_membership"
   | "no_application_role"
   | "ambiguous_application_role"
   | "owner_only"
@@ -43,7 +45,7 @@ export function denyAuthorization(code: AuthorizationFailureCode): StaffAuthoriz
 export function authorizeStaff(input: {
   account?: AppwriteAccountSnapshot | null;
   membership?: AppwriteMembershipSnapshot | null;
-  sessionState?: "valid" | "missing" | "invalid";
+  sessionState?: "valid" | "missing" | "invalid" | "expired";
   expectedTeamId?: string;
 }): StaffAuthorizationResult {
   if (input.sessionState === "missing") {
@@ -54,23 +56,55 @@ export function authorizeStaff(input: {
     return denyAuthorization("invalid_session");
   }
 
+  if (input.sessionState === "expired") {
+    return denyAuthorization("expired_session");
+  }
+
   if (!input.account) {
     return denyAuthorization("invalid_session");
   }
 
-  if (!input.account.active) {
+  if (
+    typeof input.account.id !== "string" ||
+    !input.account.id ||
+    typeof input.account.email !== "string" ||
+    !input.account.email ||
+    typeof input.account.name !== "string" ||
+    typeof input.account.active !== "boolean"
+  ) {
+    return denyAuthorization("invalid_session");
+  }
+
+  if (input.account.active === false) {
     return denyAuthorization("blocked_account");
   }
 
   const membership = input.membership;
   const expectedTeamId = input.expectedTeamId ?? APPWRITE_DEFAULT_RESOURCE_IDS.team;
 
-  if (!membership || membership.teamId !== expectedTeamId) {
+  if (!membership) {
     return denyAuthorization("no_team_membership");
   }
 
-  if (!membership.confirmed) {
+  if (
+    typeof membership.teamId !== "string" ||
+    typeof membership.confirmed !== "boolean" ||
+    !Array.isArray(membership.roles) ||
+    membership.roles.some((role) => typeof role !== "string" || !role)
+  ) {
+    return denyAuthorization("malformed_membership");
+  }
+
+  if (membership.teamId !== expectedTeamId) {
+    return denyAuthorization("no_team_membership");
+  }
+
+  if (membership.confirmed === false) {
     return denyAuthorization("unconfirmed_membership");
+  }
+
+  if (new Set(membership.roles).size !== membership.roles.length) {
+    return denyAuthorization("ambiguous_application_role");
   }
 
   const unknownRoles = membership.roles.filter(

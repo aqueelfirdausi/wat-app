@@ -15,13 +15,35 @@ export function getAppwriteSessionCookieName() {
   return name;
 }
 
-export function getAppwriteSessionCookieOptions(expires?: Date) {
+export function getAppwriteSessionCookieOptions(
+  expires?: Date,
+  environment: Record<string, string | undefined> = process.env,
+  now = new Date()
+) {
+  if (expires && (!Number.isFinite(expires.getTime()) || expires <= now)) {
+    throw new BackendConfigurationError("Appwrite session expiration is invalid.");
+  }
   return {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
+    secure: environment.NODE_ENV === "production",
     sameSite: "lax" as const,
     path: "/",
-    ...(expires ? { expires } : {})
+    ...(expires
+      ? {
+          expires,
+          maxAge: Math.max(1, Math.floor((expires.getTime() - now.getTime()) / 1000))
+        }
+      : {})
+  };
+}
+
+export function getAppwriteSessionCookieClearOptions(
+  environment: Record<string, string | undefined> = process.env
+) {
+  return {
+    ...getAppwriteSessionCookieOptions(undefined, environment),
+    expires: new Date(0),
+    maxAge: 0
   };
 }
 
@@ -42,8 +64,9 @@ export async function writeAppwriteSessionCookie(sessionSecret: string, expires?
 }
 
 export async function clearAppwriteSessionCookie() {
-  (await cookies()).set(getAppwriteSessionCookieName(), "", {
-    ...getAppwriteSessionCookieOptions(new Date(0)),
-    maxAge: 0
-  });
+  (await cookies()).set(
+    getAppwriteSessionCookieName(),
+    "",
+    getAppwriteSessionCookieClearOptions()
+  );
 }

@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { loginWithGoogle } from "@/lib/firebase/auth";
 import { isFirebaseConfigured } from "@/lib/firebase/config";
 
-export function LoginForm() {
+export function FirebaseLoginForm() {
   const router = useRouter();
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);

@@ -335,3 +335,31 @@ bounded browser lifecycles both independently verified cleanup. Final direct
 file and product routes returned 404, and aggregate totals returned to zero
 products, zero categories, and zero files. The application still exposes no
 file mutation path. See `APPWRITE-LIVE-FILE-VERIFICATION-PHASE-3R.md`.
+
+## Phase 3S Appwrite authentication and SSR session
+
+Phase 3S adds server-mediated Appwrite email/password login, an HTTP-only SSR
+session cookie, current-account resolution, exact confirmed `wat_staff`
+membership validation, and fail-closed authorization requiring exactly one of
+`admin` or `product_editor`. Built-in Team `owner`, unknown, missing,
+duplicate, malformed, and ambiguous roles remain denied.
+
+Protected admin routes now share a server boundary. Appwrite mode renders a
+narrow role-aware read-only shell; Firebase mode retains legacy components for
+rollback. Appwrite login has no signup or Google/OAuth path. Logout deletes
+only the current session and expires the cookie. Recovery request and
+completion use generic responses and server-only handling; live email delivery
+still needs verification with a controlled inbox.
+
+One disposable synthetic user, confirmed Team membership, and email/password
+session were exercised through the signed-in Console and local application.
+Invalid and valid login, protected routing, mobile and desktop shells, logout,
+post-logout denial, recovery UI, and invalid callback handling were verified.
+The session, membership, and user were deleted. Final totals were zero users,
+Team members, products, categories, files, and platforms.
+
+The repository also contains a read-only-default, double-gated identity
+lifecycle command. Its lifecycle and cleanup are fixture-tested. Live apply
+refuses before mutation because the deliberately narrow existing setup key
+cannot establish numeric user and platform baselines; no key was broadened or
+replaced. See `APPWRITE-AUTH-SSR-SESSION-PHASE-3S.md`.

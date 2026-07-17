@@ -134,17 +134,19 @@ Never commit `.env` files, API-key values, session secrets, passwords, recovery 
 
 ## 14. What remains blocked
 
-- Live Console inventory and collision review
-- Live product/category resource creation and verification until ignored credentials are supplied
 - Exact types and limits for the three deferred operational tables
 - Automatic creation of `activity_logs`, `analytics_events`, and `broadcasts`
-- Public-signup prevention proof
-- Recovery-based password establishment
-- SSR session-key verification
-- Team membership/role capability tests
+- Live password-recovery email delivery through a controlled inbox
+- Permanent owner or staff identity creation
+- Live CLI identity lifecycle while the narrow setup key cannot establish
+  numeric user and platform baselines
 - Permission, visibility-compensation, and concurrency tests
-- Real-user creation, migration writes, Vercel work, deployment, and cutover
+- Migration writes, Vercel work, deployment, and cutover
 
 ## 15. Next implementation phase
 
-Place the required values in ignored `.env.local`, run bootstrap read-only, review every fixed-resource classification, then use the already-authorized double-gated apply only if there are no collisions. Run the metadata check, the authorized disposable lifecycle, and a local Appwrite-mode browser smoke test with mutations disabled. The next implementation phase can then wire the existing product/category read adapters into the storefront and admin UI.
+Keep Appwrite mode selected and mutations disabled. The next separately
+approved phase may add read-only admin catalogue presentation on top of the
+verified SSR identity boundary. Do not create operational tables, permanent
+staff identities, product/category mutation routes, platforms, or deployments
+as part of that work.
