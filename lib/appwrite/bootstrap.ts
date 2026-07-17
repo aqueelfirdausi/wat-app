@@ -3,6 +3,13 @@ import {
   APPWRITE_PERMANENT_TABLE_IDS,
   getAppwriteResourceIds
 } from "@/lib/appwrite/resources";
+import {
+  APPWRITE_TABLE_BLUEPRINTS,
+  type AppwriteColumnBlueprint,
+  type AppwriteIndexBlueprint
+} from "@/lib/appwrite/table-blueprints";
+
+export { APPWRITE_TABLE_BLUEPRINTS } from "@/lib/appwrite/table-blueprints";
 
 export type ResourceClassification =
   | "exact match"
@@ -40,8 +47,21 @@ export type BootstrapInventory = {
     name: string;
     rowSecurity: boolean;
     permissions: string[];
-    columns: string[];
-    indexes: string[];
+    columns: Array<{
+      key: string;
+      type: string;
+      required: boolean;
+      size?: number;
+      default?: string | number | boolean;
+      elements?: string[];
+      status?: string;
+    }>;
+    indexes: Array<{
+      key: string;
+      type: string;
+      columns: string[];
+      status?: string;
+    }>;
   }>;
 };
 
@@ -49,47 +69,12 @@ export type BootstrapPlan = {
   mode: BootstrapMode;
   resources: BootstrapResource[];
   hasConflicts: boolean;
-  writeActions: Array<{ kind: "team" | "database" | "bucket"; id: string }>;
+  writeActions: Array<{ kind: "team" | "database" | "bucket" | "table"; id: string }>;
   prohibitedActions: ["delete", "user mutation", "API-key mutation"];
   summary: string;
 };
 
 const ONE_MEBIBYTE = 1024 * 1024;
-
-export const APPWRITE_TABLE_BLUEPRINTS = {
-  products: {
-    columns: [
-      "name", "slug", "description", "brand", "preferredContactId", "categoryId",
-      "categoryName", "price", "currency", "condition", "stockStatus", "featured",
-      "statusPick", "storefrontVisible", "feedVisible", "sortPriority",
-      "chosenSelectionKey", "imageFileId", "legacyImageUrl", "createdAt", "updatedAt",
-      "createdByName", "updatedByName"
-    ],
-    indexes: ["products_slug_unique", "products_updated_at", "products_chosen_unique"]
-  },
-  categories: {
-    columns: ["name", "slug", "updatedAt"],
-    indexes: ["categories_slug_unique", "categories_name"]
-  },
-  activity_logs: {
-    columns: [
-      "action", "entityType", "entityId", "entityName", "actorUserId",
-      "legacyActorFirebaseUid", "actorName", "actorEmail", "details", "requestId", "createdAt"
-    ],
-    indexes: ["activity_logs_created_at"]
-  },
-  analytics_events: {
-    columns: ["eventName", "sessionId", "productId", "productSlug", "category", "context", "createdAt"],
-    indexes: ["analytics_events_created_at"]
-  },
-  broadcasts: {
-    columns: [
-      "title", "body", "sentAt", "sentByUserId", "sentByName", "sentByEmail",
-      "productId", "productSlug", "productImageFileId", "legacyProductImageUrl"
-    ],
-    indexes: ["broadcasts_sent_at"]
-  }
-} as const;
 
 function findById<T extends { id: string }>(resources: T[], id: string) {
   return resources.find((resource) => resource.id === id);
@@ -136,8 +121,11 @@ function classifyBucket(inventory: BootstrapInventory): BootstrapResource {
     return { kind: "bucket", id, name: id, classification: "missing", reasons: ["Fixed ID is absent."], canCreate: true };
   }
 
+  if (bucket.name !== id) {
+    return { kind: "bucket", id, name: id, classification: "conflicting", reasons: [`Fixed ID has name ${bucket.name}.`], canCreate: false };
+  }
+
   const reasons: string[] = [];
-  if (bucket.name !== id) reasons.push(`Fixed ID has name ${bucket.name}.`);
   if (!bucket.fileSecurity) reasons.push("File security is disabled.");
   if (bucket.permissions.length !== 0) reasons.push("Bucket permissions are not empty.");
   if (bucket.maximumFileSize !== ONE_MEBIBYTE) reasons.push("Maximum file size is not 1 MiB.");
@@ -162,37 +150,97 @@ function classifyTable(tableId: string, inventory: BootstrapInventory): Bootstra
   }
 
   if (!table) {
+    const canCreate = blueprint.createInPhase3L;
     return {
       kind: "table",
       id: tableId,
       name: tableId,
       classification: "missing",
-      reasons: ["Fixed ID is absent.", "Automatic creation is blocked until every column type and size is frozen."],
+      reasons: canCreate
+        ? ["Fixed ID is absent; the Phase 3L core schema is fully specified."]
+        : ["Fixed ID is absent; this operational schema is intentionally deferred."],
+      canCreate
+    };
+  }
+
+  if (table.name !== tableId) {
+    return {
+      kind: "table",
+      id: tableId,
+      name: tableId,
+      classification: "conflicting",
+      reasons: [`Fixed ID has name ${table.name}.`],
       canCreate: false
     };
   }
 
   const reasons: string[] = [];
-  if (table.name !== tableId) reasons.push(`Fixed ID has name ${table.name}.`);
   if (!table.rowSecurity) reasons.push("Row security is disabled.");
   if (table.permissions.length !== 0) reasons.push("Table permissions are not empty.");
 
-  const missingColumns = blueprint.columns.filter((column) => !table.columns.includes(column));
-  const extraColumns = table.columns.filter((column) => !(blueprint.columns as readonly string[]).includes(column));
-  const missingIndexes = blueprint.indexes.filter((index) => !table.indexes.includes(index));
+  const expectedColumnKeys: string[] = blueprint.schemaLocked
+    ? blueprint.columns.map((column) => column.key)
+    : [...(blueprint.expectedColumnKeys ?? [])];
+  const missingColumns = expectedColumnKeys.filter((key) => !table.columns.some((actual) => actual.key === key));
+  const extraColumns = table.columns.filter((column) => !expectedColumnKeys.includes(column.key));
+  const missingIndexes = blueprint.indexes.filter((index) => !table.indexes.some((actual) => actual.key === index.key));
+
+  const incompatibleColumns = blueprint.columns.flatMap((expected) => {
+    const actual = table.columns.find((column) => column.key === expected.key);
+    if (!actual) return [];
+    return columnMatches(expected, actual) ? [] : [expected.key];
+  });
+  const incompatibleIndexes = blueprint.indexes.flatMap((expected) => {
+    const actual = table.indexes.find((index) => index.key === expected.key);
+    if (!actual) return [];
+    return indexMatches(expected, actual) ? [] : [expected.key];
+  });
 
   if (missingColumns.length) reasons.push(`Missing columns: ${missingColumns.join(", ")}.`);
-  if (extraColumns.length) reasons.push(`Unexpected columns: ${extraColumns.join(", ")}.`);
-  if (missingIndexes.length) reasons.push(`Missing indexes: ${missingIndexes.join(", ")}.`);
+  if (extraColumns.length) reasons.push(`Unexpected columns: ${extraColumns.map((column) => column.key).join(", ")}.`);
+  if (incompatibleColumns.length) reasons.push(`Incompatible column definitions: ${incompatibleColumns.join(", ")}.`);
+  if (missingIndexes.length) reasons.push(`Missing indexes: ${missingIndexes.map((index) => index.key).join(", ")}.`);
+  if (incompatibleIndexes.length) reasons.push(`Incompatible index definitions: ${incompatibleIndexes.join(", ")}.`);
+
+  if (!blueprint.schemaLocked) {
+    return {
+      kind: "table",
+      id: tableId,
+      name: tableId,
+      classification: reasons.length ? "requires adjustment" : "Needs verification",
+      reasons: reasons.length ? reasons : ["Operational-table field types and limits are intentionally deferred."],
+      canCreate: false
+    };
+  }
 
   return {
     kind: "table",
     id: tableId,
     name: tableId,
-    classification: reasons.length ? "requires adjustment" : "compatible",
-    reasons: reasons.length ? reasons : ["Names and major security settings match; exact types and limits still need verification."],
+    classification: reasons.length ? "requires adjustment" : "exact match",
+    reasons: reasons.length ? reasons : ["Schema, indexes, permissions, and row security match the locked blueprint."],
     canCreate: false
   };
+}
+
+function columnMatches(
+  expected: AppwriteColumnBlueprint,
+  actual: BootstrapInventory["tables"][number]["columns"][number]
+) {
+  if (actual.type !== expected.kind || actual.required !== expected.required) return false;
+  if (expected.size !== undefined && actual.size !== expected.size) return false;
+  if (expected.default !== undefined && actual.default !== expected.default) return false;
+  if (expected.elements && JSON.stringify(actual.elements ?? []) !== JSON.stringify(expected.elements)) return false;
+  return actual.status === undefined || actual.status === "available";
+}
+
+function indexMatches(
+  expected: AppwriteIndexBlueprint,
+  actual: BootstrapInventory["tables"][number]["indexes"][number]
+) {
+  return actual.type === expected.type
+    && JSON.stringify(actual.columns) === JSON.stringify(expected.columns)
+    && (actual.status === undefined || actual.status === "available");
 }
 
 export function buildBootstrapPlan(inventory: BootstrapInventory, mode: BootstrapMode): BootstrapPlan {
@@ -217,11 +265,15 @@ export function buildBootstrapPlan(inventory: BootstrapInventory, mode: Bootstra
     });
   }
 
-  const hasConflicts = resources.some((resource) => resource.classification === "conflicting");
+  const hasConflicts = resources.some((resource) =>
+    resource.classification === "conflicting"
+    || resource.classification === "requires adjustment"
+    || resource.classification === "Needs verification"
+  );
   const writeActions = mode === "apply" && !hasConflicts
     ? resources
         .filter((resource) => resource.classification === "missing" && resource.canCreate)
-        .map((resource) => ({ kind: resource.kind as "team" | "database" | "bucket", id: resource.id }))
+        .map((resource) => ({ kind: resource.kind, id: resource.id }))
     : [];
 
   return {
@@ -231,7 +283,7 @@ export function buildBootstrapPlan(inventory: BootstrapInventory, mode: Bootstra
     writeActions,
     prohibitedActions: ["delete", "user mutation", "API-key mutation"],
     summary: hasConflicts
-      ? "Conflicts detected; apply is blocked and no writes are permitted."
+      ? "Blocking findings detected; apply is blocked and no writes are permitted."
       : mode === "read-only"
         ? "Read-only inspection complete; no writes were planned or performed."
         : `${writeActions.length} safe missing-resource creation action(s) planned.`

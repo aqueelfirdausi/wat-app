@@ -1,8 +1,7 @@
 import "server-only";
 
 import { Account, Client, Storage, TablesDB, Teams } from "node-appwrite";
-import { BackendConfigurationError } from "@/lib/backend/mode";
-import { getServerBackendMode } from "@/lib/backend/server";
+import { BackendConfigurationError, parseBackendMode } from "@/lib/backend/mode";
 
 type ServerConfiguration = {
   endpoint: string;
@@ -13,8 +12,13 @@ let dataServices: ReturnType<typeof createDataServices> | null = null;
 let authAdminAccount: Account | null = null;
 
 function getBaseConfiguration(): ServerConfiguration {
-  if (getServerBackendMode() !== "appwrite") {
+  if (parseBackendMode(process.env.WAT_BACKEND) !== "appwrite") {
     throw new BackendConfigurationError("Appwrite server services are inactive.");
+  }
+
+  const missing = ["APPWRITE_ENDPOINT", "APPWRITE_PROJECT_ID"].filter((name) => !process.env[name]);
+  if (missing.length) {
+    throw new BackendConfigurationError(`Selected backend configuration is incomplete. Missing: ${missing.join(", ")}.`);
   }
 
   return {

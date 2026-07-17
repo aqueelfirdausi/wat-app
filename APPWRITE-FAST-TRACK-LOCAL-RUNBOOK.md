@@ -50,7 +50,25 @@ Only after the read-only output is reviewed and the owner separately authorizes 
 npm.cmd run appwrite:bootstrap -- --apply --confirm-create-missing
 ```
 
-Apply mode never deletes or rewrites resources and never modifies users or keys. It currently creates only a missing fixed Team, database, or bucket. Table creation remains blocked until every Appwrite column type and size is frozen; creating incomplete table shells would make later runs unsafe.
+Apply mode never deletes or rewrites resources and never modifies users or keys. It can create a missing fixed Team, database, bucket, and the fully locked `products` and `categories` tables. The two core tables are created with empty table permissions, row security, the Phase 3L columns, and approved indexes. Partial or incompatible tables are not adjusted automatically. The three operational tables remain deferred; incomplete placeholder tables are not created.
+
+If the ignored environment is not configured, both bootstrap and connectivity commands fail before network access and print only missing variable names.
+
+## 6A. Verify connectivity
+
+The default check reads metadata only:
+
+```powershell
+npm.cmd run appwrite:check
+```
+
+After the resources and narrow data key are confirmed, the separately gated disposable private-category lifecycle is:
+
+```powershell
+npm.cmd run appwrite:check -- --apply --confirm-disposable-check
+```
+
+It creates, reads, updates, deletes, and verifies deletion of one unmistakably disposable row with empty row permissions. Do not run it against an unreviewed project. If it fails, preserve the reported row ID and verify cleanup in the Console before retrying.
 
 ## 7. Start local Appwrite mode
 
@@ -96,9 +114,9 @@ Never commit `.env` files, API-key values, session secrets, passwords, recovery 
 ## 14. What remains blocked
 
 - Live Console inventory and collision review
-- Final product slug size (`160` or `191`)
-- Exact types and limits for handoff fields without frozen Appwrite definitions
-- Automatic creation of the five tables
+- Live product/category resource creation and verification until ignored credentials are supplied
+- Exact types and limits for the three deferred operational tables
+- Automatic creation of `activity_logs`, `analytics_events`, and `broadcasts`
 - Public-signup prevention proof
 - Recovery-based password establishment
 - SSR session-key verification
@@ -108,4 +126,4 @@ Never commit `.env` files, API-key values, session secrets, passwords, recovery 
 
 ## 15. Next implementation phase
 
-Obtain the minimal ignored Appwrite values, run the bootstrap read-only inspection, resolve the reported schema blockers, and explicitly authorize only the missing-resource creation. Then replace the login UI and connect product/category read adapters while keeping mutations disabled.
+Place the required values in ignored `.env.local`, run bootstrap read-only, review every fixed-resource classification, then use the already-authorized double-gated apply only if there are no collisions. Run the metadata check, the authorized disposable lifecycle, and a local Appwrite-mode browser smoke test with mutations disabled. The next implementation phase can then wire the existing product/category read adapters into the storefront and admin UI.

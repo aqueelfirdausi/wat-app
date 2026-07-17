@@ -192,3 +192,11 @@ Firebase remains available only through explicit `WAT_BACKEND=firebase`. In Appw
 No Appwrite resource, API key, user, password recovery, Firebase data, Vercel setting, domain, deployment, or production configuration was created or changed during Phase 3K. See `APPWRITE-FAST-TRACK-LOCAL-RUNBOOK.md` for the safe local sequence.
 
 Remaining requirements are live resource inventory, fixed-ID collision review, exact column type/size completion, public-signup prevention proof, recovery-based password establishment, SSR auth-key verification, Team role behavior, row/file permission tests, visibility compensation, and `chosenSelectionKey` transaction/concurrency proof.
+
+## Phase 3L fast-track resource setup
+
+Phase 3L locked the practical `products` and `categories` schemas against the installed Node SDK. Product slugs use `varchar(160)`, descriptions use the native text column, legacy image URLs use the native URL column, and the approved enum, boolean, integer, datetime, and index definitions are represented explicitly. The bootstrap may create only wholly missing core tables with row security enabled and empty table permissions. It never adjusts partial or incompatible tables automatically. The three operational tables remain part of the five-table architecture but their live creation is deferred until field limits are finalized.
+
+The repository now includes a metadata-only connectivity command plus a separately double-gated disposable private-category lifecycle. It also includes server-only, validated product/category read adapters with no Firebase fallback. Appwrite data services no longer require the provisional authentication key merely to initialize a data-only client.
+
+No Phase 3L Appwrite environment-variable names were present in the ignored local environment at implementation time. Consequently no live Appwrite inspection, resource creation, row lifecycle, local Appwrite-mode browser smoke run, user/key action, Firebase change, Vercel action, deployment, or domain change was performed. Live project state and resource existence remain unverified.

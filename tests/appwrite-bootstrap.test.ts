@@ -57,19 +57,22 @@ test("missing bootstrap API key is rejected", () => {
 test("exact existing resources are not rewritten", () => {
   const plan = buildBootstrapPlan(inventory(), "apply");
   assert.equal(plan.resources.find((resource) => resource.kind === "team")?.classification, "exact match");
-  assert.equal(plan.writeActions.length, 0);
+  assert.equal(plan.writeActions.some((action) => action.kind !== "table"), false);
 });
 
 test("missing safe resource is planned only in confirmed apply mode", () => {
   const missingTeam = inventory({ teams: [] });
   assert.equal(buildBootstrapPlan(missingTeam, "read-only").writeActions.length, 0);
-  assert.deepEqual(buildBootstrapPlan(missingTeam, "apply").writeActions, [{ kind: "team", id: "wat_staff" }]);
+  assert.deepEqual(
+    buildBootstrapPlan(missingTeam, "apply").writeActions.filter((action) => action.kind === "team"),
+    [{ kind: "team", id: "wat_staff" }]
+  );
 });
 
 test("name collision blocks apply", () => {
   const plan = buildBootstrapPlan(inventory({ teams: [{ id: "other", name: "wat_staff" }] }), "apply");
   assert.equal(plan.hasConflicts, true);
-  assert.equal(plan.writeActions.length, 0);
+  assert.equal(plan.writeActions.some((action) => action.kind === "bucket"), false);
 });
 
 test("ID collision with a different name is conflicting", () => {
@@ -83,6 +86,14 @@ test("incompatible bucket security requires adjustment without rewrite", () => {
   }), "apply");
   const bucket = plan.resources.find((resource) => resource.kind === "bucket");
   assert.equal(bucket?.classification, "requires adjustment");
+  assert.equal(plan.writeActions.length, 0);
+});
+
+test("a fixed table ID with an unrelated name blocks every apply action", () => {
+  const plan = buildBootstrapPlan(inventory({
+    tables: [{ id: "products", name: "unrelated", rowSecurity: true, permissions: [], columns: [], indexes: [] }]
+  }), "apply");
+  assert.equal(plan.resources.find((resource) => resource.id === "products")?.classification, "conflicting");
   assert.equal(plan.writeActions.length, 0);
 });
 
@@ -100,10 +111,28 @@ test("Appwrite team_contacts is explicitly conflicting", () => {
   assert.match(plan.resources.find((resource) => resource.id === "team_contacts")?.reasons[0] ?? "", /prohibited/);
 });
 
-test("partial resource set plans only safe missing top-level resources", () => {
+test("partial resource set plans top-level resources and the two locked core tables", () => {
   const plan = buildBootstrapPlan(inventory({ teams: [], databases: [], buckets: [] }), "apply");
-  assert.deepEqual(plan.writeActions.map((action) => action.kind).sort(), ["bucket", "database", "team"]);
-  assert.equal(plan.resources.filter((resource) => resource.kind === "table" && resource.canCreate).length, 0);
+  assert.deepEqual(plan.writeActions.map((action) => `${action.kind}:${action.id}`).sort(), [
+    "bucket:product_images",
+    "database:wat_app",
+    "table:categories",
+    "table:products",
+    "team:wat_staff"
+  ]);
+  assert.deepEqual(
+    plan.resources.filter((resource) => resource.kind === "table" && resource.canCreate).map((resource) => resource.id),
+    ["products", "categories"]
+  );
+});
+
+test("operational tables remain deferred rather than receiving placeholder schemas", () => {
+  const plan = buildBootstrapPlan(inventory(), "apply");
+  for (const id of ["activity_logs", "analytics_events", "broadcasts"]) {
+    const resource = plan.resources.find((candidate) => candidate.id === id);
+    assert.equal(resource?.classification, "missing");
+    assert.equal(resource?.canCreate, false);
+  }
 });
 
 test("bootstrap plan contains no delete or user mutation behavior", () => {
