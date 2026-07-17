@@ -208,3 +208,35 @@ Phase 3N proved that the five post-creation product findings were comparator fal
 Bootstrap normalization now retains `format` and `array`. The comparison canonicalizes only the two verified string-format representations and explicitly rejects arrays for scalar blueprints. Negative tests continue to reject wrong formats, enum values, defaults, ordering, and array shapes. A read-only bootstrap rerun classified the Team, database, bucket, `products`, and `categories` as exact matches with no conflict or write action.
 
 No live resource, column, index, permission, row, file, user, membership, key, authentication method, platform, Firebase resource, Vercel resource, deployment, or domain was changed during Phase 3N. See `APPWRITE-PRODUCT-SCHEMA-DIAGNOSIS-PHASE-3N.md` for the sanitized evidence.
+
+## Phase 3O connectivity, disposable lifecycle, and local smoke
+
+Phase 3O verified the existing live `wat_staff` Team, `wat_app` database,
+`product_images` bucket, and locked `products` and `categories` tables through
+read-only bootstrap and metadata checks. The three operational tables remain
+missing and intentionally deferred. Read-only Console inspection confirmed zero
+users, zero Team members, no platforms, and exactly the three approved local API
+keys; no key secret was viewed.
+
+The double-gated connectivity lifecycle created one private disposable category
+row, verified create/read/update/delete behavior, and verified not found after
+deletion. Aggregate checks showed zero products, zero categories, and zero image
+files both before and after the lifecycle. No permanent row or file remains.
+
+A real local Chrome smoke run found that two Firebase-only client effects still
+attempted readers after Firebase initialization had correctly been suppressed
+in Appwrite mode. Narrow `isBrowserFirebaseMode()` gates now suppress homepage
+catalogue listeners and broadcast listeners. The clean retest rendered the
+storefront Appwrite foundation state, server-enforced read-only admin/login
+states, and an expected missing-product 404 without runtime overlays or console
+errors. No Appwrite catalogue adapter or Firebase fallback was introduced.
+
+The browser SDK was not invoked because public Appwrite catalogue wiring remains
+deferred, so the absent Web platform was not required and none was created.
+Configured Appwrite server key values and key names were absent from served HTML
+and client static assets. `WAT_MUTATIONS_ENABLED` remained false and server-only.
+
+No real user, membership, platform, product, file, operational table, Firebase
+resource, Vercel resource, deployment, domain, production branch, or archive
+state was changed. See `APPWRITE-CONNECTIVITY-AND-SMOKE-PHASE-3O.md` for the
+sanitized evidence and next-phase boundary.

@@ -8,6 +8,7 @@ import { BroadcastDrawer } from "@/components/storefront/broadcast-drawer";
 import { MobileFeedCard } from "@/components/mobile-feed-card";
 import { ProductCard } from "@/components/product-card";
 import { trackAnalyticsEvent } from "@/lib/analytics";
+import { isBrowserFirebaseMode } from "@/lib/backend/browser";
 import { STORE_BRANDS, resolveProductBrand } from "@/lib/brands";
 import { fetchCategories, fetchProducts, subscribeToCategories, subscribeToProducts } from "@/lib/firebase/firestore";
 import { Category, Product } from "@/lib/types";
@@ -100,6 +101,11 @@ export function HomepageClient() {
   useEffect(() => {
     let productsUnsubscribe: undefined | (() => void);
     let categoriesUnsubscribe: undefined | (() => void);
+
+    if (!isBrowserFirebaseMode()) {
+      setHasLoadedProducts(true);
+      return;
+    }
 
     fetchProducts()
       .then((prods) => {

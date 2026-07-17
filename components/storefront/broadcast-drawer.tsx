@@ -3,6 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { isBrowserFirebaseMode } from "@/lib/backend/browser";
 import { type Broadcast, subscribeToBroadcasts } from "@/lib/firebase/firestore";
 
 const DISMISSED_KEY = "watapp-broadcasts-dismissed";
@@ -35,6 +36,10 @@ export function BroadcastDrawer() {
   }, []);
 
   useEffect(() => {
+    if (!isBrowserFirebaseMode()) {
+      return;
+    }
+
     const unsub = subscribeToBroadcasts(setBroadcasts);
     return unsub;
   }, []);
