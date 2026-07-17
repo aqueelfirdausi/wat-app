@@ -12,12 +12,13 @@
     "seed:demo": "tsx --conditions=react-server scripts/seed-demo.mjs",
     "test:mutation-gate": "tsx --conditions=react-server --test tests/mutation-gate.test.ts",
     "test:firebase-inventory": "node --test tests/firebase-inventory-readonly.test.mjs",
-    "test:appwrite-foundation": "tsx --conditions=react-server --test tests/backend-selector.test.ts tests/appwrite-authorization.test.ts tests/appwrite-bootstrap.test.ts tests/appwrite-connectivity.test.ts tests/appwrite-product-image.test.ts tests/appwrite-read.test.ts tests/catalogue-read.test.ts",
+    "test:appwrite-foundation": "tsx --conditions=react-server --test tests/backend-selector.test.ts tests/appwrite-authorization.test.ts tests/appwrite-bootstrap.test.ts tests/appwrite-connectivity.test.ts tests/appwrite-file-verification.test.ts tests/appwrite-product-image.test.ts tests/appwrite-read.test.ts tests/catalogue-read.test.ts",
     "test:catalogue": "tsx --conditions=react-server --test tests/appwrite-product-image.test.ts tests/appwrite-read.test.ts tests/catalogue-read.test.ts",
     "appwrite:bootstrap": "tsx --conditions=react-server scripts/appwrite-bootstrap.ts",
     "appwrite:diagnose-schema": "tsx --conditions=react-server scripts/appwrite-schema-diagnose.ts",
     "appwrite:check": "tsx --conditions=react-server scripts/appwrite-check.ts",
-    "appwrite:check-empty": "tsx --conditions=react-server scripts/appwrite-empty-state-check.ts"
+    "appwrite:check-empty": "tsx --conditions=react-server scripts/appwrite-empty-state-check.ts",
+    "appwrite:check-file": "tsx --conditions=react-server scripts/appwrite-file-verification.ts"
   },
   "dependencies": {
     "@capacitor/android": "^8.3.3",

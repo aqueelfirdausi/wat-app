@@ -314,3 +314,24 @@ passed. Live totals remained zero products, categories, and files, so no live
 file lifecycle was needed or authorized. No Appwrite mutation, Firebase change,
 Vercel action, deployment, domain, production-branch change, or archive change
 occurred. See `APPWRITE-PRODUCT-IMAGE-DELIVERY-PHASE-3Q.md`.
+
+## Phase 3R autonomous live file verification
+
+Phase 3Q was closed, committed, and pushed as `5374efc`. Phase 3R adds a
+read-only-by-default, double-gated disposable file verification command. The
+bounded command creates a one-pixel PNG privately, accepts only 401/403/404 as
+anonymous-denial evidence, publishes it with exact public and staff read
+permissions, and verifies anonymous HTTP 200, `image/png`, and byte-for-byte
+delivery.
+
+One disposable public category and product then exercise the real Phase 3Q
+server resolver. Real browser checks proved the homepage and detail page loaded
+the direct Frankfurt Appwrite file-view URL at natural 1×1 dimensions without
+console errors, Firebase traffic, the Appwrite browser SDK, the legacy image
+proxy, or a privileged media endpoint.
+
+Cleanup always runs product, category, then file in a `finally` path. Two
+bounded browser lifecycles both independently verified cleanup. Final direct
+file and product routes returned 404, and aggregate totals returned to zero
+products, zero categories, and zero files. The application still exposes no
+file mutation path. See `APPWRITE-LIVE-FILE-VERIFICATION-PHASE-3R.md`.

@@ -70,6 +70,27 @@ npm.cmd run appwrite:check -- --apply --confirm-disposable-check
 
 It creates, reads, updates, deletes, and verifies deletion of one unmistakably disposable row with empty row permissions. Do not run it against an unreviewed project. If it fails, preserve the reported row ID and verify cleanup in the Console before retrying.
 
+## 6B. Verify disposable file delivery
+
+The file verification command is read-only by default:
+
+```powershell
+npm.cmd run appwrite:check-file
+```
+
+The separately authorized, double-gated disposable PNG/category/product
+lifecycle is:
+
+```powershell
+npm.cmd run appwrite:check-file -- --apply --confirm-disposable-file-check
+```
+
+It proves anonymous denial while the file is private, exact anonymous PNG
+delivery after publication, then deletes the disposable product, category, and
+file in fail-closed order. It requires Appwrite mode with mutations still set
+to false. `--hold-seconds=N` may be used only in confirmed apply mode for a
+bounded local browser check and is limited to 120 seconds.
+
 ## 7. Start local Appwrite mode
 
 Set these ignored local values, then start normally:
