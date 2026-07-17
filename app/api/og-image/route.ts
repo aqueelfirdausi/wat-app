@@ -1,4 +1,5 @@
 import { NextRequest } from "next/server";
+import { isServerAppwriteSelected } from "@/lib/backend/server";
 
 // Only proxy images from Firebase Storage — prevents open-proxy abuse.
 const ALLOWED_HOSTNAME = "firebasestorage.googleapis.com";
@@ -9,6 +10,10 @@ const ALLOWED_HOSTNAME = "firebasestorage.googleapis.com";
 const FETCH_TIMEOUT_MS = 8000;
 
 export async function GET(request: NextRequest) {
+  if (isServerAppwriteSelected()) {
+    return new Response("Image proxy is unavailable for the selected backend.", { status: 404 });
+  }
+
   const source = request.nextUrl.searchParams.get("url")?.trim();
 
   if (!source) {

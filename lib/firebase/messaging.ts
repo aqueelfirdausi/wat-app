@@ -2,11 +2,16 @@
 
 import { getApps } from "firebase/app";
 import { getMessaging, getToken, onMessage } from "firebase/messaging";
+import { isBrowserFirebaseMode } from "@/lib/backend/browser";
 
 const VAPID_KEY = process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY;
 const FCM_SW_PATH = "/api/fcm-sw";
 
 function getFirebaseApp() {
+  if (!isBrowserFirebaseMode()) {
+    return null;
+  }
+
   const apps = getApps();
   return apps.length ? apps[0] : null;
 }

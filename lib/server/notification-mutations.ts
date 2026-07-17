@@ -6,6 +6,7 @@ import {
   mutationDisabledResponse,
   requireMutationEnabled
 } from "@/lib/server/mutation-gate";
+import { isServerFirebaseMode } from "@/lib/backend/server";
 
 const OWNER_EMAILS = ["aqueelfirdausi@gmail.com", "abdullahbinaqueel@gmail.com"];
 const FCM_BATCH_SIZE = 500;
@@ -68,6 +69,17 @@ function checkMutationGate() {
   }
 }
 
+function checkFirebaseBackend() {
+  if (isServerFirebaseMode()) {
+    return null;
+  }
+
+  return NextResponse.json(
+    { error: "This mutation path is unavailable for the selected backend.", code: "BACKEND_PATH_UNAVAILABLE" },
+    { status: 503, headers: { "Cache-Control": "no-store" } }
+  );
+}
+
 export async function handleNotificationPost(
   request: NextRequest,
   loadAdminServices: AdminServicesLoader = loadFirebaseAdminServices
@@ -76,6 +88,9 @@ export async function handleNotificationPost(
   if (disabledResponse) {
     return disabledResponse;
   }
+
+  const backendResponse = checkFirebaseBackend();
+  if (backendResponse) return backendResponse;
 
   const { auth, db, messaging } = await loadAdminServices();
   const authHeader = request.headers.get("Authorization");
@@ -188,6 +203,9 @@ export async function handleNotificationSubscriptionPost(
   if (disabledResponse) {
     return disabledResponse;
   }
+
+  const backendResponse = checkFirebaseBackend();
+  if (backendResponse) return backendResponse;
 
   let payload: { token?: unknown; platform?: unknown };
 

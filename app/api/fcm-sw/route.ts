@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { isServerAppwriteSelected } from "@/lib/backend/server";
 
 // Serves the Firebase Messaging service worker with injected config.
 // A separate SW file is required for FCM background message handling.
@@ -7,6 +8,10 @@ import { NextResponse } from "next/server";
 export const dynamic = "force-dynamic";
 
 export async function GET() {
+  if (isServerAppwriteSelected()) {
+    return new NextResponse(null, { status: 404, headers: { "Cache-Control": "no-store" } });
+  }
+
   const config = {
     apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY ?? "",
     authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN ?? "",

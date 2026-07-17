@@ -176,3 +176,19 @@ No Appwrite SDK, Appwrite environment configuration, or safely available Console
 - Storage: all existing bucket IDs/names, confirming whether `product_images` already exists and its current file-size, extension, encryption, antivirus, and permission settings.
 - Users: aggregate user count and whether any existing users must be preserved; do not copy emails, phone numbers, password data, or session tokens.
 - API keys: key names/IDs, scopes, and expiry status only; never copy key secrets. Confirm whether a suitably scoped migration key already exists or must later be created with explicit approval.
+
+## Phase 3K fast-track local foundation
+
+The migration adopted a fast-track local strategy on `appwrite-migration`. The repository now has an explicit `WAT_BACKEND` selector accepting only `firebase` or `appwrite`. The selector is server-owned; Next.js exposes the same non-secret build-time value to browser modules so both sides select one backend consistently. Missing, malformed, padded, or uppercase values fail closed. The production branch and running Firebase application remain unchanged and undeployed.
+
+Official Appwrite browser and Node SDKs are installed. Browser, server-data, server-authentication, and per-session clients initialize lazily and keep API keys out of browser bundles. The data and authentication clients remain separate; the data key retains only row/file scopes and the provisional authentication key retains only `sessions.write`.
+
+The authentication foundation includes SSR cookie helpers, service interfaces, normalized staff identity, and fail-closed role decisions. It permits exactly one of `admin` or `product_editor` and denies missing/invalid sessions, blocked accounts, missing or unconfirmed `wat_staff` membership, zero or both application roles, built-in `owner` alone, and unknown roles. No login UI replacement, recovery execution, real account, Team membership, or live session was created in this phase.
+
+The idempotent bootstrap command is read-only by default. Apply requires both `--apply` and `--confirm-create-missing`, an exact expected-project-ID match, and a separate temporary bootstrap key. It never deletes or rewrites existing resources, touches users, or creates/modifies keys. The currently safe apply subset can create only a missing fixed Team, database, or bucket. It inventories and compares the five permanent tables, but automatic table creation remains blocked because several Appwrite column types and sizes—and the product slug length—are not yet frozen. It will not create incomplete table shells or an Appwrite `team_contacts` table.
+
+Firebase remains available only through explicit `WAT_BACKEND=firebase`. In Appwrite mode, the browser Firebase app and its Auth, Firestore, Storage, messaging, and listeners remain uninitialized; Firebase Admin and Firebase analytics/notification write loaders also fail closed before initialization. Catalogue and login adapters are intentionally not yet replaced, so Appwrite mode currently presents unavailable/foundation states instead of silently falling back to Firebase.
+
+No Appwrite resource, API key, user, password recovery, Firebase data, Vercel setting, domain, deployment, or production configuration was created or changed during Phase 3K. See `APPWRITE-FAST-TRACK-LOCAL-RUNBOOK.md` for the safe local sequence.
+
+Remaining requirements are live resource inventory, fixed-ID collision review, exact column type/size completion, public-signup prevention proof, recovery-based password establishment, SSR auth-key verification, Team role behavior, row/file permission tests, visibility compensation, and `chosenSelectionKey` transaction/concurrency proof.

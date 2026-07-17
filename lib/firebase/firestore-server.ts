@@ -1,4 +1,5 @@
 import { isProductVisibleOnStorefront, normalizeStockStatus } from "@/lib/utils";
+import { isServerFirebaseMode } from "@/lib/backend/server";
 
 const FIRESTORE_DATABASE_ID = "watapp";
 
@@ -41,6 +42,10 @@ type ProductMetadataFetchOptions = {
 };
 
 function getFirestoreRestConfig() {
+  if (!isServerFirebaseMode()) {
+    return null;
+  }
+
   const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID?.trim();
   const apiKey = process.env.NEXT_PUBLIC_FIREBASE_API_KEY?.trim();
 

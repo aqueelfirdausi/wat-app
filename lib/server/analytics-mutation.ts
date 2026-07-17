@@ -2,6 +2,7 @@ import "server-only";
 
 import { NextRequest, NextResponse } from "next/server";
 import { isMutationEnabled } from "@/lib/server/mutation-gate";
+import { isServerFirebaseMode } from "@/lib/backend/server";
 
 const FIRESTORE_DATABASE_ID = "watapp";
 const ANALYTICS_COLLECTION = "analyticsEvents";
@@ -112,6 +113,10 @@ export async function handleAnalyticsPost(
   writeAnalytics: AnalyticsWriter = writeAnalyticsToFirestore
 ) {
   if (!isMutationEnabled()) {
+    return new NextResponse(null, { status: 204 });
+  }
+
+  if (!isServerFirebaseMode()) {
     return new NextResponse(null, { status: 204 });
   }
 

@@ -11,7 +11,9 @@
     "typecheck": "tsc --noEmit",
     "seed:demo": "tsx --conditions=react-server scripts/seed-demo.mjs",
     "test:mutation-gate": "tsx --conditions=react-server --test tests/mutation-gate.test.ts",
-    "test:firebase-inventory": "node --test tests/firebase-inventory-readonly.test.mjs"
+    "test:firebase-inventory": "node --test tests/firebase-inventory-readonly.test.mjs",
+    "test:appwrite-foundation": "tsx --conditions=react-server --test tests/backend-selector.test.ts tests/appwrite-authorization.test.ts tests/appwrite-bootstrap.test.ts",
+    "appwrite:bootstrap": "tsx --conditions=react-server scripts/appwrite-bootstrap.ts"
   },
   "dependencies": {
     "@capacitor/android": "^8.3.3",
@@ -20,9 +22,11 @@
     "@ducanh2912/next-pwa": "^10.2.9",
     "@opentelemetry/api": "^1.9.1",
     "@types/qrcode": "^1.5.6",
+    "appwrite": "^26.2.0",
     "firebase": "^11.7.0",
     "firebase-admin": "^13.9.0",
     "next": "^15.3.0",
+    "node-appwrite": "^27.0.0",
     "qrcode": "^1.5.4",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",

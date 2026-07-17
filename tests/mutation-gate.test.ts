@@ -14,12 +14,19 @@ import {
 } from "@/lib/server/mutation-gate";
 
 const originalMutationSetting = process.env.WAT_MUTATIONS_ENABLED;
+const originalBackendSetting = process.env.WAT_BACKEND;
 
 afterEach(() => {
   if (originalMutationSetting === undefined) {
     delete process.env.WAT_MUTATIONS_ENABLED;
   } else {
     process.env.WAT_MUTATIONS_ENABLED = originalMutationSetting;
+  }
+
+  if (originalBackendSetting === undefined) {
+    delete process.env.WAT_BACKEND;
+  } else {
+    process.env.WAT_BACKEND = originalBackendSetting;
   }
 });
 
@@ -107,4 +114,52 @@ test("read-only image proxy remains available when mutations are disabled", asyn
 
   assert.equal(response.status, 400);
   assert.equal(await response.text(), "Missing image URL.");
+});
+
+test("Appwrite mode never calls the Firebase analytics writer", async () => {
+  process.env.WAT_BACKEND = "appwrite";
+  process.env.WAT_MUTATIONS_ENABLED = "true";
+  let writes = 0;
+  const request = new NextRequest("https://local.example/api/analytics", {
+    method: "POST",
+    body: JSON.stringify({ eventName: "storefront_visit" }),
+    headers: { "Content-Type": "application/json" }
+  });
+
+  const response = await handleAnalyticsPost(request, async () => {
+    writes += 1;
+  });
+
+  assert.equal(response.status, 204);
+  assert.equal(writes, 0);
+});
+
+test("Appwrite mode never loads Firebase notification services", async () => {
+  process.env.WAT_BACKEND = "appwrite";
+  process.env.WAT_MUTATIONS_ENABLED = "true";
+  let loads = 0;
+  const request = new NextRequest("https://local.example/api/notifications/send", {
+    method: "POST",
+    body: JSON.stringify({ title: "Fresh stock" }),
+    headers: { "Content-Type": "application/json" }
+  });
+
+  const response = await handleNotificationPost(request, async () => {
+    loads += 1;
+    throw new Error("Firebase must not load");
+  });
+
+  assert.equal(response.status, 503);
+  assert.equal(loads, 0);
+  assert.equal((await response.json()).code, "BACKEND_PATH_UNAVAILABLE");
+});
+
+test("Appwrite mode blocks the legacy Firebase image proxy before any fetch", async () => {
+  process.env.WAT_BACKEND = "appwrite";
+  const request = new NextRequest(
+    "https://local.example/api/image-proxy?url=https%3A%2F%2Ffirebasestorage.googleapis.com%2Fprivate.jpg"
+  );
+
+  const response = await getImageProxy(request);
+  assert.equal(response.status, 404);
 });

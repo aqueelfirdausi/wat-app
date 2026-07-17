@@ -5,10 +5,15 @@ import { App, cert, getApps, initializeApp } from "firebase-admin/app";
 import { getAuth } from "firebase-admin/auth";
 import { getFirestore } from "firebase-admin/firestore";
 import { getMessaging } from "firebase-admin/messaging";
+import { getServerBackendMode } from "@/lib/backend/server";
 
 const FIRESTORE_DATABASE_ID = "watapp";
 
 function getOrInitAdminApp(): App {
+  if (getServerBackendMode() !== "firebase") {
+    throw new Error("Firebase Admin is unavailable for the selected backend.");
+  }
+
   const apps = getApps();
   if (apps.length) return apps[0];
 

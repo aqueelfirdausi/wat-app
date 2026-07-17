@@ -1,3 +1,5 @@
+import { isBrowserFirebaseMode } from "@/lib/backend/browser";
+
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
   authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
@@ -8,7 +10,7 @@ const firebaseConfig = {
 };
 
 export function isFirebaseConfigured() {
-  return Object.values(firebaseConfig).every(Boolean);
+  return isBrowserFirebaseMode() && Object.values(firebaseConfig).every(Boolean);
 }
 
 export { firebaseConfig };
