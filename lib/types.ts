@@ -50,6 +50,38 @@ export type Category = {
   productCount?: number;
 };
 
+export type PublicProduct = Pick<
+  Product,
+  | "name"
+  | "slug"
+  | "description"
+  | "brand"
+  | "preferredContactId"
+  | "categoryName"
+  | "price"
+  | "currency"
+  | "condition"
+  | "stockStatus"
+  | "featured"
+  | "storefrontVisible"
+  | "feedVisible"
+  | "sortPriority"
+  | "imageUrl"
+  | "createdAt"
+  | "updatedAt"
+> & {
+  /**
+   * Public presentation key. Appwrite row IDs are deliberately not exposed;
+   * the unique public slug is used instead.
+   */
+  id: string;
+};
+
+export type PublicCategory = Pick<Category, "name" | "slug"> & {
+  /** Public presentation key derived from the category slug. */
+  id: string;
+};
+
 export type ActivityLog = {
   id: string;
   action: string;

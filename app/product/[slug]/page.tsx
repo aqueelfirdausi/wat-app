@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { ProductDetailClient } from "@/components/product-detail-client";
-import { fetchProductMetadataBySlug } from "@/lib/firebase/firestore-server";
+import { getPublicProductBySlug } from "@/lib/catalogue/read";
 import { buildMetadataUrl, buildProductMetadataTitle, buildProductMetadataImageUrl } from "@/lib/metadata";
 
 export const dynamic = "force-dynamic";
@@ -40,10 +40,7 @@ export async function generateMetadata({ params }: ProductPageProps): Promise<Me
 
   try {
     const { slug } = await params;
-    // includeHidden: true — fetch metadata even when storefrontVisible is false
-    // so hidden products still produce valid OG tags. The page component uses
-    // the same function without this flag and calls notFound() for hidden items.
-    const product = await fetchProductMetadataBySlug(slug, { revalidate: false, includeHidden: true });
+    const product = await getPublicProductBySlug(slug);
     const productUrl = buildMetadataUrl(`/product/${slug}`);
 
     if (!product) {
@@ -123,8 +120,7 @@ export async function generateMetadata({ params }: ProductPageProps): Promise<Me
       }
     };
   } catch {
-    // fetchProductMetadataBySlug threw (network error, Firestore timeout,
-    // cold-start timeout, etc.). Return a minimal but valid OG response so
+    // The selected catalogue reader failed. Return a minimal but valid response so
     // crawlers always get something meaningful instead of a blank card.
     return siteFallback;
   }
@@ -132,11 +128,11 @@ export async function generateMetadata({ params }: ProductPageProps): Promise<Me
 
 export default async function ProductPage({ params }: ProductPageProps) {
   const { slug } = await params;
-  const product = await fetchProductMetadataBySlug(slug, { revalidate: false });
+  const product = await getPublicProductBySlug(slug).catch(() => null);
 
   if (!product) {
     notFound();
   }
 
-  return <ProductDetailClient slug={slug} />;
+  return <ProductDetailClient product={product} />;
 }

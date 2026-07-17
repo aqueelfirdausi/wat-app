@@ -1,6 +1,6 @@
 "use client";
 
-import { Product } from "@/lib/types";
+import { Product, PublicProduct } from "@/lib/types";
 
 type AnalyticsEventName = "storefront_visit" | "feed_view" | "product_view" | "whatsapp_click";
 type AnalyticsContext = "storefront" | "catalog" | "feed" | "detail";
@@ -8,7 +8,7 @@ type AnalyticsContext = "storefront" | "catalog" | "feed" | "detail";
 type AnalyticsEventInput = {
   eventName: AnalyticsEventName;
   context?: AnalyticsContext;
-  product?: Product;
+  product?: Product | PublicProduct;
   dedupeKey?: string;
 };
 

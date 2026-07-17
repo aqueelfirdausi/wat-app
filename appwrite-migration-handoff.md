@@ -240,3 +240,45 @@ No real user, membership, platform, product, file, operational table, Firebase
 resource, Vercel resource, deployment, domain, production branch, or archive
 state was changed. See `APPWRITE-CONNECTIVITY-AND-SMOKE-PHASE-3O.md` for the
 sanitized evidence and next-phase boundary.
+
+## Phase 3P read-only catalogue wiring
+
+Phase 3P connected the existing Appwrite product/category adapters to the
+public homepage and product-detail route through one server-only backend
+selector. Firebase mode retains its existing client hydration/listeners for
+rollback. Appwrite mode uses only the Node data client; it never invokes the
+Firebase catalogue or Appwrite browser SDK and therefore requires no Web
+platform.
+
+Public Appwrite products must satisfy both `storefrontVisible=true` and exact
+public row read permission. Malformed, hidden, private, missing, or invalid rows
+fail closed. Categories also require valid public row permission. Dedicated
+public DTOs use the unique slug as their presentation key and omit raw row IDs,
+permissions, category IDs, selection keys, image file IDs, audit fields, and
+server metadata. The existing public preferred-contact identifier remains
+because the storefront WhatsApp chooser uses it.
+
+The homepage remains dynamic and receives Appwrite catalogue data from the
+server. Product detail and metadata now use the same selected public reader and
+return 404 for non-public rows. The prior Firebase metadata `includeHidden`
+escape hatch was removed. The Appwrite Open Graph image remains generic until a
+separate media phase because its Edge route does not load the Node Appwrite
+client.
+
+No Appwrite files were created. Missing or Firebase-hosted legacy images map to
+the existing placeholder in Appwrite mode; a raw `imageFileId` never reaches
+the client. Fixture tests proved visible inclusion, hidden/private exclusion,
+empty and malformed handling, category behavior, DTO filtering, safe image
+fallback, and no cross-backend fallback. No live synthetic rows were required.
+
+Real browser smoke verified the empty catalogue, empty feed, missing-product
+404, and mutation-disabled admin/login states without console errors or runtime
+overlays. Final live totals remained zero products, zero categories, and zero
+files. Production HTML, client assets, source-map candidates, and tracked files
+contained no configured server-key value or tested fragment.
+
+No mutation API, login flow, admin CRUD, user, membership, operational table,
+platform, Firebase change, Vercel change, deployment, domain, production branch,
+or archive state was changed. See `APPWRITE-READ-ONLY-CATALOGUE-PHASE-3P.md` for
+the complete sanitized flow map, verification evidence, and remaining media
+boundary.

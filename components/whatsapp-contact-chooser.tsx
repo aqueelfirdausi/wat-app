@@ -4,12 +4,12 @@ import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { trackAnalyticsEvent } from "@/lib/analytics";
 import { getActiveTeamContacts, resolveProductContact } from "@/lib/team-contacts";
-import { Product } from "@/lib/types";
+import { PublicProduct } from "@/lib/types";
 import { buildWhatsAppLink, getWhatsAppCtaLabel, isProductSoldOut } from "@/lib/utils";
 import styles from "@/components/whatsapp-chooser-button.module.css";
 
 type WhatsAppChooserButtonProps = {
-  product: Product;
+  product: PublicProduct;
   className?: string;
   label?: string;
   analyticsContext?: "catalog" | "feed" | "detail";

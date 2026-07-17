@@ -36,9 +36,6 @@ export type ProductMetadataRecord = {
 
 type ProductMetadataFetchOptions = {
   revalidate?: number | false;
-  /** When true, returns the product even if storefrontVisible is false.
-   *  Use in generateMetadata so hidden products still get OG tags. */
-  includeHidden?: boolean;
 };
 
 function getFirestoreRestConfig() {
@@ -162,5 +159,5 @@ export async function fetchProductMetadataBySlug(slug: string, options?: Product
   }
 
   const product = mapMetadataProduct(document);
-  return options?.includeHidden || product.storefrontVisible ? product : null;
+  return product.storefrontVisible ? product : null;
 }

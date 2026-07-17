@@ -17,11 +17,10 @@ type Props = {
 export default async function ProductOpenGraphImage({ params }: Props) {
   const { slug } = await params;
 
-  // includeHidden: true — generate a valid image even for hidden products
-  // revalidate: 3600 — allow edge/CDN caching for 1 hour
+  // Appwrite mode returns the generic image until server-side Appwrite media
+  // rendering is wired. Hidden Firebase products are not used here.
   const product = await fetchProductMetadataBySlug(slug, {
-    revalidate: 3600,
-    includeHidden: true
+    revalidate: 3600
   }).catch(() => null);
 
   const name = product?.name ?? "Product";

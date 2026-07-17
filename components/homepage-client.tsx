@@ -10,8 +10,9 @@ import { ProductCard } from "@/components/product-card";
 import { trackAnalyticsEvent } from "@/lib/analytics";
 import { isBrowserFirebaseMode } from "@/lib/backend/browser";
 import { STORE_BRANDS, resolveProductBrand } from "@/lib/brands";
+import { toPublicCategory, toPublicProduct } from "@/lib/catalogue/public";
 import { fetchCategories, fetchProducts, subscribeToCategories, subscribeToProducts } from "@/lib/firebase/firestore";
-import { Category, Product } from "@/lib/types";
+import { PublicCategory, PublicProduct } from "@/lib/types";
 import {
   buildProductPath,
   compareProductsForStorefront,
@@ -82,19 +83,36 @@ function formatLastUpdated(date: Date): string {
   return `Updated ${diffDays} days ago`;
 }
 
-export function HomepageClient() {
-  const [products, setProducts] = useState<Product[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
+type HomepageClientProps = {
+  readMode: "firebase" | "appwrite" | "unavailable";
+  initialProducts: PublicProduct[];
+  initialCategories: PublicCategory[];
+  initialError?: string;
+};
+
+export function HomepageClient({
+  readMode,
+  initialProducts,
+  initialCategories,
+  initialError = ""
+}: HomepageClientProps) {
+  const [products, setProducts] = useState<PublicProduct[]>(initialProducts);
+  const [categories, setCategories] = useState<PublicCategory[]>(initialCategories);
   const [activeCategory, setActiveCategory] = useState<string>("All");
-  const [error, setError] = useState<string>("");
+  const [error, setError] = useState<string>(initialError);
   const [showInstallHint, setShowInstallHint] = useState(false);
   const [deferredInstallPrompt, setDeferredInstallPrompt] = useState<DeferredInstallPrompt | null>(null);
   const [showInstallGuide, setShowInstallGuide] = useState(false);
   const [storefrontMode, setStorefrontMode] = useState<"catalog" | "feed">("catalog");
   const [showFeedHint, setShowFeedHint] = useState(false);
   const [hasResolvedStorefrontMode, setHasResolvedStorefrontMode] = useState(false);
-  const [hasLoadedProducts, setHasLoadedProducts] = useState(false);
-  const [lastUpdatedAt, setLastUpdatedAt] = useState<Date | null>(null);
+  const [hasLoadedProducts, setHasLoadedProducts] = useState(readMode !== "firebase");
+  const [lastUpdatedAt, setLastUpdatedAt] = useState<Date | null>(() => {
+    const dates = initialProducts
+      .filter((product) => product.updatedAt != null)
+      .map((product) => product.updatedAt as Date);
+    return dates.length ? dates.reduce((a, b) => (a > b ? a : b)) : null;
+  });
   const [showScrollTop, setShowScrollTop] = useState(false);
   const heroLivePicksStripRef = useRef<HTMLDivElement | null>(null);
 
@@ -102,32 +120,40 @@ export function HomepageClient() {
     let productsUnsubscribe: undefined | (() => void);
     let categoriesUnsubscribe: undefined | (() => void);
 
-    if (!isBrowserFirebaseMode()) {
+    if (readMode !== "firebase" || !isBrowserFirebaseMode()) {
       setHasLoadedProducts(true);
       return;
     }
 
     fetchProducts()
       .then((prods) => {
-        setProducts(prods);
+        const publicProducts = prods
+          .filter(isProductVisibleOnStorefront)
+          .map(toPublicProduct);
+        setProducts(publicProducts);
         setHasLoadedProducts(true);
-        const dates = prods.filter((p) => isProductVisibleOnStorefront(p) && p.updatedAt != null).map((p) => p.updatedAt as Date);
+        const dates = publicProducts.filter((p) => isProductVisibleOnStorefront(p) && p.updatedAt != null).map((p) => p.updatedAt as Date);
         setLastUpdatedAt(dates.length ? dates.reduce((a, b) => (a > b ? a : b)) : null);
       })
       .catch((err: Error) => setError(err.message));
 
     fetchCategories()
-      .then(setCategories)
+      .then((nextCategories) => setCategories(nextCategories.map(toPublicCategory)))
       .catch((err: Error) => setError(err.message));
 
     try {
       productsUnsubscribe = subscribeToProducts((prods) => {
-        setProducts(prods);
+        const publicProducts = prods
+          .filter(isProductVisibleOnStorefront)
+          .map(toPublicProduct);
+        setProducts(publicProducts);
         setHasLoadedProducts(true);
-        const dates = prods.filter((p) => isProductVisibleOnStorefront(p) && p.updatedAt != null).map((p) => p.updatedAt as Date);
+        const dates = publicProducts.filter((p) => isProductVisibleOnStorefront(p) && p.updatedAt != null).map((p) => p.updatedAt as Date);
         setLastUpdatedAt(dates.length ? dates.reduce((a, b) => (a > b ? a : b)) : null);
       });
-      categoriesUnsubscribe = subscribeToCategories(setCategories);
+      categoriesUnsubscribe = subscribeToCategories((nextCategories) => {
+        setCategories(nextCategories.map(toPublicCategory));
+      });
     } catch (err) {
       const message = err instanceof Error ? err.message : "Unable to connect to Firebase.";
       setError(message);
@@ -137,7 +163,7 @@ export function HomepageClient() {
       productsUnsubscribe?.();
       categoriesUnsubscribe?.();
     };
-  }, []);
+  }, [readMode]);
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -262,8 +288,8 @@ export function HomepageClient() {
   );
   const heroLivePicks = useMemo(() => {
     const sortedProducts = [...visibleProducts].sort(compareProductsForStorefront);
-    const picked = new Map<string, Product>();
-    const addProducts = (items: Product[]) => {
+    const picked = new Map<string, PublicProduct>();
+    const addProducts = (items: PublicProduct[]) => {
       items.forEach((product) => {
         if (picked.size < 4) {
           picked.set(product.id, product);

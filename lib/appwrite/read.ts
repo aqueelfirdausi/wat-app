@@ -3,9 +3,12 @@ import "server-only";
 import { Query } from "node-appwrite";
 import { getAppwriteDataServices } from "@/lib/appwrite/server";
 import { APPWRITE_DEFAULT_RESOURCE_IDS } from "@/lib/appwrite/resources";
-import type { Category, Product } from "@/lib/types";
+import type { PublicCategory, PublicProduct } from "@/lib/types";
 
-type AppwriteRow = Record<string, unknown> & { $id: string };
+type AppwriteRow = Record<string, unknown> & {
+  $id: string;
+  $permissions?: unknown;
+};
 
 export interface AppwriteReadTables {
   listRows(input: {
@@ -18,7 +21,7 @@ export interface AppwriteReadTables {
 
 function requiredString(row: AppwriteRow, key: string) {
   const value = row[key];
-  if (typeof value !== "string" || value.length === 0) throw new Error("Invalid Appwrite row data.");
+  if (typeof value !== "string" || value.trim().length === 0) throw new Error("Invalid Appwrite row data.");
   return value;
 }
 
@@ -41,7 +44,30 @@ function appwriteDate(row: AppwriteRow, key: string) {
   return date;
 }
 
-export function mapAppwriteProductRow(row: AppwriteRow): Product {
+function hasPublicReadPermission(row: AppwriteRow) {
+  return Array.isArray(row.$permissions) && row.$permissions.includes('read("any")');
+}
+
+function safeLegacyImageUrl(row: AppwriteRow) {
+  const value = optionalString(row, "legacyImageUrl");
+  if (!value) return "";
+
+  try {
+    const url = new URL(value);
+    const hostname = url.hostname.toLowerCase();
+    const isFirebaseHost =
+      hostname === "firebasestorage.googleapis.com" ||
+      hostname.endsWith(".firebaseapp.com") ||
+      hostname.endsWith(".firebaseio.com") ||
+      hostname.endsWith(".googleapis.com");
+
+    return url.protocol === "https:" && !isFirebaseHost ? url.toString() : "";
+  } catch {
+    throw new Error("Invalid Appwrite row data.");
+  }
+}
+
+export function mapAppwriteProductRow(row: AppwriteRow): PublicProduct {
   const brand = requiredString(row, "brand");
   const condition = requiredString(row, "condition");
   const stockStatus = requiredString(row, "stockStatus");
@@ -53,43 +79,47 @@ export function mapAppwriteProductRow(row: AppwriteRow): Product {
   if (stockStatus !== "in_stock" && stockStatus !== "low_stock" && stockStatus !== "sold_out") {
     throw new Error("Invalid Appwrite row data.");
   }
-  if (typeof price !== "number" || !Number.isSafeInteger(price)) throw new Error("Invalid Appwrite row data.");
-  if (currency !== "PKR") throw new Error("Invalid Appwrite row data.");
-  if (typeof sortPriority !== "number" || !Number.isSafeInteger(sortPriority)) {
+  if (typeof price !== "number" || !Number.isSafeInteger(price) || price < 0) {
     throw new Error("Invalid Appwrite row data.");
   }
+  if (currency !== "PKR") throw new Error("Invalid Appwrite row data.");
+  if (typeof sortPriority !== "number" || !Number.isSafeInteger(sortPriority) || sortPriority < 0) {
+    throw new Error("Invalid Appwrite row data.");
+  }
+  requiredString(row, "$id");
+  requiredString(row, "categoryId");
+  requiredString(row, "chosenSelectionKey");
+  requiredBoolean(row, "statusPick");
+  optionalString(row, "imageFileId");
+  optionalString(row, "createdByName");
+  optionalString(row, "updatedByName");
 
   return {
-    id: requiredString(row, "$id"),
+    id: requiredString(row, "slug"),
     name: requiredString(row, "name"),
     slug: requiredString(row, "slug"),
     description: requiredString(row, "description"),
     brand,
     preferredContactId: optionalString(row, "preferredContactId"),
-    categoryId: requiredString(row, "categoryId"),
     categoryName: requiredString(row, "categoryName"),
     price,
     currency,
     condition,
     stockStatus,
     featured: requiredBoolean(row, "featured"),
-    statusPick: requiredBoolean(row, "statusPick"),
-    chosenForToday: requiredString(row, "chosenSelectionKey") === "current",
     storefrontVisible: requiredBoolean(row, "storefrontVisible"),
     feedVisible: requiredBoolean(row, "feedVisible"),
     sortPriority,
-    imageUrl: optionalString(row, "legacyImageUrl") ?? "",
+    imageUrl: safeLegacyImageUrl(row),
     createdAt: appwriteDate(row, "createdAt"),
-    updatedAt: appwriteDate(row, "updatedAt"),
-    createdByName: optionalString(row, "createdByName"),
-    updatedByName: optionalString(row, "updatedByName")
+    updatedAt: appwriteDate(row, "updatedAt")
   };
 }
 
-export function mapAppwriteCategoryRow(row: AppwriteRow): Category {
+export function mapAppwriteCategoryRow(row: AppwriteRow): PublicCategory {
   appwriteDate(row, "updatedAt");
   return {
-    id: requiredString(row, "$id"),
+    id: requiredString(row, "slug"),
     name: requiredString(row, "name"),
     slug: requiredString(row, "slug")
   };
@@ -103,10 +133,18 @@ export async function listAppwriteProducts(tables: AppwriteReadTables = defaultT
   const result = await tables.listRows({
     databaseId: APPWRITE_DEFAULT_RESOURCE_IDS.database,
     tableId: APPWRITE_DEFAULT_RESOURCE_IDS.tables.products,
-    queries: [Query.orderDesc("updatedAt")],
+    queries: [Query.equal("storefrontVisible", true), Query.orderDesc("updatedAt")],
     total: false
   });
-  return result.rows.map(mapAppwriteProductRow);
+  return result.rows.flatMap((row) => {
+    if (!hasPublicReadPermission(row)) return [];
+    try {
+      const product = mapAppwriteProductRow(row);
+      return product.storefrontVisible ? [product] : [];
+    } catch {
+      return [];
+    }
+  });
 }
 
 export async function getAppwriteProductBySlug(slug: string, tables: AppwriteReadTables = defaultTables()) {
@@ -114,10 +152,21 @@ export async function getAppwriteProductBySlug(slug: string, tables: AppwriteRea
   const result = await tables.listRows({
     databaseId: APPWRITE_DEFAULT_RESOURCE_IDS.database,
     tableId: APPWRITE_DEFAULT_RESOURCE_IDS.tables.products,
-    queries: [Query.equal("slug", slug), Query.limit(1)],
+    queries: [
+      Query.equal("slug", slug),
+      Query.equal("storefrontVisible", true),
+      Query.limit(1)
+    ],
     total: false
   });
-  return result.rows[0] ? mapAppwriteProductRow(result.rows[0]) : null;
+  const row = result.rows[0];
+  if (!row || !hasPublicReadPermission(row)) return null;
+  try {
+    const product = mapAppwriteProductRow(row);
+    return product.storefrontVisible ? product : null;
+  } catch {
+    return null;
+  }
 }
 
 export async function listAppwriteCategories(tables: AppwriteReadTables = defaultTables()) {
@@ -127,7 +176,14 @@ export async function listAppwriteCategories(tables: AppwriteReadTables = defaul
     queries: [Query.orderAsc("name")],
     total: false
   });
-  return result.rows.map(mapAppwriteCategoryRow);
+  return result.rows.flatMap((row) => {
+    if (!hasPublicReadPermission(row)) return [];
+    try {
+      return [mapAppwriteCategoryRow(row)];
+    } catch {
+      return [];
+    }
+  });
 }
 
 export async function getAppwriteCategoryBySlugOrId(
@@ -144,5 +200,11 @@ export async function getAppwriteCategoryBySlugOrId(
     ],
     total: false
   });
-  return result.rows[0] ? mapAppwriteCategoryRow(result.rows[0]) : null;
+  const row = result.rows[0];
+  if (!row || !hasPublicReadPermission(row)) return null;
+  try {
+    return mapAppwriteCategoryRow(row);
+  } catch {
+    return null;
+  }
 }

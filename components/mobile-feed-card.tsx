@@ -4,7 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { WhatsAppChooserButton } from "@/components/whatsapp-contact-chooser";
 import { getStoreBrandById, resolveProductBrand } from "@/lib/brands";
-import { Product } from "@/lib/types";
+import { PublicProduct } from "@/lib/types";
 import {
   buildProductPath,
   formatCurrency,
@@ -17,7 +17,7 @@ import {
 } from "@/lib/utils";
 
 type MobileFeedCardProps = {
-  product: Product;
+  product: PublicProduct;
   analyticsContext?: "feed";
 };
 

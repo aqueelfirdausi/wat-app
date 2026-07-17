@@ -2,12 +2,11 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { WhatsAppChooserButton } from "@/components/whatsapp-contact-chooser";
 import { trackAnalyticsEvent } from "@/lib/analytics";
 import { getStoreBrandById, resolveProductBrand } from "@/lib/brands";
-import { fetchProductBySlug } from "@/lib/firebase/firestore";
-import { Product } from "@/lib/types";
+import { PublicProduct } from "@/lib/types";
 import {
   formatCurrency,
   getProductAvailabilityMessage,
@@ -21,62 +20,24 @@ import {
 } from "@/lib/utils";
 
 type ProductDetailClientProps = {
-  slug: string;
+  product: PublicProduct;
 };
 
-export function ProductDetailClient({ slug }: ProductDetailClientProps) {
-  const [product, setProduct] = useState<Product | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-
+export function ProductDetailClient({ product }: ProductDetailClientProps) {
   useEffect(() => {
-    let isMounted = true;
+    trackAnalyticsEvent({
+      eventName: "product_view",
+      context: "detail",
+      product,
+      dedupeKey: `product_view:${product.id}`
+    });
+  }, [product]);
 
-    setLoading(true);
-    setError("");
-
-    fetchProductBySlug(slug)
-      .then((nextProduct) => {
-        if (!isMounted) {
-          return;
-        }
-
-        setProduct(nextProduct);
-        if (nextProduct) {
-          trackAnalyticsEvent({
-            eventName: "product_view",
-            context: "detail",
-            product: nextProduct,
-            dedupeKey: `product_view:${nextProduct.id}`
-          });
-        }
-        if (!nextProduct) {
-          setError("This product link is no longer available.");
-        }
-      })
-      .catch((err: Error) => {
-        if (!isMounted) {
-          return;
-        }
-
-        setError(err.message || "Unable to load this product.");
-      })
-      .finally(() => {
-        if (isMounted) {
-          setLoading(false);
-        }
-      });
-
-    return () => {
-      isMounted = false;
-    };
-  }, [slug]);
-
-  const storeBrand = product ? getStoreBrandById(resolveProductBrand(product)) : undefined;
-  const isSoldOut = product ? isProductSoldOut(product) : false;
-  const isLowStock = product ? isProductLowStock(product) : false;
-  const continuityLine = product ? getProductSupportingLine(product, 96) : "";
-  const ctaHeading = product ? getWhatsAppCtaLabel(product) : "Ask on WhatsApp";
+  const storeBrand = getStoreBrandById(resolveProductBrand(product));
+  const isSoldOut = isProductSoldOut(product);
+  const isLowStock = isProductLowStock(product);
+  const continuityLine = getProductSupportingLine(product, 96);
+  const ctaHeading = getWhatsAppCtaLabel(product);
 
   return (
     <main className="public-shell">
@@ -92,21 +53,7 @@ export function ProductDetailClient({ slug }: ProductDetailClientProps) {
         </Link>
       </header>
 
-      {loading ? <div className="panel-card product-detail-state">Loading product details...</div> : null}
-
-      {!loading && error ? (
-        <section className="panel-card product-detail-state">
-          <p className="eyebrow">Product link</p>
-          <h1>Product unavailable</h1>
-          <p>{error}</p>
-          <Link href="/" className="primary-link">
-            Browse today&apos;s stock
-          </Link>
-        </section>
-      ) : null}
-
-      {!loading && product ? (
-        <section className="product-detail-layout">
+      <section className="product-detail-layout">
           <div className="product-detail-media-card">
             {product.imageUrl ? (
               <Image
@@ -197,8 +144,7 @@ export function ProductDetailClient({ slug }: ProductDetailClientProps) {
               </div>
             </div>
           </article>
-        </section>
-      ) : null}
+      </section>
     </main>
   );
 }

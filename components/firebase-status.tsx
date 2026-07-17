@@ -8,7 +8,7 @@ export function FirebaseStatus() {
     if (getBrowserBackendMode() === "appwrite") {
       return (
         <div className="notice-banner">
-          Appwrite local mode is selected. Catalogue adapters are connected in the next migration phase.
+          Appwrite read-only catalogue mode is selected. Product images use placeholders when no safe public image is available.
         </div>
       );
     }

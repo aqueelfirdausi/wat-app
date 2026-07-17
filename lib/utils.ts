@@ -1,4 +1,6 @@
-import type { Product } from "@/lib/types";
+import type { Product, PublicProduct } from "@/lib/types";
+
+type StorefrontProduct = Product | PublicProduct;
 
 export function normalizeStockStatus(value: unknown): Product["stockStatus"] {
   if (typeof value !== "string") {
@@ -240,11 +242,11 @@ export function parseFirebaseDate(value: unknown): Date | null {
   return null;
 }
 
-export function getProductFreshnessDate(product: Product) {
+export function getProductFreshnessDate(product: StorefrontProduct) {
   return product.updatedAt ?? product.createdAt ?? null;
 }
 
-export function isFreshProduct(product: Product, now = new Date()) {
+export function isFreshProduct(product: StorefrontProduct, now = new Date()) {
   const freshnessDate = getProductFreshnessDate(product);
   if (!freshnessDate) {
     return false;
@@ -257,7 +259,7 @@ export function isFreshProduct(product: Product, now = new Date()) {
   );
 }
 
-export function isNewToday(product: Product, now = new Date()) {
+export function isNewToday(product: StorefrontProduct, now = new Date()) {
   const sourceDate = product.createdAt ?? getProductFreshnessDate(product);
   if (!sourceDate) {
     return false;
@@ -270,7 +272,7 @@ export function isNewToday(product: Product, now = new Date()) {
   );
 }
 
-export function isNewArrival(product: Product, now = new Date()) {
+export function isNewArrival(product: StorefrontProduct, now = new Date()) {
   const sourceDate = product.createdAt ?? getProductFreshnessDate(product);
   if (!sourceDate) {
     return false;
@@ -279,13 +281,13 @@ export function isNewArrival(product: Product, now = new Date()) {
   return now.getTime() - sourceDate.getTime() <= 1000 * 60 * 60 * 72;
 }
 
-export function compareProductsByFreshness(a: Product, b: Product) {
+export function compareProductsByFreshness(a: StorefrontProduct, b: StorefrontProduct) {
   const aTime = getProductFreshnessDate(a)?.getTime() ?? 0;
   const bTime = getProductFreshnessDate(b)?.getTime() ?? 0;
   return bTime - aTime;
 }
 
-export function compareProductsForStorefront(a: Product, b: Product) {
+export function compareProductsForStorefront(a: StorefrontProduct, b: StorefrontProduct) {
   const featuredDelta = Number(Boolean(b.featured)) - Number(Boolean(a.featured));
   if (featuredDelta !== 0) {
     return featuredDelta;
