@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { afterEach, test } from "node:test";
 import { NextRequest } from "next/server";
 import { GET as getImageProxy } from "@/app/api/image-proxy/route";
+import { POST as createAppwriteCategory } from "@/app/api/admin/categories/route";
 import { handleAnalyticsPost } from "@/lib/server/analytics-mutation";
 import {
   handleNotificationPost,
@@ -15,6 +16,10 @@ import {
 
 const originalMutationSetting = process.env.WAT_MUTATIONS_ENABLED;
 const originalBackendSetting = process.env.WAT_BACKEND;
+const originalAppwriteSettings = new Map(
+  ["APPWRITE_ENDPOINT", "APPWRITE_PROJECT_ID", "APPWRITE_DATA_API_KEY", "APPWRITE_AUTH_API_KEY"]
+    .map((name) => [name, process.env[name]] as const)
+);
 
 afterEach(() => {
   if (originalMutationSetting === undefined) {
@@ -27,6 +32,11 @@ afterEach(() => {
     delete process.env.WAT_BACKEND;
   } else {
     process.env.WAT_BACKEND = originalBackendSetting;
+  }
+
+  for (const [name, value] of originalAppwriteSettings) {
+    if (value === undefined) delete process.env[name];
+    else process.env[name] = value;
   }
 });
 
@@ -105,6 +115,28 @@ test("notification token storage returns 503 before loading its writer", async (
 
   assert.equal(response.status, 503);
   assert.equal(storeLoads, 0);
+});
+
+test("Appwrite category route remains unavailable while the global gate is false", async () => {
+  process.env.WAT_BACKEND = "appwrite";
+  process.env.WAT_MUTATIONS_ENABLED = "false";
+  process.env.APPWRITE_ENDPOINT = "https://example.invalid/v1";
+  process.env.APPWRITE_PROJECT_ID = "project";
+  process.env.APPWRITE_DATA_API_KEY = "not-a-real-key";
+  process.env.APPWRITE_AUTH_API_KEY = "not-a-real-key";
+  const response = await createAppwriteCategory(new Request(
+    "https://local.example/api/admin/categories",
+    {
+      method: "POST",
+      headers: {
+        origin: "https://local.example",
+        "content-type": "application/json"
+      },
+      body: JSON.stringify({})
+    }
+  ));
+  assert.equal(response.status, 503);
+  assert.equal((await response.json()).code, "MUTATIONS_DISABLED");
 });
 
 test("read-only image proxy remains available when mutations are disabled", async () => {

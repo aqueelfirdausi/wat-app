@@ -442,3 +442,59 @@ See `APPWRITE-MUTATION-ARCHITECTURE-PHASE-3U.md`. The next safe phase is a
 separately approved, double-gated server category-mutation implementation using
 only disposable private fixtures. Do not automatically begin product, image,
 chosen-selection, activity-table, mutation-UI, deployment, or cutover work.
+
+## Phase 3V server-side category mutations
+
+Phase 3V implements a server-only Appwrite category create, rename, and delete
+boundary plus a disabled `/api/admin/categories` integration seam. Ordinary
+calls require Appwrite mode, the exact SSR authorization boundary, the Phase
+3U role/action matrix, and the global mutation gate. Because
+`WAT_MUTATIONS_ENABLED=false`, the route returns 503 before loading mutation
+services and no UI calls it.
+
+Create validates strict narrow input, uses a deterministic SHA-256-derived row
+ID for same-key retry safety, enforces the unique slug, sets server time and
+permissions, and returns only a category DTO. Rename and delete use canonical
+`updatedAt` concurrency tokens and short TablesDB transactions. Delete is
+admin-only and rejects any uncached `products.categoryId` reference without
+cascade or reassignment.
+
+Ordinary categories retain the approved exact public/staff read permissions.
+The double-gated verifier creates only staff-readable private categories. No
+request can supply permissions or actor metadata, and raw rows, permission
+arrays, SDK objects, API keys, sessions, or transaction state never enter
+responses or client props.
+
+Live verification established that transaction commit/rollback calls must be
+polled to terminal state, empty transactions must be discarded instead of
+rolled back, mutation-critical list queries require `ttl:0`, and Appwrite
+datetimes require canonical UTC normalization. A terminally committed category
+delete may briefly resurface; the service uses a bounded, compare-before-delete
+and uncached reference-recheck compensation before reporting success.
+
+Development failures created private fixture categories after unknown service
+outcomes. The lifecycle was corrected to clean exact generated IDs
+unconditionally in `finally`. Every orphan matched the exact Phase 3V ID,
+name, slug, and staff-only permission contract and was removed through the
+double-gated recovery mode. Two consecutive final lifecycles then passed with
+no recovery, proving create/read/rename, stale rejection, product-editor delete
+denial, referenced-delete rejection, admin delete, prepared logical events,
+direct absence, zero counts, and zero prefix matches.
+
+Logical category created/renamed/deletion-attempted/deleted/failure/cleanup
+events are prepared with Phase 3U helpers but not durably stored.
+`activity_logs` remains absent and no Firebase or alternate log was added.
+
+Final verification passed 33 focused category/design tests, 147 Appwrite
+foundation tests, 16 mutation-gate tests, 8 Firebase inventory tests, lint,
+typecheck, production build, diff checks, and secret/client containment.
+Products, categories, files, and Team members are zero; operational tables and
+Appwrite `team_contacts` remain absent. `main`, archive, Firebase, Vercel,
+domains, deployment, and production remain unchanged.
+
+See `APPWRITE-CATEGORY-MUTATIONS-PHASE-3V.md`. The exact Phase 3V commit is the
+commit containing this handoff section and is reported after push; a commit
+cannot contain its own hash. The next recommended phase is a separately
+approved consolidated server-side product-mutation implementation. Do not
+automatically begin product, image, activity-table, UI, staging, deployment, or
+cutover work.
