@@ -55,20 +55,30 @@ export function isValidPublicProductImageFile(
   value: unknown,
   expectedFileId: string
 ): value is AppwriteFileMetadata {
-  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  return (
+    classifyAppwriteProductImageFile(value, expectedFileId) === "public"
+  );
+}
+
+export type AdminProductImageFileState = "public" | "private" | "invalid";
+
+export function classifyAppwriteProductImageFile(
+  value: unknown,
+  expectedFileId: string
+): AdminProductImageFileState {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return "invalid";
 
   const file = value as AppwriteFileMetadata;
-  if (file.$id !== expectedFileId || !isValidAppwriteId(file.$id)) return false;
-  if (file.bucketId !== APPWRITE_DEFAULT_RESOURCE_IDS.productImagesBucket) return false;
-  if (!hasExactPublicReadPermission(file.$permissions)) return false;
-  if (!STOREFRONT_IMAGE_MIME_TYPES.has(file.mimeType as string)) return false;
+  if (file.$id !== expectedFileId || !isValidAppwriteId(file.$id)) return "invalid";
+  if (file.bucketId !== APPWRITE_DEFAULT_RESOURCE_IDS.productImagesBucket) return "invalid";
+  if (!STOREFRONT_IMAGE_MIME_TYPES.has(file.mimeType as string)) return "invalid";
   if (
     typeof file.sizeOriginal !== "number" ||
     !Number.isSafeInteger(file.sizeOriginal) ||
     file.sizeOriginal < 0 ||
     file.sizeOriginal > MAX_PRODUCT_IMAGE_BYTES
   ) {
-    return false;
+    return "invalid";
   }
   if (
     typeof file.chunksTotal !== "number" ||
@@ -76,13 +86,19 @@ export function isValidPublicProductImageFile(
     file.chunksTotal < 1 ||
     file.chunksUploaded !== file.chunksTotal
   ) {
-    return false;
+    return "invalid";
   }
   if (file.deleted === true || (file.$deletedAt !== undefined && file.$deletedAt !== null && file.$deletedAt !== "")) {
-    return false;
+    return "invalid";
+  }
+  if (
+    !Array.isArray(file.$permissions) ||
+    file.$permissions.some((permission) => typeof permission !== "string")
+  ) {
+    return "invalid";
   }
 
-  return true;
+  return hasExactPublicReadPermission(file.$permissions) ? "public" : "private";
 }
 
 export function buildPublicAppwriteFileViewUrl(

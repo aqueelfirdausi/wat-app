@@ -363,3 +363,35 @@ lifecycle command. Its lifecycle and cleanup are fixture-tested. Live apply
 refuses before mutation because the deliberately narrow existing setup key
 cannot establish numeric user and platform baselines; no key was broadened or
 replaced. See `APPWRITE-AUTH-SSR-SESSION-PHASE-3S.md`.
+
+## Phase 3T read-only admin catalogue
+
+Phase 3T connects the protected Appwrite admin routes to one server-only,
+backend-selected read boundary. Firebase mode preserves the existing Firebase
+dashboard and product components for rollback. Appwrite mode never starts a
+Firebase listener or privileged browser Appwrite reader.
+
+Authorized `admin` and `product_editor` identities may read validated public,
+private, and hidden products and categories. The internal DTO derives public
+permission, visibility, chosen-selection, and image states while excluding raw
+rows, permission arrays, image file IDs, selection keys, accounts, memberships,
+cookies, sessions, and server configuration. Product and category reads are
+bounded, malformed rows fail closed, sorting is deterministic, and all summary
+and category counts are derived in memory.
+
+The protected Appwrite presentation includes catalogue summaries, read-only
+product and category panels, and supported zero-row states. It contains no
+create, edit, delete, publish, visibility, upload, reorder, chosen-product, or
+category mutation control. The protected route remains request-dynamic and
+session-dependent, with no catalogue cache or build-time private read.
+
+One disposable user, confirmed single-role membership, session, category,
+public product, and private/hidden product exercised the real login, protected
+catalogue, public storefront, responsive layout, logout, and empty-state flows.
+No file or Web platform was required. The session, rows, membership, and user
+were deleted; final totals returned to zero users, Team members, products,
+categories, files, and platforms.
+
+No permanent Appwrite resource, API key or scope, Firebase resource, Vercel
+resource, deployment, domain, production branch, or archive reference changed.
+See `APPWRITE-READ-ONLY-ADMIN-CATALOGUE-PHASE-3T.md`.

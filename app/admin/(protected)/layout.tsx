@@ -1,7 +1,5 @@
-import { redirect } from "next/navigation";
 import { AppwriteAdminShell } from "@/components/admin/appwrite-admin-shell";
-import { resolveAppwriteStaffIdentity } from "@/lib/appwrite/auth/runtime";
-import { readAppwriteSessionCookie } from "@/lib/appwrite/auth/session-cookie";
+import { requireCurrentAppwriteStaffIdentity } from "@/lib/appwrite/auth/current-staff";
 import { getServerBackendMode } from "@/lib/backend/server";
 import { isMutationEnabled } from "@/lib/server/mutation-gate";
 
@@ -34,15 +32,6 @@ export default async function ProtectedAdminLayout({
     return <AdminLayoutClient>{children}</AdminLayoutClient>;
   }
 
-  const authorization = await resolveAppwriteStaffIdentity(
-    await readAppwriteSessionCookie()
-  );
-  if (!authorization.ok) {
-    if (authorization.code === "no_session") {
-      redirect("/admin/login");
-    }
-    redirect("/api/auth/clear-session");
-  }
-
-  return <AppwriteAdminShell identity={authorization.identity} />;
+  const identity = await requireCurrentAppwriteStaffIdentity();
+  return <AppwriteAdminShell identity={identity}>{children}</AppwriteAdminShell>;
 }

@@ -2,21 +2,17 @@ import Link from "next/link";
 import type { AuthenticatedStaffIdentity } from "@/lib/appwrite/schema";
 
 export function AppwriteAdminShell({
-  identity
+  identity,
+  children
 }: {
   identity: AuthenticatedStaffIdentity;
+  children: React.ReactNode;
 }) {
   const productEditor = identity.role === "product_editor";
-  const links = productEditor
-    ? [
-        { href: "/admin/products", label: "Products" },
-        { href: "/admin/stock", label: "Quick Stock" }
-      ]
-    : [
-        { href: "/admin", label: "Dashboard" },
-        { href: "/admin/products", label: "Products" },
-        { href: "/admin/stock", label: "Quick Stock" }
-      ];
+  const links = [
+    { href: "/admin", label: "Catalogue overview" },
+    { href: "/admin/products", label: "Products" }
+  ];
 
   return (
     <div className="admin-shell">
@@ -44,14 +40,7 @@ export function AppwriteAdminShell({
         </div>
       </aside>
       <main className="admin-content">
-        <section className="panel-card">
-          <p className="eyebrow">Read-only migration</p>
-          <h1>Admin access verified</h1>
-          <p>
-            Your Appwrite session and staff role are valid. Catalogue mutations remain
-            disabled during migration verification.
-          </p>
-        </section>
+        {children}
       </main>
     </div>
   );
