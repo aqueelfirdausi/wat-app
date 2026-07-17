@@ -395,3 +395,50 @@ categories, files, and platforms.
 No permanent Appwrite resource, API key or scope, Firebase resource, Vercel
 resource, deployment, domain, production branch, or archive reference changed.
 See `APPWRITE-READ-ONLY-ADMIN-CATALOGUE-PHASE-3T.md`.
+
+## Phase 3U mutation architecture and authorization design
+
+Phase 3U adds a fixture-only, pure mutation contract layer. It freezes an
+exhaustive role/action matrix: both recognized roles may manage ordinary
+catalogue, image, visibility, merchandising, stock, and chosen-selection
+changes; only `admin` may permanently delete products or categories, perform
+destructive cleanup, or read immutable activity records. Every future handler
+must still resolve a valid SSR session, confirmed `wat_staff` membership, and
+exactly one application role. Built-in Team `owner` alone remains denied.
+
+Narrow category and product planners normalize bounded values and reject
+unknown fields, raw permission arrays, raw Appwrite metadata, server-owned
+selection/timestamp/audit fields, client-controlled actors, Firebase IDs,
+tenant fields, malformed values, and unsafe visibility combinations. Update
+and delete contracts require optimistic concurrency tokens; all writes require
+idempotency keys and predictable validation, authorization, conflict,
+not-found, dependency, cleanup, and internal error classifications.
+
+Visibility and image plans publish a verified image before a row, hide a row
+before privatizing its image, upload replacements privately, attach the new
+file before retiring the old one, and use compare-before-write compensation.
+The chosen design preserves the provisional unique
+`chosenSelectionKey="current"` invariant independently of `statusPick`.
+Current official Appwrite Cloud documentation and installed SDK types expose
+atomic TablesDB transactions, so the target uses one short transaction rather
+than a process-local lock. Live Frankfurt capability, key scopes, conflict
+codes, and unique-index behavior remain `Needs verification`.
+
+The logical immutable activity event includes actor, correlation, snapshots,
+changed fields, result, error, and compensation state while rejecting secrets,
+sessions, raw permissions, and SDK objects. Its physical mapping and retention
+remain `Needs verification` because the frozen activity table has a narrower
+approved column set. The operational table was not created or changed.
+
+Focused fixtures cover the authorization matrix, category/product validation,
+forbidden fields, slug conflict classification, visibility/image/chosen
+transition and compensation plans, idempotency behavior, and activity-event
+construction. No Appwrite SDK write, mutation route, UI, live row/file,
+identity, membership, platform, operational table, Firebase resource, Vercel
+resource, deployment, domain, production branch, or archive change occurred.
+`WAT_MUTATIONS_ENABLED` remained false.
+
+See `APPWRITE-MUTATION-ARCHITECTURE-PHASE-3U.md`. The next safe phase is a
+separately approved, double-gated server category-mutation implementation using
+only disposable private fixtures. Do not automatically begin product, image,
+chosen-selection, activity-table, mutation-UI, deployment, or cutover work.
