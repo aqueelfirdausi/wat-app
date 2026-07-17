@@ -12,10 +12,10 @@
     "seed:demo": "tsx --conditions=react-server scripts/seed-demo.mjs",
     "test:mutation-gate": "tsx --conditions=react-server --test tests/mutation-gate.test.ts",
     "test:firebase-inventory": "node --test tests/firebase-inventory-readonly.test.mjs",
-    "test:appwrite-foundation": "tsx --conditions=react-server --test tests/backend-selector.test.ts tests/appwrite-admin-catalogue.test.ts tests/appwrite-admin-catalogue-verification.test.ts tests/appwrite-authentication.test.ts tests/appwrite-auth-containment.test.ts tests/appwrite-authorization.test.ts tests/appwrite-bootstrap.test.ts tests/appwrite-category-mutations.test.ts tests/appwrite-connectivity.test.ts tests/appwrite-disposable-identity.test.ts tests/appwrite-file-verification.test.ts tests/appwrite-mutation-design.test.ts tests/appwrite-product-image.test.ts tests/appwrite-read.test.ts tests/catalogue-read.test.ts",
+    "test:appwrite-foundation": "tsx --conditions=react-server --test tests/backend-selector.test.ts tests/appwrite-admin-catalogue.test.ts tests/appwrite-admin-catalogue-verification.test.ts tests/appwrite-authentication.test.ts tests/appwrite-auth-containment.test.ts tests/appwrite-authorization.test.ts tests/appwrite-bootstrap.test.ts tests/appwrite-category-mutations.test.ts tests/appwrite-connectivity.test.ts tests/appwrite-disposable-identity.test.ts tests/appwrite-file-verification.test.ts tests/appwrite-mutation-design.test.ts tests/appwrite-product-image.test.ts tests/appwrite-product-mutations.test.ts tests/appwrite-read.test.ts tests/catalogue-read.test.ts",
     "test:appwrite-admin": "tsx --conditions=react-server --test tests/appwrite-admin-catalogue.test.ts tests/appwrite-admin-catalogue-verification.test.ts",
     "test:appwrite-auth": "tsx --conditions=react-server --test tests/appwrite-authentication.test.ts tests/appwrite-auth-containment.test.ts tests/appwrite-authorization.test.ts tests/appwrite-disposable-identity.test.ts",
-    "test:appwrite-mutations": "tsx --conditions=react-server --test tests/appwrite-mutation-design.test.ts tests/appwrite-category-mutations.test.ts",
+    "test:appwrite-mutations": "tsx --conditions=react-server --test tests/appwrite-mutation-design.test.ts tests/appwrite-category-mutations.test.ts tests/appwrite-product-mutations.test.ts",
     "test:catalogue": "tsx --conditions=react-server --test tests/appwrite-product-image.test.ts tests/appwrite-read.test.ts tests/catalogue-read.test.ts",
     "appwrite:bootstrap": "tsx --conditions=react-server scripts/appwrite-bootstrap.ts",
     "appwrite:diagnose-schema": "tsx --conditions=react-server scripts/appwrite-schema-diagnose.ts",
@@ -24,7 +24,8 @@
     "appwrite:check-file": "tsx --conditions=react-server scripts/appwrite-file-verification.ts",
     "appwrite:check-auth": "tsx --conditions=react-server scripts/appwrite-auth-verification.ts",
     "appwrite:check-admin-catalogue": "tsx --conditions=react-server scripts/appwrite-admin-catalogue-verification.ts",
-    "appwrite:check-category-mutations": "tsx --conditions=react-server scripts/appwrite-category-mutation-verification.ts"
+    "appwrite:check-category-mutations": "tsx --conditions=react-server scripts/appwrite-category-mutation-verification.ts",
+    "appwrite:check-product-mutations": "tsx --conditions=react-server scripts/appwrite-product-mutation-verification.ts"
   },
   "dependencies": {
     "@capacitor/android": "^8.3.3",

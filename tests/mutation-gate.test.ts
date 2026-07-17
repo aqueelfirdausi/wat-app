@@ -3,6 +3,7 @@ import { afterEach, test } from "node:test";
 import { NextRequest } from "next/server";
 import { GET as getImageProxy } from "@/app/api/image-proxy/route";
 import { POST as createAppwriteCategory } from "@/app/api/admin/categories/route";
+import { POST as createAppwriteProduct } from "@/app/api/admin/products/route";
 import { handleAnalyticsPost } from "@/lib/server/analytics-mutation";
 import {
   handleNotificationPost,
@@ -126,6 +127,28 @@ test("Appwrite category route remains unavailable while the global gate is false
   process.env.APPWRITE_AUTH_API_KEY = "not-a-real-key";
   const response = await createAppwriteCategory(new Request(
     "https://local.example/api/admin/categories",
+    {
+      method: "POST",
+      headers: {
+        origin: "https://local.example",
+        "content-type": "application/json"
+      },
+      body: JSON.stringify({})
+    }
+  ));
+  assert.equal(response.status, 503);
+  assert.equal((await response.json()).code, "MUTATIONS_DISABLED");
+});
+
+test("Appwrite product route remains unavailable while the global gate is false", async () => {
+  process.env.WAT_BACKEND = "appwrite";
+  process.env.WAT_MUTATIONS_ENABLED = "false";
+  process.env.APPWRITE_ENDPOINT = "https://example.invalid/v1";
+  process.env.APPWRITE_PROJECT_ID = "project";
+  process.env.APPWRITE_DATA_API_KEY = "not-a-real-key";
+  process.env.APPWRITE_AUTH_API_KEY = "not-a-real-key";
+  const response = await createAppwriteProduct(new Request(
+    "https://local.example/api/admin/products",
     {
       method: "POST",
       headers: {

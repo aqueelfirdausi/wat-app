@@ -342,6 +342,26 @@ test("rename rejects stale writes and duplicate slugs", async () => {
   );
 });
 
+test("rename refuses referenced categories so product name snapshots cannot become stale", async () => {
+  const { service, tables } = setup();
+  const created = await service.createCategory(
+    createRequest({ idempotencyKey: "category:create:referenced-rename" }),
+    admin
+  );
+  tables.products.set("product_reference", {
+    $id: "product_reference",
+    $permissions: [],
+    categoryId: created.id
+  });
+  await expectCode(service.updateCategory({
+    categoryId: created.id,
+    name: "Renamed Category",
+    expectedUpdatedAt: created.updatedAt,
+    idempotencyKey: "category:update:referenced-rename"
+  }, admin), "REFERENCE_CONFLICT");
+  assert.equal((tables.categories.get(created.id)?.name), created.name);
+});
+
 test("completed rename retry returns the intended current state", async () => {
   const { service } = setup();
   const created = await service.createCategory(createRequest(), admin);

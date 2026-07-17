@@ -375,6 +375,180 @@ export function planProductMutation(input: unknown): ProductMutationCommand {
   };
 }
 
+export type ProductCreateCommand = Omit<ProductMutationCommand, "imageFileId"> & {
+  imageFileId: null;
+};
+
+export function planProductCreate(input: unknown): ProductCreateCommand {
+  const command = planProductMutation(input);
+  if (command.imageFileId) {
+    throw new MutationContractError(
+      "VALIDATION_FAILED",
+      "imageFileId is deferred to the image lifecycle phase.",
+      "imageFileId"
+    );
+  }
+  if (command.storefrontVisible) {
+    throw new MutationContractError(
+      "VALIDATION_FAILED",
+      "Products cannot be published in this phase.",
+      "storefrontVisible"
+    );
+  }
+  if (command.feedVisible) {
+    throw new MutationContractError(
+      "VALIDATION_FAILED",
+      "Products cannot be added to the feed in this phase.",
+      "feedVisible"
+    );
+  }
+  return { ...command, imageFileId: null };
+}
+
+const PRODUCT_UPDATE_FIELDS = [
+  "productId",
+  "expectedUpdatedAt",
+  "idempotencyKey",
+  "name",
+  "slug",
+  "description",
+  "brand",
+  "preferredContactId",
+  "categoryId",
+  "price",
+  "currency",
+  "condition",
+  "stockStatus",
+  "featured",
+  "statusPick",
+  "storefrontVisible",
+  "feedVisible",
+  "sortPriority"
+] as const;
+
+export type ProductUpdatePatch = Partial<
+  Omit<ProductCreateCommand, "idempotencyKey" | "imageFileId">
+>;
+
+export type ProductUpdateCommand = {
+  productId: string;
+  expectedUpdatedAt: string;
+  idempotencyKey: string;
+  patch: ProductUpdatePatch;
+};
+
+export function planProductUpdate(input: unknown): ProductUpdateCommand {
+  const value = record(input);
+  const forbidden = Object.keys(value).find((key) => FORBIDDEN_PRODUCT_FIELDS.has(key));
+  if (forbidden) {
+    throw new MutationContractError(
+      "VALIDATION_FAILED",
+      `${forbidden} is server-owned or unsupported.`,
+      forbidden
+    );
+  }
+  rejectUnknownFields(value, PRODUCT_UPDATE_FIELDS);
+  const patch: ProductUpdatePatch = {};
+  if ("name" in value) patch.name = requiredString(value.name, "name", 160);
+  if ("slug" in value) {
+    if (!patch.name && typeof value.slug !== "string") {
+      throw new MutationContractError("VALIDATION_FAILED", "slug must be a string.", "slug");
+    }
+    patch.slug = normalizedSlug(value.slug, patch.name ?? "product");
+  }
+  if ("description" in value) {
+    patch.description = requiredString(value.description, "description", 10_000);
+  }
+  if ("brand" in value) {
+    patch.brand = enumValue<"univercell" | "eko">(
+      value.brand,
+      "brand",
+      ["univercell", "eko"]
+    );
+  }
+  if ("preferredContactId" in value) {
+    patch.preferredContactId = optionalString(
+      value.preferredContactId,
+      "preferredContactId",
+      64
+    );
+  }
+  if ("categoryId" in value) patch.categoryId = appwriteId(value.categoryId, "categoryId");
+  if ("price" in value) patch.price = integerValue(value.price, "price", 1);
+  if ("currency" in value) {
+    patch.currency = enumValue<"PKR">(value.currency, "currency", ["PKR"]);
+  }
+  if ("condition" in value) {
+    patch.condition = enumValue<"New" | "Like New" | "Used">(
+      value.condition,
+      "condition",
+      ["New", "Like New", "Used"]
+    );
+  }
+  if ("stockStatus" in value) {
+    patch.stockStatus = enumValue<"in_stock" | "low_stock" | "sold_out">(
+      value.stockStatus,
+      "stockStatus",
+      ["in_stock", "low_stock", "sold_out"]
+    );
+  }
+  if ("featured" in value) patch.featured = booleanValue(value.featured, "featured");
+  if ("statusPick" in value) patch.statusPick = booleanValue(value.statusPick, "statusPick");
+  if ("storefrontVisible" in value) {
+    const storefrontVisible = booleanValue(value.storefrontVisible, "storefrontVisible");
+    if (storefrontVisible) {
+      throw new MutationContractError(
+        "VALIDATION_FAILED",
+        "Products cannot be published in this phase.",
+        "storefrontVisible"
+      );
+    }
+    patch.storefrontVisible = false;
+  }
+  if ("feedVisible" in value) {
+    const feedVisible = booleanValue(value.feedVisible, "feedVisible");
+    if (feedVisible) {
+      throw new MutationContractError(
+        "VALIDATION_FAILED",
+        "Products cannot be added to the feed in this phase.",
+        "feedVisible"
+      );
+    }
+    patch.feedVisible = false;
+  }
+  if ("sortPriority" in value) {
+    patch.sortPriority = integerValue(value.sortPriority, "sortPriority", 0);
+  }
+  if (Object.keys(patch).length === 0) {
+    throw new MutationContractError(
+      "VALIDATION_FAILED",
+      "At least one mutable product field is required."
+    );
+  }
+  return {
+    productId: appwriteId(value.productId, "productId"),
+    expectedUpdatedAt: expectedUpdatedAt(value.expectedUpdatedAt),
+    idempotencyKey: idempotencyKey(value.idempotencyKey),
+    patch
+  };
+}
+
+export type ProductDeleteCommand = {
+  productId: string;
+  expectedUpdatedAt: string;
+  idempotencyKey: string;
+};
+
+export function planProductDelete(input: unknown): ProductDeleteCommand {
+  const value = record(input);
+  rejectUnknownFields(value, ["productId", "expectedUpdatedAt", "idempotencyKey"]);
+  return {
+    productId: appwriteId(value.productId, "productId"),
+    expectedUpdatedAt: expectedUpdatedAt(value.expectedUpdatedAt),
+    idempotencyKey: idempotencyKey(value.idempotencyKey)
+  };
+}
+
 export type PlannedStep = {
   operation: string;
   compensation: string | null;

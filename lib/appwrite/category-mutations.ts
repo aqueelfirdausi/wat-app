@@ -4,7 +4,7 @@ import { createHash } from "node:crypto";
 import { AppwriteException, Query } from "node-appwrite";
 import {
   APPLICATION_CATEGORY_MUTATION_CONTEXT,
-  isPhase3VCategoryVerificationContext,
+  isCategoryMutationVerificationContext,
   type CategoryMutationExecutionContext
 } from "@/lib/appwrite/category-verification-context";
 import {
@@ -141,7 +141,7 @@ function authorize(identity: AuthenticatedStaffIdentity, action: CatalogueMutati
 }
 
 function permissionMode(context: CategoryMutationExecutionContext): AppwriteCategoryPermissionMode {
-  return isPhase3VCategoryVerificationContext(context) ? "private_fixture" : "public";
+  return isCategoryMutationVerificationContext(context) ? "private_fixture" : "public";
 }
 
 function deterministicCategoryId(idempotencyKey: string) {
@@ -430,7 +430,7 @@ export function createAppwriteCategoryMutationService(
     action: CatalogueMutationAction,
     context: CategoryMutationExecutionContext
   ) {
-    const verification = isPhase3VCategoryVerificationContext(context);
+    const verification = isCategoryMutationVerificationContext(context);
     dependencies.enforceRuntimeBoundary(verification);
     authorize(identity, action);
     return permissionMode(context);
@@ -468,7 +468,7 @@ export function createAppwriteCategoryMutationService(
     const mode = begin(identity, "create_category", context);
     const command = planCategoryCreate(request);
     const rowId =
-      context.kind === "phase3v_verification" && isPhase3VCategoryVerificationContext(context)
+      context.kind !== "application" && isCategoryMutationVerificationContext(context)
         ? context.fixtureRowId
         : deterministicCategoryId(command.idempotencyKey);
     const timestamp = dependencies.now();
@@ -584,6 +584,20 @@ export function createAppwriteCategoryMutationService(
           return current;
         }
         throw new MutationContractError("STALE_WRITE", "Category has changed.");
+      }
+      const references = await dependencies.tables.listRows({
+        databaseId,
+        tableId: productsTableId,
+        queries: [Query.equal("categoryId", command.categoryId), Query.limit(1)],
+        transactionId,
+        total: false,
+        ttl: 0
+      });
+      if (references.rows.length > 0) {
+        throw new MutationContractError(
+          "REFERENCE_CONFLICT",
+          "Referenced categories cannot be renamed until snapshot propagation is implemented."
+        );
       }
       const duplicate = await dependencies.tables.listRows({
         databaseId,

@@ -498,3 +498,58 @@ cannot contain its own hash. The next recommended phase is a separately
 approved consolidated server-side product-mutation implementation. Do not
 automatically begin product, image, activity-table, UI, staging, deployment, or
 cutover work.
+
+## Phase 3W server-side product mutations
+
+Phase 3W implements server-only Appwrite product create, update, and delete
+plus a disabled `/api/admin/products` seam. Ordinary calls require exact
+Appwrite selection, SSR-derived staff authorization, action authorization, and
+the fail-closed global mutation gate. `WAT_MUTATIONS_ENABLED=false`, so no
+ordinary UI or route write is active.
+
+Create uses a deterministic 36-character row ID for retry safety, derives the
+canonical category snapshot in a transaction, sets the provisional chosen key
+to the row ID, forces both visibility flags false, attaches no image, sets
+server timestamps/actor fields, and applies exact staff-only read permissions.
+Update uses a strict partial allow-list and canonical `updatedAt` token,
+preserves creation/image/chosen state, and derives changed category names
+server-side. Admin-only delete rejects stale, selected, image-linked, public,
+or malformed rows and verifies sustained absence after terminal commit.
+
+Product create/update/delete reuse the Phase 3V safety findings: terminal
+transaction polling, empty-transaction discard, `ttl:0` mutation-critical
+queries, canonical Appwrite datetimes, and bounded compare-before-write
+compensation. Same-key create is deterministic; update is outcome-idempotent;
+completed delete retry is `NOT_FOUND`. No new ledger/table/column was added.
+
+To prevent stale denormalized product snapshots, category rename now rejects
+any uncached product reference. Product create/reassignment always reads the
+category within the product transaction and copies its canonical name.
+Category delete remains reference-protected with `ttl:0`; product create's
+transactional category read makes concurrent removal fail conservatively.
+
+The double-gated verifier is read-only by default and creates only exact
+Phase 3W-prefixed private categories/products. Two consecutive live lifecycles
+proved create/retry/duplicate-slug behavior, ordinary update, category
+reassignment, stale and forbidden-input rejection, product-editor delete
+denial, selected/image/reference blocks, admin delete, and product-before-
+category cleanup. Both began and ended at products/categories/files `0/0/0`,
+recovered no orphan, left zero prefix match, and created no file.
+
+Final verification passed 50 focused mutation tests, 164 Appwrite foundation
+tests, 17 mutation-gate tests, 8 Firebase inventory tests, lint, typecheck,
+production build, diff checks, and secret/client containment. Team memberships
+remain zero; operational tables and Appwrite `team_contacts` remain absent.
+No Firebase, Vercel, domain, deployment, production, main, or archive state
+changed.
+
+Logical product events are prepared but not durable; `activity_logs` remains
+absent. See `APPWRITE-PRODUCT-MUTATIONS-PHASE-3W.md`. The exact Phase 3W commit
+is the commit containing this handoff section and is reported after push
+because a commit cannot contain its own hash.
+
+Stop after Phase 3W. The next recommended consolidated phase is a separately
+approved, double-gated image-lifecycle, visibility-transition, and chosen-
+product-concurrency implementation using private disposable fixtures and exact
+compensation. Do not automatically begin it, activity logging, mutation UI,
+deployment, real-user creation, or production cutover.
