@@ -4,6 +4,8 @@ import { NextRequest } from "next/server";
 import { GET as getImageProxy } from "@/app/api/image-proxy/route";
 import { POST as createAppwriteCategory } from "@/app/api/admin/categories/route";
 import { POST as createAppwriteProduct } from "@/app/api/admin/products/route";
+import { POST as mutateAppwriteProductImage } from "@/app/api/admin/product-images/route";
+import { POST as mutateAppwriteProductLifecycle } from "@/app/api/admin/product-lifecycle/route";
 import { handleAnalyticsPost } from "@/lib/server/analytics-mutation";
 import {
   handleNotificationPost,
@@ -160,6 +162,31 @@ test("Appwrite product route remains unavailable while the global gate is false"
   ));
   assert.equal(response.status, 503);
   assert.equal((await response.json()).code, "MUTATIONS_DISABLED");
+});
+
+test("Appwrite Phase 3X routes remain unavailable while the global gate is false", async () => {
+  process.env.WAT_BACKEND = "appwrite";
+  process.env.WAT_MUTATIONS_ENABLED = "false";
+  process.env.APPWRITE_ENDPOINT = "https://example.invalid/v1";
+  process.env.APPWRITE_PROJECT_ID = "project";
+  process.env.APPWRITE_DATA_API_KEY = "not-a-real-key";
+  process.env.APPWRITE_AUTH_API_KEY = "not-a-real-key";
+  const [imageResponse, lifecycleResponse] = await Promise.all([
+    mutateAppwriteProductImage(
+      new Request("https://local.example/api/admin/product-images", {
+        method: "POST"
+      })
+    ),
+    mutateAppwriteProductLifecycle(
+      new Request("https://local.example/api/admin/product-lifecycle", {
+        method: "POST"
+      })
+    )
+  ]);
+  assert.equal(imageResponse.status, 503);
+  assert.equal(lifecycleResponse.status, 503);
+  assert.equal((await imageResponse.json()).code, "MUTATIONS_DISABLED");
+  assert.equal((await lifecycleResponse.json()).code, "MUTATIONS_DISABLED");
 });
 
 test("read-only image proxy remains available when mutations are disabled", async () => {

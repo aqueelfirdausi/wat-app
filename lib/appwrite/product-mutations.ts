@@ -24,7 +24,7 @@ import {
 import { APPWRITE_PUBLIC_READ_PERMISSION } from "@/lib/appwrite/public-permissions";
 import {
   APPLICATION_PRODUCT_MUTATION_CONTEXT,
-  isPhase3WProductVerificationContext,
+  isProductMutationVerificationContext,
   type ProductMutationExecutionContext
 } from "@/lib/appwrite/product-verification-context";
 import { APPWRITE_DEFAULT_RESOURCE_IDS } from "@/lib/appwrite/resources";
@@ -33,7 +33,7 @@ import { getAppwriteDataServices } from "@/lib/appwrite/server";
 import { getServerBackendMode } from "@/lib/backend/server";
 import { requireMutationEnabled } from "@/lib/server/mutation-gate";
 
-type ProductRow = Record<string, unknown> & {
+export type ProductMutationRow = Record<string, unknown> & {
   $id: string;
   $permissions?: unknown;
 };
@@ -161,8 +161,8 @@ function mapCategoryRow(row: CategoryRow, verification: boolean) {
   return { id: row.$id, name: row.name, slug: row.slug, updatedAt };
 }
 
-function mapProductRow(
-  row: ProductRow,
+export function mapProductMutationRow(
+  row: ProductMutationRow,
   options: { allowBlockedPublicState?: boolean } = {}
 ): ProductMutationDto {
   const preferredContactId = optionalString(row.preferredContactId, 64);
@@ -347,7 +347,7 @@ async function readMaterializedProduct(
 ) {
   for (let attempt = 0; attempt < 50; attempt++) {
     try {
-      return mapProductRow(
+      return mapProductMutationRow(
         await dependencies.tables.getRow({
           databaseId,
           tableId: productsTableId,
@@ -487,9 +487,18 @@ export function createAppwriteProductMutationService(
     action: CatalogueMutationAction,
     context: ProductMutationExecutionContext
   ) {
-    const verification = isPhase3WProductVerificationContext(context);
+    const verification = isProductMutationVerificationContext(context);
     dependencies.enforceRuntimeBoundary(verification);
     authorize(identity, action);
+    if (
+      context.kind === "phase3x_cleanup_verification" &&
+      action !== "delete_product"
+    ) {
+      throw new MutationContractError(
+        "AUTHORIZATION_FAILED",
+        "Phase 3X cleanup context permits only exact disposable product deletion."
+      );
+    }
     return verification;
   }
 
@@ -515,7 +524,7 @@ export function createAppwriteProductMutationService(
     let staged = false;
     try {
       try {
-        const existing = mapProductRow(
+        const existing = mapProductMutationRow(
           await dependencies.tables.getRow({
             databaseId,
             tableId: productsTableId,
@@ -648,7 +657,7 @@ export function createAppwriteProductMutationService(
     let staged = false;
     try {
       transactionId = (await dependencies.tables.createTransaction({ ttl: 60 })).$id;
-      const current = mapProductRow(
+      const current = mapProductMutationRow(
         await dependencies.tables.getRow({
           databaseId,
           tableId: productsTableId,
@@ -765,13 +774,22 @@ export function createAppwriteProductMutationService(
   ): Promise<ProductDeleteDto> {
     begin(identity, "delete_product", context);
     const command = planProductDelete(request);
+    if (
+      context.kind === "phase3x_cleanup_verification" &&
+      !context.fixtureProductIds.includes(command.productId)
+    ) {
+      throw new MutationContractError(
+        "AUTHORIZATION_FAILED",
+        "Product is outside the Phase 3X disposable cleanup allow-list."
+      );
+    }
     const timestamp = dependencies.now();
     let transactionId = "";
     let committed = false;
     let staged = false;
     try {
       transactionId = (await dependencies.tables.createTransaction({ ttl: 60 })).$id;
-      const current = mapProductRow(
+      const current = mapProductMutationRow(
         await dependencies.tables.getRow({
           databaseId,
           tableId: productsTableId,
@@ -863,7 +881,7 @@ export function createAppwriteProductMutationService(
       let resurfaced: ProductMutationDto | null = null;
       for (let attempt = 0; attempt < 50; attempt++) {
         try {
-          resurfaced = mapProductRow(
+          resurfaced = mapProductMutationRow(
             await dependencies.tables.getRow({
               databaseId,
               tableId: productsTableId,

@@ -553,3 +553,76 @@ approved, double-gated image-lifecycle, visibility-transition, and chosen-
 product-concurrency implementation using private disposable fixtures and exact
 compensation. Do not automatically begin it, activity logging, mutation UI,
 deployment, real-user creation, or production cutover.
+
+## Phase 3X image lifecycle, visibility, and chosen concurrency
+
+Phase 3X implements one server-only Appwrite boundary for private-first product
+image upload/attachment, safe replacement/removal, admin-only orphan cleanup,
+image-first publication, row-first hiding, feed/featured/status-pick changes,
+and atomic chosen-product selection. The ordinary image and lifecycle routes
+remain disabled by `WAT_MUTATIONS_ENABLED=false`; no admin mutation control was
+added.
+
+Accepted images are JPEG, PNG, and WebP up to 1 MiB, with signature and
+extension agreement. Files begin with exact staff-role reads. Public files and
+rows use exactly `read("any")`, `read("team:wat_staff/admin")`, and
+`read("team:wat_staff/product_editor")`, with no public write. Upload metadata,
+completion, MIME, size, bucket, ID, and permissions are re-read before
+attachment. Replacement never deletes the old file before secure new linkage;
+all compensation is compare-before-write and reports incomplete cleanup.
+
+Publication proves direct anonymous file HTTP delivery before making the row
+public. Hiding removes row visibility and public permission before
+privatizing the image, and failure leaves the row hidden. Feed visibility
+requires storefront visibility. Featured and status-pick remain independent
+from publication and chosen selection.
+
+Chosen selection uses one short TablesDB transaction: the prior row returns to
+its own unique key and the target receives `"current"`. Commit is polled to a
+terminal state and the service verifies exactly one current row uncached.
+Already-selected retries are outcome-idempotent, stale targets reject, unknown
+commit outcomes succeed only after exact invariant proof, and multiple current
+rows fail closed. Selected-product deletion remains blocked and never chooses
+a replacement.
+
+The double-gated lifecycle uses only exact `phase3x_disposable_` resources and
+requires `--run-lifecycle` plus
+`--confirm-destructive-disposable-product-lifecycle`. Three corrected live
+runs proved exact private bytes/metadata, retry, replacement/removal, invalid
+rejection without residual files, editor/admin orphan authorization, public
+catalogue inclusion, direct image delivery, merchandising independence,
+catalogue exclusion and anonymous denial after hiding, chosen replacement and
+retry, selected-delete blocking, former-selected deletion, and bounded
+concurrent selection with exactly one final current row.
+
+One initial verifier run stopped because it passed a raw Appwrite datetime
+instead of a canonical UTC token. Its `finally` cleanup and an independent
+recount proved `0/0/0` before the verifier was corrected. All corrected runs
+started and ended with products/categories/files `0/0/0`, zero product,
+category, file, and selected prefix matches, and every former public URL
+denied.
+
+Final verification passed 33 focused Phase 3X tests, 83 consolidated mutation
+tests, 197 Appwrite foundation tests, 18 mutation-gate tests, 8 Firebase
+inventory tests, lint, typecheck, production build, diff checks, and tracked/
+client secret-value scans. Live TablesDB multi-row chosen transactions
+committed and materialized after terminal polling. Both bounded concurrent
+attempts were accepted and the exact one-current invariant held; no live
+unique/transaction conflict code was observed, so those fail-closed paths
+remain fixture-proven.
+
+Logical lifecycle events are prepared but not durable. `activity_logs`,
+`analytics_events`, `broadcasts`, and Appwrite `team_contacts` remain absent.
+Products, categories, files, and Team memberships remain zero; no identity or
+platform operation occurred. Firebase, Vercel, domains, deployments,
+production, `main`, and the archive reference remain unchanged.
+
+See `APPWRITE-IMAGE-VISIBILITY-CHOSEN-PHASE-3X.md`. The exact Phase 3X commit
+is the commit containing this handoff section and is reported after push
+because a commit cannot contain its own hash.
+
+Stop after Phase 3X. The next recommended consolidated phase is physical
+immutable activity logging plus fully connected role-aware admin mutation UI
+and end-to-end authenticated mutation verification. Do not automatically begin
+it, enable ordinary mutations, create a real owner, deploy, cut over, or retire
+Firebase.
