@@ -17,6 +17,7 @@
     "test:appwrite-auth": "tsx --conditions=react-server --test tests/appwrite-authentication.test.ts tests/appwrite-auth-containment.test.ts tests/appwrite-authorization.test.ts tests/appwrite-disposable-identity.test.ts",
     "test:appwrite-mutations": "tsx --conditions=react-server --test tests/appwrite-mutation-design.test.ts tests/appwrite-category-mutations.test.ts tests/appwrite-product-mutations.test.ts tests/appwrite-product-lifecycle.test.ts",
     "test:appwrite-lifecycle": "tsx --conditions=react-server --test tests/appwrite-product-lifecycle.test.ts",
+    "test:appwrite-phase3y": "tsx --conditions=react-server --test tests/appwrite-activity-logs.test.ts tests/appwrite-admin-ui.test.ts",
     "test:catalogue": "tsx --conditions=react-server --test tests/appwrite-product-image.test.ts tests/appwrite-read.test.ts tests/catalogue-read.test.ts",
     "appwrite:bootstrap": "tsx --conditions=react-server scripts/appwrite-bootstrap.ts",
     "appwrite:diagnose-schema": "tsx --conditions=react-server scripts/appwrite-schema-diagnose.ts",
@@ -27,7 +28,9 @@
     "appwrite:check-admin-catalogue": "tsx --conditions=react-server scripts/appwrite-admin-catalogue-verification.ts",
     "appwrite:check-category-mutations": "tsx --conditions=react-server scripts/appwrite-category-mutation-verification.ts",
     "appwrite:check-product-mutations": "tsx --conditions=react-server scripts/appwrite-product-mutation-verification.ts",
-    "appwrite:check-product-lifecycle": "tsx --conditions=react-server scripts/appwrite-product-lifecycle-verification.ts"
+    "appwrite:check-product-lifecycle": "tsx --conditions=react-server scripts/appwrite-product-lifecycle-verification.ts",
+    "appwrite:activity-schema": "tsx --conditions=react-server scripts/appwrite-activity-schema.ts",
+    "appwrite:check-activity": "tsx --conditions=react-server scripts/appwrite-activity-verification.ts"
   },
   "dependencies": {
     "@capacitor/android": "^8.3.3",

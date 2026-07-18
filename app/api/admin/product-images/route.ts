@@ -3,6 +3,7 @@ import { resolveAppwriteStaffIdentity } from "@/lib/appwrite/auth/runtime";
 import { readAppwriteSessionCookie } from "@/lib/appwrite/auth/session-cookie";
 import { handleProductImageRequest } from "@/lib/appwrite/product-lifecycle-handlers";
 import { createAppwriteProductLifecycleService } from "@/lib/appwrite/product-lifecycle";
+import { persistAppwriteActivityEvent } from "@/lib/appwrite/activity-logs";
 import { getServerBackendMode } from "@/lib/backend/server";
 import { isMutationEnabled, mutationDisabledResponse } from "@/lib/server/mutation-gate";
 
@@ -19,7 +20,10 @@ export async function POST(request: Request) {
   const result = await handleProductImageRequest(request, {
     resolveIdentity: async () =>
       resolveAppwriteStaffIdentity(await readAppwriteSessionCookie()),
-    service: createAppwriteProductLifecycleService()
+    service: createAppwriteProductLifecycleService(),
+    emitActivityEvent: async (event) => {
+      await persistAppwriteActivityEvent(event);
+    }
   });
   return NextResponse.json(result.body, {
     status: result.status,

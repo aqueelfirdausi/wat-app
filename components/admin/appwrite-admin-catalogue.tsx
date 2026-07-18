@@ -5,6 +5,8 @@ import type {
 import { loadBackendAdminCatalogue } from "@/lib/appwrite/admin-catalogue";
 import { requireCurrentAppwriteStaffIdentity } from "@/lib/appwrite/auth/current-staff";
 import { getServerBackendMode } from "@/lib/backend/server";
+import { isMutationEnabled } from "@/lib/server/mutation-gate";
+import { AppwriteAdminMutations } from "@/components/admin/appwrite-admin-mutations";
 
 function formatPrice(price: number, currency: string) {
   return new Intl.NumberFormat("en-PK", {
@@ -45,10 +47,12 @@ function imageLabel(product: AppwriteAdminProduct) {
 
 export function AppwriteAdminCatalogueView({
   catalogue,
-  heading = "Read-only catalogue"
+  heading = "Catalogue",
+  mutationsEnabled = false
 }: {
   catalogue: AppwriteAdminCatalogue;
   heading?: string;
+  mutationsEnabled?: boolean;
 }) {
   const { products, categories, summary } = catalogue;
 
@@ -57,14 +61,19 @@ export function AppwriteAdminCatalogueView({
       <section className="panel-card">
         <div className="panel-header">
           <div>
-            <p className="eyebrow">Appwrite · read only</p>
+            <p className="eyebrow">
+              Appwrite · {mutationsEnabled ? "verified mutations" : "read only"}
+            </p>
             <h1>{heading}</h1>
             <p>
-              Live staff catalogue data. Creating, editing, publishing, reordering,
-              uploading, and deleting remain unavailable.
+              {mutationsEnabled
+                ? "Live staff catalogue data with server-mediated, role-aware mutation controls."
+                : "Live staff catalogue data. Catalogue mutation controls are unavailable."}
             </p>
           </div>
-          <span className="admin-readonly-badge">Mutations disabled</span>
+          <span className="admin-readonly-badge">
+            {mutationsEnabled ? "Mutations enabled for verification" : "Mutations disabled"}
+          </span>
         </div>
 
         <div className="admin-catalogue-stats" aria-label="Catalogue summary">
@@ -232,5 +241,21 @@ export async function AppwriteAdminCataloguePage({
     identity
   );
   if (!catalogue) return null;
-  return <AppwriteAdminCatalogueView catalogue={catalogue} heading={heading} />;
+  const mutationsEnabled = isMutationEnabled();
+  return (
+    <>
+      <AppwriteAdminCatalogueView
+        catalogue={catalogue}
+        heading={heading}
+        mutationsEnabled={mutationsEnabled}
+      />
+      <div className="dashboard-stack appwrite-admin-catalogue">
+        <AppwriteAdminMutations
+          catalogue={catalogue}
+          role={identity.role}
+          enabled={mutationsEnabled}
+        />
+      </div>
+    </>
+  );
 }

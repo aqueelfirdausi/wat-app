@@ -24,6 +24,7 @@ import {
   type MutationErrorCode
 } from "@/lib/appwrite/mutation-design";
 import { APPWRITE_DEFAULT_RESOURCE_IDS } from "@/lib/appwrite/resources";
+import { persistAppwriteActivityEvent } from "@/lib/appwrite/activity-logs";
 import type { AuthenticatedStaffIdentity } from "@/lib/appwrite/schema";
 import { getAppwriteDataServices } from "@/lib/appwrite/server";
 import { getServerBackendMode } from "@/lib/backend/server";
@@ -418,9 +419,11 @@ export function createAppwriteCategoryMutationService(
       overrides.enforceRuntimeBoundary ?? enforceDefaultRuntimeBoundary,
     emitActivityEvent:
       overrides.emitActivityEvent ??
-      (() => {
-        // Durable activity storage is intentionally deferred until activity_logs exists.
-      }),
+      (overrides.tables
+        ? async () => {}
+        : async (event) => {
+            await persistAppwriteActivityEvent(event);
+          }),
     wait: overrides.wait ?? ((milliseconds) =>
       new Promise((resolve) => setTimeout(resolve, milliseconds)))
   };
@@ -552,6 +555,24 @@ export function createAppwriteCategoryMutationService(
       }));
       return dto;
     } catch (error) {
+      if (
+        !(error instanceof MutationContractError) ||
+        error.code !== "AUDIT_PERSISTENCE_FAILED"
+      ) {
+        await emit(eventInput({
+          eventId: activityEventId("create-failed", command.idempotencyKey),
+          eventType: "category.mutation_failed",
+          entityId: rowId,
+          identity,
+          timestamp,
+          requestId: command.idempotencyKey,
+          before: null,
+          after: null,
+          result: "failed",
+          errorClassification:
+            error instanceof MutationContractError ? error.code : "INTERNAL_ERROR"
+        }));
+      }
       return classifySdkFailure(error);
     }
   }
@@ -650,6 +671,24 @@ export function createAppwriteCategoryMutationService(
         if (staged) await rollbackTransaction(dependencies, transactionId);
         else await discardEmptyTransaction(dependencies, transactionId);
       }
+      if (
+        !(error instanceof MutationContractError) ||
+        error.code !== "AUDIT_PERSISTENCE_FAILED"
+      ) {
+        await emit(eventInput({
+          eventId: activityEventId("update-failed", command.idempotencyKey),
+          eventType: "category.mutation_failed",
+          entityId: command.categoryId,
+          identity,
+          timestamp,
+          requestId: command.idempotencyKey,
+          before: null,
+          after: null,
+          result: "failed",
+          errorClassification:
+            error instanceof MutationContractError ? error.code : "INTERNAL_ERROR"
+        }));
+      }
       return classifySdkFailure(error);
     }
   }
@@ -700,6 +739,18 @@ export function createAppwriteCategoryMutationService(
           result: "failed",
           errorClassification: "REFERENCE_CONFLICT"
         }));
+        await emit(eventInput({
+          eventId: activityEventId("delete-blocked", command.idempotencyKey),
+          eventType: "category.deletion_blocked",
+          entityId: current.id,
+          identity,
+          timestamp,
+          requestId: command.idempotencyKey,
+          before: current,
+          after: current,
+          result: "failed",
+          errorClassification: "REFERENCE_CONFLICT"
+        }));
         throw new MutationContractError(
           "REFERENCE_CONFLICT",
           "Category is referenced by a product."
@@ -738,6 +789,24 @@ export function createAppwriteCategoryMutationService(
       if (transactionId && !committed) {
         if (staged) await rollbackTransaction(dependencies, transactionId);
         else await discardEmptyTransaction(dependencies, transactionId);
+      }
+      if (
+        !(error instanceof MutationContractError) ||
+        error.code !== "AUDIT_PERSISTENCE_FAILED"
+      ) {
+        await emit(eventInput({
+          eventId: activityEventId("delete-failed", command.idempotencyKey),
+          eventType: "category.mutation_failed",
+          entityId: command.categoryId,
+          identity,
+          timestamp,
+          requestId: command.idempotencyKey,
+          before: null,
+          after: null,
+          result: "failed",
+          errorClassification:
+            error instanceof MutationContractError ? error.code : "INTERNAL_ERROR"
+        }));
       }
       return classifySdkFailure(error);
     }

@@ -11,7 +11,8 @@ export function AppwriteAdminShell({
   const productEditor = identity.role === "product_editor";
   const links = [
     { href: "/admin", label: "Catalogue overview" },
-    { href: "/admin/products", label: "Products" }
+    { href: "/admin/products", label: "Products" },
+    ...(!productEditor ? [{ href: "/admin/logs", label: "Activity log" }] : [])
   ];
 
   return (

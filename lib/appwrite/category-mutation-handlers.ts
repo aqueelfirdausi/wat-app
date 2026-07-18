@@ -36,6 +36,8 @@ function errorStatus(code: MutationErrorCode) {
       return 409;
     case "DEPENDENCY_FAILED":
       return 424;
+    case "AUDIT_PERSISTENCE_FAILED":
+      return 500;
     case "CLEANUP_FAILED":
     case "INTERNAL_ERROR":
       return 500;

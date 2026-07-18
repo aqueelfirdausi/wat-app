@@ -50,6 +50,7 @@ import {
 import { APPWRITE_DEFAULT_RESOURCE_IDS } from "@/lib/appwrite/resources";
 import type { AuthenticatedStaffIdentity } from "@/lib/appwrite/schema";
 import { getAppwriteDataServices } from "@/lib/appwrite/server";
+import { persistAppwriteActivityEvent } from "@/lib/appwrite/activity-logs";
 import { getServerBackendMode } from "@/lib/backend/server";
 import { requireMutationEnabled } from "@/lib/server/mutation-gate";
 
@@ -256,13 +257,25 @@ export type ProductLifecycleEventType =
   | "image.removed"
   | "image.orphan_cleanup_attempted"
   | "image.orphan_cleanup_completed"
+  | "image.orphan_cleanup_failed"
+  | "image.mutation_failed"
   | "product.published"
   | "product.hidden"
+  | "product.feed_visibility_changed"
+  | "product.featured_changed"
+  | "product.status_pick_changed"
   | "image.public_permission_added"
   | "image.public_permission_removed"
+  | "product.chosen_selected"
+  | "product.chosen_replaced"
+  | "product.chosen_retried"
+  | "product.chosen_cleared"
+  | "product.chosen_failed"
   | "product.chosen_changed"
   | "product.chosen_attempt_failed"
   | "product.visibility_transition_failed"
+  | "product.visibility_compensation_result"
+  | "product.chosen_compensation_result"
   | "product.compensation_attempted"
   | "product.compensation_completed"
   | "product.cleanup_failed";
@@ -518,9 +531,11 @@ export function createAppwriteProductLifecycleService(
     enforceRuntimeBoundary: overrides.enforceRuntimeBoundary ?? defaultRuntimeBoundary,
     emitActivityEvent:
       overrides.emitActivityEvent ??
-      (() => {
-        // Physical activity_logs storage is intentionally deferred.
-      })
+      (overrides.tables || overrides.storage
+        ? async () => {}
+        : async (event) => {
+            await persistAppwriteActivityEvent(event);
+          })
   };
 
   function begin(
@@ -605,6 +620,23 @@ export function createAppwriteProductLifecycleService(
         mimeType: metadata.mimeType,
         size: metadata.size,
         public: false
+      },
+      result: "succeeded"
+    });
+    await emit({
+      eventType: "image.verified",
+      entityType: "image",
+      entityId: fileId,
+      identity,
+      timestamp: dependencies.now(),
+      requestId,
+      before: null,
+      after: {
+        fileId,
+        mimeType: metadata.mimeType,
+        size: metadata.size,
+        public: false,
+        linkage: "unattached"
       },
       result: "succeeded"
     });
@@ -951,7 +983,24 @@ export function createAppwriteProductLifecycleService(
       after: null,
       result: "failed"
     });
-    await deleteFileAndVerify(dependencies, command.fileId);
+    try {
+      await deleteFileAndVerify(dependencies, command.fileId);
+    } catch (error) {
+      await emit({
+        eventType: "image.orphan_cleanup_failed",
+        entityType: "image",
+        entityId: command.fileId,
+        identity,
+        timestamp: dependencies.now(),
+        requestId: command.idempotencyKey,
+        before: { fileId: command.fileId },
+        after: null,
+        result: "failed",
+        errorClassification:
+          error instanceof MutationContractError ? error.code : "INTERNAL_ERROR"
+      });
+      return classify(error);
+    }
     await emit({
       eventType: "image.orphan_cleanup_completed",
       entityType: "image",
@@ -1219,7 +1268,7 @@ export function createAppwriteProductLifecycleService(
       permissions: productPermissionsForVisibility(current.storefrontVisible),
       identity
     });
-    return waitForProduct(
+    const product = await waitForProduct(
       dependencies,
       current.id,
       (candidate) =>
@@ -1227,6 +1276,27 @@ export function createAppwriteProductLifecycleService(
           ([key, value]) => candidate[key as keyof ProductMutationDto] === value
         ) && candidate.chosenSelectionKey === current.chosenSelectionKey
     );
+    for (const field of Object.keys(command.patch) as Array<
+      keyof typeof command.patch
+    >) {
+      await emit({
+        eventType:
+          field === "feedVisible"
+            ? "product.feed_visibility_changed"
+            : field === "featured"
+              ? "product.featured_changed"
+              : "product.status_pick_changed",
+        entityType: "product",
+        entityId: product.id,
+        identity,
+        timestamp: dependencies.now(),
+        requestId: command.idempotencyKey,
+        before: { [field]: current[field] },
+        after: { [field]: product[field] },
+        result: "succeeded"
+      });
+    }
+    return product;
   }
 
   async function readChosenRows(transactionId?: string) {
@@ -1268,6 +1338,18 @@ export function createAppwriteProductLifecycleService(
     assertPhase3XResourceAllowed(context, "product", command.targetProductId);
     const beforeChosen = await readChosenRows();
     if (beforeChosen[0]?.id === command.targetProductId) {
+      await emit({
+        eventType: "product.chosen_retried",
+        entityType: "product",
+        entityId: command.targetProductId,
+        identity,
+        timestamp: dependencies.now(),
+        requestId: command.idempotencyKey,
+        before: { selectedProductId: command.targetProductId },
+        after: { selectedProductId: command.targetProductId },
+        result: "succeeded",
+        metadata: { retry: true, outcome: "already_selected" }
+      });
       return {
         selectedProduct: beforeChosen[0],
         previousProductId: command.targetProductId,
@@ -1292,6 +1374,18 @@ export function createAppwriteProductLifecycleService(
       previousId = selected[0]?.id ?? null;
       if (previousId === target.id) {
         await discardTransaction(dependencies, transactionId);
+        await emit({
+          eventType: "product.chosen_retried",
+          entityType: "product",
+          entityId: target.id,
+          identity,
+          timestamp: dependencies.now(),
+          requestId: command.idempotencyKey,
+          before: { selectedProductId: target.id },
+          after: { selectedProductId: target.id },
+          result: "succeeded",
+          metadata: { retry: true, outcome: "transaction_already_selected" }
+        });
         return {
           selectedProduct: selected[0],
           previousProductId: previousId,
@@ -1340,7 +1434,9 @@ export function createAppwriteProductLifecycleService(
         }
       }
       await emit({
-        eventType: "product.chosen_changed",
+        eventType: previousId
+          ? "product.chosen_replaced"
+          : "product.chosen_selected",
         entityType: "product",
         entityId: target.id,
         identity,
@@ -1373,8 +1469,74 @@ export function createAppwriteProductLifecycleService(
           // A committed transaction is atomic; never perform sequential restoration.
         }
       }
+      await emit({
+        eventType: "product.chosen_failed",
+        entityType: "product",
+        entityId: command.targetProductId,
+        identity,
+        timestamp: dependencies.now(),
+        requestId: command.idempotencyKey,
+        before: { selectedProductId: beforeChosen[0]?.id ?? null },
+        after: null,
+        result: "failed",
+        errorClassification:
+          error instanceof MutationContractError ? error.code : "INTERNAL_ERROR"
+      });
       return classify(error);
     }
+  }
+
+  async function clearChosenProduct(
+    request: unknown,
+    identity: AuthenticatedStaffIdentity,
+    context: ProductLifecycleExecutionContext = APPLICATION_PRODUCT_LIFECYCLE_CONTEXT
+  ) {
+    begin(identity, "clear_chosen_product", context);
+    const command = planChosenProductMutation(request);
+    assertPhase3XResourceAllowed(context, "product", command.targetProductId);
+    const current = await readProduct(dependencies, command.targetProductId);
+    if (current.updatedAt !== command.expectedTargetUpdatedAt) {
+      throw new MutationContractError("STALE_WRITE", "Chosen target has changed.");
+    }
+    const selected = await readChosenRows();
+    if (!selected.length) return current;
+    if (selected[0].id !== current.id) {
+      throw new MutationContractError(
+        "CONFLICT",
+        "Chosen target no longer matches the current selection."
+      );
+    }
+    await updateProductInTransaction({
+      dependencies,
+      current,
+      expectedUpdatedAt: command.expectedTargetUpdatedAt,
+      data: { chosenSelectionKey: current.id },
+      permissions: productPermissionsForVisibility(current.storefrontVisible),
+      identity
+    });
+    const product = await waitForProduct(
+      dependencies,
+      current.id,
+      (candidate) => candidate.chosenSelectionKey === candidate.id
+    );
+    if ((await readChosenRows()).length !== 0) {
+      throw new MutationContractError(
+        "DEPENDENCY_FAILED",
+        "Chosen selection did not clear."
+      );
+    }
+    await emit({
+      eventType: "product.chosen_cleared",
+      entityType: "product",
+      entityId: product.id,
+      identity,
+      timestamp: dependencies.now(),
+      requestId: command.idempotencyKey,
+      before: { selectedProductId: product.id },
+      after: { selectedProductId: null },
+      result: "succeeded"
+    });
+    return product;
   }
 
   return {
@@ -1385,6 +1547,7 @@ export function createAppwriteProductLifecycleService(
     setStorefrontVisibility,
     setMerchandising,
     selectChosenProduct,
+    clearChosenProduct,
     validateProductImage,
     readChosenRows
   };

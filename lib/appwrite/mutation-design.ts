@@ -57,6 +57,7 @@ export type MutationErrorCode =
   | "REFERENCE_CONFLICT"
   | "NOT_FOUND"
   | "DEPENDENCY_FAILED"
+  | "AUDIT_PERSISTENCE_FAILED"
   | "CLEANUP_FAILED"
   | "INTERNAL_ERROR";
 
@@ -697,7 +698,8 @@ export type ActivityEventInput = {
   metadata?: Record<string, unknown>;
 };
 
-const SENSITIVE_LOG_KEYS = /password|secret|token|cookie|api.?key|permission|session/i;
+const SENSITIVE_LOG_KEYS =
+  /password|secret|token|cookie|api.?key|permission|session|authorization|headers?/i;
 
 function assertLogSafe(value: unknown, path = "event"): void {
   if (Array.isArray(value)) {

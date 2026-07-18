@@ -291,15 +291,13 @@ test("sorting is deterministic when priority and timestamps are equal", async ()
   assert.deepEqual(result.categories.map((category) => category.slug), ["a", "z"]);
 });
 
-test("admin DTO excludes raw rows, permissions, file IDs, and selection keys", async () => {
+test("admin DTO exposes only bounded mutation references, not raw rows or server-owned fields", async () => {
   const result = await loadAppwriteAdminCatalogue(
     adminIdentity,
     dependencies([productBase], [categoryPublic]).values
   );
   const serialized = JSON.stringify(result);
   for (const privateValue of [
-    productBase.$id,
-    productBase.chosenSelectionKey,
     'read(\\"any\\")',
     "Fixture creator"
   ]) {
@@ -309,6 +307,10 @@ test("admin DTO excludes raw rows, permissions, file IDs, and selection keys", a
       assert.equal(serialized.includes(privateValue), false);
     }
   }
+  assert.equal(result.products[0].id, productBase.$id);
+  assert.equal(result.categories[0].id, categoryPublic.$id);
+  assert.equal(serialized.includes('"$id"'), false);
+  assert.equal(serialized.includes("chosenSelectionKey"), false);
   assert.equal(serialized.includes("file-public"), true);
   assert.equal(serialized.includes("$permissions"), false);
   assert.equal(serialized.includes("imageFileId"), false);

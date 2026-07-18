@@ -4925,6 +4925,78 @@ textarea {
   gap: 14px;
 }
 
+.admin-mutation-form {
+  display: grid;
+  gap: 0.85rem;
+  margin-top: 1rem;
+}
+
+.admin-mutation-form label {
+  display: grid;
+  gap: 0.35rem;
+  font-weight: 700;
+}
+
+.admin-mutation-form input,
+.admin-mutation-form select,
+.admin-mutation-form textarea {
+  width: 100%;
+  min-height: 44px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 0.7rem 0.8rem;
+  color: inherit;
+  background: var(--surface);
+  font: inherit;
+}
+
+.admin-mutation-form textarea {
+  min-height: 96px;
+  resize: vertical;
+}
+
+.admin-product-form {
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  align-items: end;
+}
+
+.admin-product-form label:has(textarea) {
+  grid-column: 1 / -1;
+}
+
+.admin-mutation-list,
+.admin-mutation-actions {
+  display: grid;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.admin-mutation-row {
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: end;
+}
+
+.admin-mutation-actions {
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+}
+
+.admin-mutation-message {
+  position: sticky;
+  bottom: 1rem;
+  z-index: 5;
+  min-height: 1.5rem;
+  border-radius: 12px;
+  background: #fff;
+  padding: 0.75rem 1rem;
+  box-shadow: var(--shadow);
+}
+
+@media (max-width: 560px) {
+  .admin-mutation-row {
+    grid-template-columns: 1fr;
+  }
+}
+
 .admin-catalogue-section-heading {
   align-items: center;
   margin-bottom: 16px;

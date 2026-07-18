@@ -28,6 +28,7 @@ import {
   type ProductMutationExecutionContext
 } from "@/lib/appwrite/product-verification-context";
 import { APPWRITE_DEFAULT_RESOURCE_IDS } from "@/lib/appwrite/resources";
+import { persistAppwriteActivityEvent } from "@/lib/appwrite/activity-logs";
 import type { AuthenticatedStaffIdentity } from "@/lib/appwrite/schema";
 import { getAppwriteDataServices } from "@/lib/appwrite/server";
 import { getServerBackendMode } from "@/lib/backend/server";
@@ -475,9 +476,11 @@ export function createAppwriteProductMutationService(
       overrides.enforceRuntimeBoundary ?? enforceDefaultRuntimeBoundary,
     emitActivityEvent:
       overrides.emitActivityEvent ??
-      (() => {
-        // Durable activity storage is intentionally deferred.
-      }),
+      (overrides.tables
+        ? async () => {}
+        : async (event) => {
+            await persistAppwriteActivityEvent(event);
+          }),
     wait: overrides.wait ?? ((milliseconds) =>
       new Promise((resolve) => setTimeout(resolve, milliseconds)))
   };
@@ -640,6 +643,28 @@ export function createAppwriteProductMutationService(
         if (staged) await rollbackTransaction(dependencies, transactionId);
         else await discardEmptyTransaction(dependencies, transactionId);
       }
+      if (
+        !(error instanceof MutationContractError) ||
+        error.code !== "AUDIT_PERSISTENCE_FAILED"
+      ) {
+        await emit(eventInput({
+          eventId: activityEventId("create-failed", command.idempotencyKey),
+          eventType:
+            error instanceof MutationContractError &&
+            error.code === "DEPENDENCY_FAILED"
+              ? "product.dependency_rejected"
+              : "product.mutation_failed",
+          entityId: rowId,
+          identity,
+          timestamp,
+          requestId: command.idempotencyKey,
+          before: null,
+          after: null,
+          result: "failed",
+          errorClassification:
+            error instanceof MutationContractError ? error.code : "INTERNAL_ERROR"
+        }));
+      }
       return classifySdkFailure(error);
     }
   }
@@ -762,6 +787,30 @@ export function createAppwriteProductMutationService(
       if (transactionId && !committed) {
         if (staged) await rollbackTransaction(dependencies, transactionId);
         else await discardEmptyTransaction(dependencies, transactionId);
+      }
+      if (
+        !(error instanceof MutationContractError) ||
+        error.code !== "AUDIT_PERSISTENCE_FAILED"
+      ) {
+        await emit(eventInput({
+          eventId: activityEventId("update-failed", command.idempotencyKey),
+          eventType:
+            error instanceof MutationContractError && error.code === "STALE_WRITE"
+              ? "product.stale_write_rejected"
+              : error instanceof MutationContractError &&
+                  error.code === "DEPENDENCY_FAILED"
+                ? "product.dependency_rejected"
+                : "product.mutation_failed",
+          entityId: command.productId,
+          identity,
+          timestamp,
+          requestId: command.idempotencyKey,
+          before: null,
+          after: null,
+          result: "failed",
+          errorClassification:
+            error instanceof MutationContractError ? error.code : "INTERNAL_ERROR"
+        }));
       }
       return classifySdkFailure(error);
     }
@@ -946,6 +995,27 @@ export function createAppwriteProductMutationService(
       if (transactionId && !committed) {
         if (staged) await rollbackTransaction(dependencies, transactionId);
         else await discardEmptyTransaction(dependencies, transactionId);
+      }
+      if (
+        !(error instanceof MutationContractError) ||
+        error.code !== "AUDIT_PERSISTENCE_FAILED"
+      ) {
+        await emit(eventInput({
+          eventId: activityEventId("delete-failed", command.idempotencyKey),
+          eventType:
+            error instanceof MutationContractError && error.code === "STALE_WRITE"
+              ? "product.stale_write_rejected"
+              : "product.mutation_failed",
+          entityId: command.productId,
+          identity,
+          timestamp,
+          requestId: command.idempotencyKey,
+          before: null,
+          after: null,
+          result: "failed",
+          errorClassification:
+            error instanceof MutationContractError ? error.code : "INTERNAL_ERROR"
+        }));
       }
       return classifySdkFailure(error);
     }

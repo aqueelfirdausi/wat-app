@@ -71,13 +71,63 @@ export const APPWRITE_TABLE_BLUEPRINTS = {
   },
   activity_logs: {
     createInPhase3L: false,
-    schemaLocked: false,
-    expectedColumnKeys: [
-      "action", "entityType", "entityId", "entityName", "actorUserId",
-      "legacyActorFirebaseUid", "actorName", "actorEmail", "details", "requestId", "createdAt"
+    schemaLocked: true,
+    columns: [
+      { key: "eventId", kind: "varchar", size: 96, required: true },
+      { key: "eventType", kind: "varchar", size: 96, required: true },
+      {
+        key: "entityType",
+        kind: "enum",
+        elements: ["product", "category", "image"],
+        required: true
+      },
+      { key: "entityId", kind: "varchar", size: 36, required: true },
+      { key: "actorUserId", kind: "varchar", size: 36, required: true },
+      { key: "actorDisplayName", kind: "varchar", size: 160, required: true },
+      {
+        key: "actorRole",
+        kind: "enum",
+        elements: ["admin", "product_editor"],
+        required: true
+      },
+      { key: "occurredAt", kind: "datetime", required: true },
+      { key: "requestId", kind: "varchar", size: 128, required: true },
+      {
+        key: "result",
+        kind: "enum",
+        elements: ["succeeded", "failed", "compensated", "compensation_failed"],
+        required: true
+      },
+      { key: "changedFields", kind: "varchar", size: 1024, required: true },
+      { key: "beforeState", kind: "text", required: false },
+      { key: "afterState", kind: "text", required: false },
+      { key: "errorClassification", kind: "varchar", size: 64, required: false },
+      {
+        key: "compensationClassification",
+        kind: "varchar",
+        size: 160,
+        required: false
+      },
+      { key: "metadataSummary", kind: "text", required: false },
+      {
+        key: "fixtureClassification",
+        kind: "enum",
+        elements: ["ordinary", "phase3y_verification"],
+        required: true
+      }
     ],
-    columns: [],
-    indexes: [{ key: "activity_logs_created_at", type: "key", columns: ["createdAt"] }]
+    indexes: [
+      { key: "activity_event_unique", type: "unique", columns: ["eventId"] },
+      { key: "activity_occurred_at", type: "key", columns: ["occurredAt"] },
+      {
+        key: "activity_entity",
+        type: "key",
+        columns: ["entityType", "entityId"]
+      },
+      { key: "activity_actor", type: "key", columns: ["actorUserId"] },
+      { key: "activity_event_type", type: "key", columns: ["eventType"] },
+      { key: "activity_request", type: "key", columns: ["requestId"] }
+    ]
   },
   analytics_events: {
     createInPhase3L: false,

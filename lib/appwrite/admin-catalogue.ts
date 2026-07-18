@@ -41,6 +41,7 @@ export type AdminProductImageState =
 
 export type AppwriteAdminProduct = {
   key: string;
+  id: string;
   name: string;
   slug: string;
   description: string;
@@ -69,6 +70,7 @@ export type AppwriteAdminProduct = {
 
 export type AppwriteAdminCategory = {
   key: string;
+  id: string;
   name: string;
   slug: string;
   isPubliclyReadable: boolean;
@@ -263,6 +265,7 @@ async function mapProduct(
 
   return {
     key: product.slug,
+    id: product.id,
     name: product.name,
     slug: product.slug,
     description: product.description,
@@ -368,6 +371,7 @@ export async function loadAppwriteAdminCatalogue(
         id,
         category: {
           key: requiredString(row, "slug"),
+          id,
           name: requiredString(row, "name"),
           slug: requiredString(row, "slug"),
           isPubliclyReadable: permissionState(row),

@@ -7,6 +7,7 @@ import {
   readBoundedJson
 } from "@/lib/appwrite/auth/validation";
 import type { createAppwriteProductLifecycleService } from "@/lib/appwrite/product-lifecycle";
+import { prepareProductLifecycleActivityEvent } from "@/lib/appwrite/product-lifecycle";
 import {
   MutationContractError,
   type MutationErrorCode
@@ -18,6 +19,9 @@ type LifecycleService = ReturnType<typeof createAppwriteProductLifecycleService>
 export type ProductLifecycleHandlerDependencies = {
   resolveIdentity(): Promise<StaffAuthorizationResult>;
   service: LifecycleService;
+  emitActivityEvent?: (
+    event: ReturnType<typeof prepareProductLifecycleActivityEvent>
+  ) => void | Promise<void>;
 };
 
 type HandlerResult = {
@@ -39,6 +43,8 @@ function errorStatus(code: MutationErrorCode) {
       return 409;
     case "DEPENDENCY_FAILED":
       return 424;
+    case "AUDIT_PERSISTENCE_FAILED":
+      return 500;
     case "CLEANUP_FAILED":
     case "INTERNAL_ERROR":
       return 500;
@@ -71,6 +77,72 @@ function safeError(error: unknown): HandlerResult {
       error: "Product lifecycle mutation failed."
     }
   };
+}
+
+async function persistHandlerFailure(input: {
+  operation: unknown;
+  command: Record<string, unknown>;
+  identity: Extract<StaffAuthorizationResult, { ok: true }>["identity"];
+  error: unknown;
+  entityType: "product" | "image";
+  emitActivityEvent?: ProductLifecycleHandlerDependencies["emitActivityEvent"];
+}) {
+  if (
+    !input.emitActivityEvent ||
+    input.operation === "chosen" ||
+    input.operation === "cleanup_orphan" ||
+    !(input.error instanceof MutationContractError) ||
+    input.error.code === "VALIDATION_FAILED" ||
+    input.error.code === "AUTHORIZATION_FAILED" ||
+    input.error.code === "AUDIT_PERSISTENCE_FAILED"
+  ) {
+    return;
+  }
+  const entityId =
+    input.entityType === "image"
+      ? input.command.productId
+      : input.command.productId ?? input.command.targetProductId;
+  const requestId = input.command.idempotencyKey;
+  if (
+    typeof entityId !== "string" ||
+    !/^[A-Za-z0-9][A-Za-z0-9._-]{0,35}$/.test(entityId) ||
+    typeof requestId !== "string" ||
+    !/^[A-Za-z0-9._:-]{8,128}$/.test(requestId)
+  ) {
+    return;
+  }
+  const eventType =
+    input.entityType === "image"
+      ? "image.mutation_failed"
+      : input.operation === "chosen_clear"
+        ? "product.chosen_failed"
+        : "product.visibility_transition_failed";
+  await input.emitActivityEvent(
+    prepareProductLifecycleActivityEvent({
+      eventType,
+      entityType: input.entityType,
+      entityId,
+      identity: input.identity,
+      timestamp: new Date().toISOString(),
+      requestId,
+      before: null,
+      after: null,
+      result:
+        input.error.code === "CLEANUP_FAILED"
+          ? "compensation_failed"
+          : "failed",
+      errorClassification: input.error.code,
+      ...(input.error.code === "CLEANUP_FAILED"
+        ? { compensationResult: "cleanup outcome unproven" }
+        : {}),
+      metadata: {
+        operation:
+          typeof input.operation === "string"
+            ? input.operation
+            : "unknown"
+      }
+    })
+  );
 }
 
 async function authorizedIdentity(
@@ -144,6 +216,11 @@ export async function handleProductLifecycleRequest(
                 command,
                 authorization.identity
               )
+            : operation === "chosen_clear"
+              ? await dependencies.service.clearChosenProduct(
+                  command,
+                  authorization.identity
+                )
             : operation === "cleanup_orphan"
               ? await dependencies.service.cleanupOrphanFile(
                   command,
@@ -158,6 +235,23 @@ export async function handleProductLifecycleRequest(
                 })();
     return { status: 200, body: { ok: true, data } };
   } catch (error) {
+    try {
+      await persistHandlerFailure({
+        operation,
+        command,
+        identity: authorization.identity,
+        error,
+        entityType: "product",
+        emitActivityEvent: dependencies.emitActivityEvent
+      });
+    } catch {
+      return safeError(
+        new MutationContractError(
+          "AUDIT_PERSISTENCE_FAILED",
+          "Business outcome was preserved but durable audit persistence failed."
+        )
+      );
+    }
     return safeError(error);
   }
 }
@@ -185,6 +279,8 @@ export async function handleProductImageRequest(
   }
   const authorization = await authorizedIdentity(dependencies);
   if (!authorization.ok) return authorization.result;
+  let auditOperation: FormDataEntryValue | null = null;
+  let auditCommand: Record<string, unknown> = {};
   try {
     const form = await request.formData();
     const operation = form.get("operation");
@@ -202,6 +298,8 @@ export async function handleProductImageRequest(
       );
     }
     const command = { productId, expectedUpdatedAt, idempotencyKey };
+    auditOperation = operation;
+    auditCommand = command;
     if (operation === "remove") {
       const data = await dependencies.service.removeImage(
         command,
@@ -251,6 +349,23 @@ export async function handleProductImageRequest(
             })();
     return { status: 200, body: { ok: true, data } };
   } catch (error) {
+    try {
+      await persistHandlerFailure({
+        operation: auditOperation,
+        command: auditCommand,
+        identity: authorization.identity,
+        error,
+        entityType: "image",
+        emitActivityEvent: dependencies.emitActivityEvent
+      });
+    } catch {
+      return safeError(
+        new MutationContractError(
+          "AUDIT_PERSISTENCE_FAILED",
+          "Business outcome was preserved but durable audit persistence failed."
+        )
+      );
+    }
     return safeError(error);
   }
 }

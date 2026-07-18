@@ -626,3 +626,86 @@ immutable activity logging plus fully connected role-aware admin mutation UI
 and end-to-end authenticated mutation verification. Do not automatically begin
 it, enable ordinary mutations, create a real owner, deploy, cut over, or retire
 Firebase.
+
+## Phase 3Y immutable activity logging and admin mutation UI
+
+Phase 3Y creates the fifth permanent table, `activity_logs`, with row security
+enabled, empty table permissions, 17 locked columns, and six indexes. Required
+columns are `eventId(96)`, `eventType(96)`,
+`entityType(product|category|image)`, `entityId(36)`, `actorUserId(36)`,
+`actorDisplayName(160)`, `actorRole(admin|product_editor)`, `occurredAt`,
+`requestId(128)`, `result(succeeded|failed|compensated|compensation_failed)`,
+`changedFields(1024)`, and
+`fixtureClassification(ordinary|phase3y_verification)`. Optional columns are
+bounded redacted `beforeState`, `afterState`, `metadataSummary`,
+`errorClassification(64)`, and `compensationClassification(160)`.
+
+Indexes are unique `activity_event_unique(eventId)` plus
+`activity_occurred_at(occurredAt)`,
+`activity_entity(entityType,entityId)`, `activity_actor(actorUserId)`,
+`activity_event_type(eventType)`, and `activity_request(requestId)`. The final
+read-only schema check classified the live table as `exact_match`.
+`analytics_events`, `broadcasts`, and Appwrite `team_contacts` remain absent.
+
+Every activity row has exactly `read("team:wat_staff/admin")`. The normal
+server boundary exposes create/get/list only; there is no update/delete method,
+route, or UI. Product editors and the public cannot read. This is
+application-immutable under the approved server boundary; infrastructure
+administrators remain technically capable of modification.
+
+Category, product, image, visibility, merchandising, chosen, failure, blocked,
+and compensation outcomes now use the durable writer. Equivalent event retry
+is accepted only after exact row/permission verification; conflicting reuse
+fails. A verified business result is preserved if audit persistence fails and
+the response is distinctly `AUDIT_PERSISTENCE_FAILED`. Logical state and
+metadata pass scalar allow-lists, deterministic JSON encoding, and a 16,384
+character application bound; secrets, raw permissions/SDK objects, headers,
+sessions, credentials, file bytes, and query-bearing URLs are excluded.
+
+The protected Appwrite catalogue now has same-origin server-mediated category,
+product, image, visibility, merchandising, and chosen controls. Admin-only
+delete and activity controls are absent for product editors and remain
+server-enforced. Activity is dynamically read newest-first through a narrow
+DTO with page size at most 50, bounded offset, `ttl:0`, and no protected cache.
+`WAT_MUTATIONS_ENABLED=false` remains the default; the temporary enabled
+development process was stopped and never persisted.
+
+Authenticated browser verification proved admin/editor login and logout,
+invalid-login safety, protected access, category and product mutations,
+server-derived category names, editor update and delete/activity denial,
+featured/status-pick independence, chosen selection/retry/clear, admin delete,
+and admin activity display. Chrome local-file access prevented repeating the
+image/publication/hiding sequence through the Phase 3Y UI. Those underlying
+live flows passed in Phase 3X, and Phase 3Y file/UI plus lifecycle tests pass;
+the missing browser repetition remains a documented finding rather than a
+claimed pass.
+
+The first live category create exposed equivalent Appwrite datetime
+normalization during audit re-read. Business and audit rows had materialized,
+so the distinct audit-unknown policy was returned without a false rollback.
+Canonical instant comparison corrected the verifier.
+
+Final live state is products/categories/files/Team memberships `0/0/0/0`.
+Appwrite Console reported `3 users deleted` and returned to its empty user
+state. All temporary sessions were revoked. Fifteen immutable audit rows remain
+as synthetic migration evidence, all explicitly
+`phase3y_verification`, with exact admin-only permissions and a passing
+sensitive-text scan.
+
+Final verification passed 16 focused Phase 3Y tests, 83 consolidated mutation
+tests, 197 Appwrite foundation tests, 18 mutation-gate tests, 8 Firebase
+inventory tests, lint, typecheck, production build, live exact-schema,
+live activity reader/permission/redaction checks, diff checks, and tracked/
+client containment checks. Known build warnings remain workspace-root
+inference, webpack cache snapshot warnings, and the Edge static-generation
+notice.
+
+See `APPWRITE-ACTIVITY-LOGGING-ADMIN-UI-PHASE-3Y.md`. The exact Phase 3Y commit
+is the commit containing this handoff section and is reported after push
+because a commit cannot contain its own hash.
+
+Stop after Phase 3Y. The next separately approved phase is real-owner recovery
+establishment, isolated Appwrite deployment/Web platform preparation, staging
+QA, production-readiness review, and explicit cutover/rollback approval. Do
+not automatically create the owner, deploy, configure domains, enable
+production mutations, cut over, or retire Firebase.
