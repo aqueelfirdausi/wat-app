@@ -327,7 +327,9 @@ reference remain frozen.
 
 - project/database/Team/bucket: existing Frankfurt `watapp` / `wat_app` /
   `wat_staff` / `product_images`
-- permanent tables: exactly five, now including exact-match `activity_logs`
+- frozen permanent-table target: exactly five definitions
+- physically materialized tables: `products`, `categories`, and exact-match
+  `activity_logs`
 - activity rows: 15, all `phase3y_verification`, admin-read-only
 - products/categories/files/users/Team memberships: `0/0/0/0/0`
 - `analytics_events`, `broadcasts`, Appwrite `team_contacts`: absent

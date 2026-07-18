@@ -629,8 +629,9 @@ Firebase.
 
 ## Phase 3Y immutable activity logging and admin mutation UI
 
-Phase 3Y creates the fifth permanent table, `activity_logs`, with row security
-enabled, empty table permissions, 17 locked columns, and six indexes. Required
+Phase 3Y creates the permanent `activity_logs` table within the frozen
+five-table target, with row security enabled, empty table permissions, 17
+locked columns, and six indexes. Required
 columns are `eventId(96)`, `eventType(96)`,
 `entityType(product|category|image)`, `entityId(36)`, `actorUserId(36)`,
 `actorDisplayName(160)`, `actorRole(admin|product_editor)`, `occurredAt`,
