@@ -67,7 +67,8 @@ const SAFE_METADATA_FIELDS = new Set([
 
 export type ActivityFixtureClassification =
   | "ordinary"
-  | "phase3y_verification";
+  | "phase3y_verification"
+  | "phase3z_staging_verification";
 
 export type PhysicalActivityEvent = {
   rowId: string;
@@ -321,22 +322,38 @@ export function mapLogicalActivityEvent(
     "activity metadata"
   );
   const explicitFixture = metadata?.fixtureClassification;
-  const fixtureClassification: ActivityFixtureClassification =
-    explicitFixture === "phase3y_verification" ||
-    entityId.startsWith("phase3y_") ||
-    actorUserId.startsWith("phase3y_")
-      ? "phase3y_verification"
-      : "ordinary";
   if (
     explicitFixture !== undefined &&
     explicitFixture !== "ordinary" &&
-    explicitFixture !== "phase3y_verification"
+    explicitFixture !== "phase3y_verification" &&
+    explicitFixture !== "phase3z_staging_verification"
   ) {
     throw new MutationContractError(
       "VALIDATION_FAILED",
       "Activity fixture classification is invalid."
     );
   }
+  const environmentFixture =
+    process.env.WAT_ACTIVITY_FIXTURE_CLASSIFICATION;
+  if (
+    environmentFixture !== undefined &&
+    environmentFixture !== "" &&
+    environmentFixture !== "phase3z_staging_verification"
+  ) {
+    throw new MutationContractError(
+      "VALIDATION_FAILED",
+      "Activity fixture environment classification is invalid."
+    );
+  }
+  const fixtureClassification: ActivityFixtureClassification =
+    explicitFixture === "phase3y_verification" ||
+    entityId.startsWith("phase3y_") ||
+    actorUserId.startsWith("phase3y_")
+      ? "phase3y_verification"
+      : explicitFixture === "phase3z_staging_verification" ||
+          environmentFixture === "phase3z_staging_verification"
+        ? "phase3z_staging_verification"
+        : "ordinary";
   return {
     rowId: `evt_${createHash("sha256")
       .update(eventId)
@@ -480,7 +497,8 @@ function mapActivityRow(row: ActivityRow): ActivityLogDto {
       row.result !== "compensated" &&
       row.result !== "compensation_failed") ||
     (row.fixtureClassification !== "ordinary" &&
-      row.fixtureClassification !== "phase3y_verification")
+      row.fixtureClassification !== "phase3y_verification" &&
+      row.fixtureClassification !== "phase3z_staging_verification")
   ) {
     throw new Error("Invalid activity row.");
   }

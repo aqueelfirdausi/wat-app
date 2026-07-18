@@ -15,10 +15,18 @@ import {
 import { handleProductLifecycleRequest } from "@/lib/appwrite/product-lifecycle-handlers";
 
 const previousBackend = process.env.WAT_BACKEND;
+const previousFixtureClassification =
+  process.env.WAT_ACTIVITY_FIXTURE_CLASSIFICATION;
 process.env.WAT_BACKEND = "appwrite";
 test.after(() => {
   if (previousBackend === undefined) delete process.env.WAT_BACKEND;
   else process.env.WAT_BACKEND = previousBackend;
+  if (previousFixtureClassification === undefined) {
+    delete process.env.WAT_ACTIVITY_FIXTURE_CLASSIFICATION;
+  } else {
+    process.env.WAT_ACTIVITY_FIXTURE_CLASSIFICATION =
+      previousFixtureClassification;
+  }
 });
 
 function logical(overrides: Record<string, unknown> = {}) {
@@ -106,6 +114,57 @@ test("logical activity maps to bounded redacted physical fields", () => {
     fixtureClassification: "phase3y_verification",
     operation: "update"
   });
+});
+
+test("Phase 3Z staging classification is server-controlled and fail-closed", () => {
+  delete process.env.WAT_ACTIVITY_FIXTURE_CLASSIFICATION;
+  const ordinary = mapLogicalActivityEvent(
+    logical({
+      eventId: "owner:event:0001",
+      entityId: "owner_product_0001",
+      actor: {
+        userId: "permanent_owner",
+        displayName: "Permanent Owner",
+        role: "admin"
+      },
+      metadata: { operation: "update" }
+    })
+  );
+  assert.equal(ordinary.fixtureClassification, "ordinary");
+
+  process.env.WAT_ACTIVITY_FIXTURE_CLASSIFICATION =
+    "phase3z_staging_verification";
+  const staging = mapLogicalActivityEvent(
+    logical({
+      eventId: "owner:event:0002",
+      entityId: "owner_product_0002",
+      actor: {
+        userId: "permanent_owner",
+        displayName: "Permanent Owner",
+        role: "admin"
+      },
+      metadata: { operation: "update" }
+    })
+  );
+  assert.equal(
+    staging.fixtureClassification,
+    "phase3z_staging_verification"
+  );
+
+  process.env.WAT_ACTIVITY_FIXTURE_CLASSIFICATION = "unexpected";
+  assert.throws(
+    () =>
+      mapLogicalActivityEvent(
+        logical({
+          eventId: "owner:event:0003",
+          entityId: "owner_product_0003"
+        })
+      ),
+    (error) =>
+      error instanceof MutationContractError &&
+      error.code === "VALIDATION_FAILED"
+  );
+  delete process.env.WAT_ACTIVITY_FIXTURE_CLASSIFICATION;
 });
 
 test("logical constructor rejects raw permissions and authorization data", () => {

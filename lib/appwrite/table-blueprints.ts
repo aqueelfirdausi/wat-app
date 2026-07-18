@@ -112,7 +112,11 @@ export const APPWRITE_TABLE_BLUEPRINTS = {
       {
         key: "fixtureClassification",
         kind: "enum",
-        elements: ["ordinary", "phase3y_verification"],
+        elements: [
+          "ordinary",
+          "phase3y_verification",
+          "phase3z_staging_verification"
+        ],
         required: true
       }
     ],

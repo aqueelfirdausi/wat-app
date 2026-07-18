@@ -62,12 +62,27 @@ async function main() {
   if (FORBIDDEN_TEXT.test(safePayload)) {
     throw new Error("Retained activity data failed the sensitive-text scan.");
   }
+  const allowedClassifications = new Set([
+    "phase3y_verification",
+    "phase3z_staging_verification"
+  ]);
   if (
     result.rows.some(
-      (row) => row.fixtureClassification !== "phase3y_verification"
+      (row) => !allowedClassifications.has(String(row.fixtureClassification))
     )
   ) {
-    throw new Error("A retained activity row is not classified as Phase 3Y verification evidence.");
+    throw new Error("A retained activity row has an unexpected fixture classification.");
+  }
+  const countsByClassification = Object.fromEntries(
+    [...allowedClassifications].map((classification) => [
+      classification,
+      result.rows.filter(
+        (row) => row.fixtureClassification === classification
+      ).length
+    ])
+  );
+  if (countsByClassification.phase3y_verification !== 15) {
+    throw new Error("The 15 retained Phase 3Y verification rows changed unexpectedly.");
   }
 
   const admin = {
@@ -121,7 +136,7 @@ async function main() {
       {
         mode: "read-only",
         retainedRows: result.total,
-        fixtureClassification: "phase3y_verification",
+        countsByClassification,
         exactAdminRowPermissions: true,
         newestFirst: true,
         adminRead: true,
