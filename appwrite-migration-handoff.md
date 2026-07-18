@@ -710,3 +710,61 @@ establishment, isolated Appwrite deployment/Web platform preparation, staging
 QA, production-readiness review, and explicit cutover/rollback approval. Do
 not automatically create the owner, deploy, configure domains, enable
 production mutations, cut over, or retire Firebase.
+
+## Phase 3Z owner, isolated staging, and cutover readiness
+
+Phase 3Z established the permanent owner as the only retained Appwrite user and
+the only confirmed `wat_staff` member, with exactly the recognized application
+role `admin`. Email/password remains enabled while Phone, Magic URL, Email OTP,
+Anonymous, OAuth, Team invites, and JWT remain disabled. Protected admin,
+mutation, and admin-only activity access passed.
+
+The isolated Vercel project `wat-app-preview` has a Ready Preview deployment of
+commit `ec58b2e48bd9dd430d29b2214055af46430698f6` and the exact branch alias
+`wat-app-preview-git-appw-ead519-aqueel-ahmed-firdausis-projects.vercel.app`.
+Exactly that hostname is the sole Appwrite Web platform. No production alias,
+custom domain, DNS, Firebase, `main`, or archive state changed. Preview alone
+uses Appwrite mode, enabled mutations, and the server-controlled
+`phase3z_staging_verification` activity classification; committed defaults
+remain fail-closed.
+
+Recovery request existence privacy and real inbox delivery passed, and the
+owner personally completed a password reset. The delivered callback
+incorrectly targeted localhost, however. The secret was not printed; the
+callback was safely transferred to the approved Preview host for completion.
+Malformed callbacks fail closed and the existing owner session retained its
+role. The Preview-scoped recovery URL has been corrected in Vercel, but the
+required exact Preview redeploy was blocked by browser policy and did not
+occur. Fresh delivery to the staging hostname, new-password login,
+old-password denial, and live reused-link rejection remain unproven.
+
+Real staging UI checks passed category/product creation, hidden-row privacy,
+publication/feed dependency guards, featured/status/chosen independence,
+chosen deletion blocking, chosen clear, deletion, owner-attributed immutable
+activity display, and final cleanup. Chrome still rejected the file handoff,
+so the complete upload/replacement/publication/direct-delivery/hide/
+privatization/removal UI sequence was not repeated. The live disposable editor
+browser matrix and Vercel server runtime-log scan also remain incomplete.
+
+Final Appwrite catalogue/files are `0/0/0`; users/memberships are `1/1` with
+exact role `admin`; platforms are `1`; chosen state and all disposable
+identities/fixtures are absent. Activity rows are 34: 15
+`phase3y_verification` plus 19 `phase3z_staging_verification`. Exact admin-only
+permissions, newest-first owner read, editor denial, no update/delete boundary,
+and sensitive-text absence pass.
+
+Verification passed 17 Phase 3Z activity/UI tests, 197 Appwrite foundation
+tests, 83 consolidated mutation tests, 18 mutation-gate tests, 8 Firebase
+inventory tests, lint, typecheck, production build, exact live schema and
+empty-state checks, live activity verification, diff checks, and actual-value
+tracked/client secret scans. The build has only the known workspace-root,
+webpack-cache, and Edge/static warnings; no vendor-chunk failure recurred.
+
+The readiness decision is **NOT READY**. See
+`APPWRITE-STAGING-CUTOVER-READINESS-PHASE-3Z.md` and
+`APPWRITE-PRODUCTION-CUTOVER-RUNBOOK.md`. Before reassessment, deploy and retest
+the corrected recovery callback, pass the full image/publication UI flow,
+repeat the live editor matrix, and inspect Preview server runtime logs. Do not
+execute the production runbook, add `watapp.pk` to Appwrite, enable production
+mutations, move aliases/DNS, merge to `main`, or retire Firebase without a new
+explicit owner approval.
