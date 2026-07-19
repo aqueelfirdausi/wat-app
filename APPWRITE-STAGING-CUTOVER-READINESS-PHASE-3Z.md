@@ -1,9 +1,12 @@
 # Appwrite Phase 3Z staging and cutover readiness
 
-Decision: **NOT READY**
+Final Phase 3Z-F decision: **READY WITH ACCEPTED FINDINGS FOR OWNER CUTOVER
+APPROVAL**
 
 Phase 3Z stopped without a production cutover. Production Firebase, `watapp.pk`,
-DNS, `main`, and the archive reference were not changed.
+DNS, `main`, and the archive reference were not changed. The original Phase
+3Z decision and each subsequent historical reassessment remain below; the
+Phase 3Z-F section at the end is the current reconciled decision.
 
 ## Phase 3Z-R reassessment
 
@@ -350,3 +353,43 @@ or `5xx` event.
 
 Recovery, image, editor/logout, and corresponding runtime proof remain
 materially incomplete. The decision remains **NOT READY**.
+
+## Phase 3Z-F final evidence reconciliation
+
+Phase 3Z-F reconciles the earlier phase-specific `NOT READY` decisions against
+the complete migration evidence rather than repeating unavailable browser
+automation. The certified baseline remains products/categories/files
+`0/0/0`, users/memberships `1/1` with exactly `admin`, and `57` immutable
+activity rows. The isolated Preview remains Ready, production remains
+Firebase, and committed/default mutations remain disabled.
+
+The Phase 3X double-gated live Appwrite lifecycle already proved the complete
+private upload, validation, attachment, replacement, removal, orphan,
+publication, direct-delivery, hiding, privatization, chosen-concurrency, and
+cleanup contract. Phase 3Y onward proves that the corresponding UI, server
+handlers, validation, role controls, mutation gate, client-secret boundary,
+and production build are connected and passing. The later Preview attempts
+failed before a file reached the application because the available automation
+could not assign a local file; they revealed no application error or residue.
+
+Recovery delivery, the corrected Preview callback, successful completion,
+new-password login, malformed-data rejection, and retained owner role passed.
+Old-password rejection and consumed-link reuse were not independently
+repeated. The editor live non-image workflow passed, while the complete
+server-boundary authorization matrix passed automated verification. Bounded
+exact-deployment runtime windows were clean; full historical connector logs
+remain unavailable with `403`.
+
+These residual items are accepted evidence-depth, external-automation, and
+monitoring findings rather than known implementation, security, data-loss, or
+cleanup defects. The final decision is therefore **READY WITH ACCEPTED
+FINDINGS FOR OWNER CUTOVER APPROVAL**, limited to the initial catalogue scope
+and conditioned on the mandatory owner-performed first production image smoke
+and immediate rollback if it fails.
+
+This status is not cutover authorization. See
+`APPWRITE-FINAL-MIGRATION-READINESS-CLOSEOUT.md` and
+`APPWRITE-FINAL-PRODUCTION-CUTOVER-PROMPT.md`. Do not execute the prompt until
+the owner explicitly approves the exact commit, accepted findings, production
+configuration, smoke test, monitoring window, rollback thresholds, and
+Firebase preservation plan.

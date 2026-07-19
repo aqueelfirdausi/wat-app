@@ -897,3 +897,49 @@ the full deployed image lifecycle, dependent editor/logout cases, and runtime
 evidence for them remain open. See
 `APPWRITE-FINAL-BLOCKER-CLOSURE-PHASE-3Z-R3.md`. No production cutover is
 authorized.
+
+## Phase 3Z-F final migration closeout
+
+Phase 3Z-F performed documentation-only evidence reconciliation from the
+certified post-Phase-3Z-R3 state. No browser experiment, identity, recovery
+request, catalogue/file mutation, deployment, production configuration,
+domain/DNS/alias action, backend switch, or deferred-table creation occurred.
+
+The verified baseline remains products/categories/files `0/0/0`,
+users/memberships `1/1` with the permanent owner holding exactly `admin`, and
+`57` immutable activity rows (`15` Phase 3Y, `19` Phase 3Z, `23` Phase 3Z-R).
+The live schemas and permanent resources remain exact; one isolated Preview
+Web platform remains; `analytics_events`, `broadcasts`, and Appwrite
+`team_contacts` remain absent. Production remains Firebase at `watapp.pk`,
+committed/default mutations remain disabled, and `main` plus the archive are
+unchanged.
+
+The complete live Phase 3X Appwrite image/permission/chosen lifecycle and
+cleanup evidence is authoritative backend proof. Phase 3Y onward supplies the
+connected UI/server, validation, role, mutation-gate, security, test, build,
+owner, recovery, editor, activity, deployment, and bounded runtime evidence.
+The later inability to assign a local file to deployed Chrome stopped before
+application submission and is classified as an external automation limit, not
+an unimplemented image lifecycle.
+
+Successful corrected-host recovery and new-password login are proven;
+old-password rejection and consumed-link reuse were not independently
+repeated. The live editor non-image matrix and automated server authorization
+matrix passed; editor image, every deployed crafted request, and logout were
+not repeated live. Full historical Vercel logs remain unavailable, while the
+exact available deployment windows were clean. These and the explicitly
+deferred operational features are recorded with mitigations in the closeout.
+
+The final decision is **READY WITH ACCEPTED FINDINGS FOR OWNER CUTOVER
+APPROVAL** for the narrow Appwrite authentication/catalogue/image/activity
+scope. It is conditional on explicit owner acceptance and on the owner
+manually uploading, previewing, publishing, hiding, and removing one controlled
+first production image before broader catalogue entry. Any failure freezes
+Appwrite mutations and triggers rollback.
+
+See `APPWRITE-FINAL-MIGRATION-READINESS-CLOSEOUT.md` for the evidence and risk
+classification and `APPWRITE-FINAL-PRODUCTION-CUTOVER-PROMPT.md` for the
+separate executable procedure. Do not execute that procedure, merge to
+`main`, add `watapp.pk` to Appwrite, enable production mutations, alter
+production routing, switch away from Firebase, or retire rollback resources
+without explicit owner approval of the exact migration commit and safeguards.
