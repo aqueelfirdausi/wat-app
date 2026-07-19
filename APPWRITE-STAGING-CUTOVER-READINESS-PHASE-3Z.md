@@ -333,3 +333,20 @@ be completed safely. The dependent editor cases were not rerun.
 
 The readiness decision remains **NOT READY**. No production action is
 authorized.
+
+## Phase 3Z-R3 final automation attempt
+
+Phase 3Z-R3 retained the safe final baseline but did not close the required
+image blocker. Direct Playwright attachment, a localhost-only Chrome DevTools
+port, and native chooser automation were all unavailable; extension
+`setFiles` was not repeated. No upload request reached the application.
+
+Exact cleanup restored products/categories/files to `0/0/0`; users and
+memberships remain `1/1`; activity is `57` rows. The exact Ready deployment
+for commit `1f3240c7fe7ec7f0a1042884df99156f84200011` is
+`5oUwJSxjASYCPUCHTKGdfwDrsUrs`. Its bounded 15:47-16:17 Asia/Karachi runtime
+window contained the successful fixture creates and no warning, error, fatal,
+or `5xx` event.
+
+Recovery, image, editor/logout, and corresponding runtime proof remain
+materially incomplete. The decision remains **NOT READY**.

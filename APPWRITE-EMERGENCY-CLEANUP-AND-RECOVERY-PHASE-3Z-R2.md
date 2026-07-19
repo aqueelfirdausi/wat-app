@@ -167,3 +167,18 @@ This decision does not authorize production cutover, production mutations,
 adding `watapp.pk` to Appwrite, changing aliases or DNS, merging to `main`, or
 retiring Firebase. A separate explicit owner cutover approval remains required
 even after every blocker closes.
+
+## Phase 3Z-R3 continuation
+
+Phase 3Z-R3 certified the `0/0/0`, `1/1`, and 55-row starting baseline, then
+exhausted direct Python Playwright attachment, a localhost-only Chrome
+DevTools port, and real native chooser automation without repeating extension
+`setFiles`. No file reached the deployed UI.
+
+The permanent owner created one exact hidden category/product pair through the
+Preview UI. Exact compare-before-delete fallback cleanup restored
+products/categories/files to `0/0/0`; no identity was created. Final activity
+is `57` rows (`15` Phase 3Y, `19` Phase 3Z, `23` blocker closure).
+
+The Phase 3Z-R3 decision remains **NOT READY**. See
+`APPWRITE-FINAL-BLOCKER-CLOSURE-PHASE-3Z-R3.md`.

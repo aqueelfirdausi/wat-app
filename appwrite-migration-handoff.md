@@ -866,3 +866,34 @@ Phase 3Z-R2 is therefore **NOT READY**. Do not execute the production runbook,
 enable production mutations, add `watapp.pk` to Appwrite, move aliases or DNS,
 merge to `main`, or retire Firebase. Explicit owner cutover approval remains a
 separate future gate after all blockers close.
+
+## Phase 3Z-R3 automation-based final blocker attempt
+
+Phase 3Z-R3 began at
+`1f3240c7fe7ec7f0a1042884df99156f84200011`, aligned `0/0`, with a clean
+worktree and the certified products/categories/files `0/0/0`,
+users/memberships `1/1`, and 55-row activity baseline.
+
+Locally installed Python Playwright could not attach to the authenticated
+Chrome profile; Chrome also refused a localhost-only DevTools port. Real
+native chooser automation left the deployed file input empty. Extension
+`setFiles` was deliberately not repeated. The permanent owner created one
+exact hidden category/product pair through the deployed UI, but no upload
+request reached the application.
+
+Exact compare-before-delete cleanup removed the hidden, feed-hidden, unchosen,
+image-free product before its category. Final products/categories/files are
+`0/0/0`; users/memberships remain `1/1`; no disposable identity was created;
+activity is `57` rows (`15` Phase 3Y, `19` Phase 3Z, `23` blocker closure).
+
+The exact Ready deployment for the tested commit is
+`5oUwJSxjASYCPUCHTKGdfwDrsUrs`. Its available 15:47-16:17 Asia/Karachi
+dashboard window showed successful fixture creates, no warning/error/fatal
+events, no `5xx`, and no message output. No image or dependent authorization
+request exists because those workflows could not run.
+
+Phase 3Z-R3 is **NOT READY**. Previous-password denial, consumed-link reuse,
+the full deployed image lifecycle, dependent editor/logout cases, and runtime
+evidence for them remain open. See
+`APPWRITE-FINAL-BLOCKER-CLOSURE-PHASE-3Z-R3.md`. No production cutover is
+authorized.

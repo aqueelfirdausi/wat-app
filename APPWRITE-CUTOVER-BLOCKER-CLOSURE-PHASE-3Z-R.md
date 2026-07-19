@@ -284,3 +284,17 @@ request reached the application. Previous-password denial and consumed-link
 reuse could not be tested without guessing a password or risking the sole
 owner session. A new editor was intentionally not created while the image
 workflow remained blocked. The final decision is therefore **NOT READY**.
+
+### Phase 3Z-R3 continuation
+
+Phase 3Z-R3 found no supported direct file-assignment path that could combine
+the authenticated permanent-owner/Vercel session with Playwright file input.
+Standalone Playwright profile attachment and a localhost DevTools port were
+refused; real native chooser automation selected no file; extension
+`setFiles` was not repeated.
+
+One owner category/product pair was created through the deployed UI and then
+removed by exact compare-before-delete cleanup. Final catalogue/files are
+`0/0/0`; identities remain `1/1`; activity is `57`. Recovery, full image,
+dependent editor/logout, and their runtime evidence remain open. The decision
+is **NOT READY**.
