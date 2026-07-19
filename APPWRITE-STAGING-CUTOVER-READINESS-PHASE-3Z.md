@@ -313,3 +313,23 @@ the complete UI image/publication/hide/removal workflow, repeat the live editor
 matrix, inspect Preview server logs, and confirm final `0/0/0` and `1/1`
 baselines. Production cutover still requires a separate explicit owner
 approval after those blockers close.
+
+## Phase 3Z-R2 final status
+
+Phase 3Z-R2 restored and retained the exact safe baseline:
+products/categories/files `0/0/0`, users/memberships `1/1`, sole recognized
+role exactly `admin`, and one exact isolated Preview Web platform. The final
+activity recount is `55` rows (`15` Phase 3Y, `19` Phase 3Z, `21` Phase 3Z-R);
+the corrected credential-shaped sensitive-text verifier and every activity
+permission/reader boundary passed.
+
+The exact tested deployment
+`dpl_DagmYasUx7kqBpoRF3L6MdsaumFu` was Ready at
+`6185967bd7883f23c8840ab2f1e9d888635f8e6b`. Bounded signed-in dashboard logs
+showed successful Phase 3Z-R2 mutations and no warning, error, fatal, or `5xx`
+event. Chrome nevertheless denied the real file chooser handoff before any
+upload request, and the previous-password and consumed-link checks could not
+be completed safely. The dependent editor cases were not rerun.
+
+The readiness decision remains **NOT READY**. No production action is
+authorized.

@@ -262,3 +262,25 @@ owner cutover approval would still be required afterward.
 
 Phase 3Z-R2 has now closed the cleanup blocker, but it has not yet closed the
 remaining password, image, editor, runtime-log, and activity-verifier blockers.
+
+### Final Phase 3Z-R2 reassessment
+
+The final uncached baseline remains products/categories/files `0/0/0` and
+users/memberships `1/1`, with only the permanent owner holding exactly
+`admin`. The corrected credential-shaped activity verifier passed against
+`55` immutable rows (`15` Phase 3Y, `19` Phase 3Z, `21` Phase 3Z-R), closing
+the activity-verifier blocker.
+
+The exact tested Preview deployment
+`dpl_DagmYasUx7kqBpoRF3L6MdsaumFu` was Ready at
+`6185967bd7883f23c8840ab2f1e9d888635f8e6b`. Its signed-in Vercel dashboard
+showed successful Phase 3Z-R2 category/product mutations and no warning,
+error, fatal, or `5xx` event in the available window. The connected log API
+remained `403`, and the Hobby history window could not provide a complete
+historical scan.
+
+Chrome rejected real `input[type=file]` handoff with `Not allowed`; no upload
+request reached the application. Previous-password denial and consumed-link
+reuse could not be tested without guessing a password or risking the sole
+owner session. A new editor was intentionally not created while the image
+workflow remained blocked. The final decision is therefore **NOT READY**.

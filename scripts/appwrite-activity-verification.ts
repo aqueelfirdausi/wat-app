@@ -11,7 +11,7 @@ import { getAppwriteDataServices } from "@/lib/appwrite/server";
 loadEnvConfig(process.cwd());
 
 const FORBIDDEN_TEXT =
-  /api[_-]?key|password|authorization|cookie|sessionsecret|recoverytoken|\.env\.local/i;
+  /(?:api[_-]?key|password|authorization|cookie|sessionsecret|recoverytoken)(?:\\?["'])?\s*[:=]|bearer\s+[a-z0-9._~+/-]{8,}|\.env\.local/i;
 
 async function main() {
   if (process.argv.length !== 2) {

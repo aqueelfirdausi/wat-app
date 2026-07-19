@@ -845,3 +845,24 @@ certified, but Phase 3Z-R2 remains **NOT READY** while password reuse/denial,
 the deployed image lifecycle, the remaining editor matrix, runtime logs, and
 final activity verification remain incomplete. No production cutover is
 authorized.
+
+The Stage 2 attempt retained the recovered baseline and closed activity
+verification. The final uncached state is products/categories/files `0/0/0`
+and users/memberships `1/1`, with only the permanent owner holding exactly
+`admin`. The corrected credential-shaped sensitive-text verifier passed
+against `55` retained activity rows: `15` Phase 3Y, `19` Phase 3Z, and `21`
+Phase 3Z-R.
+
+The exact tested Preview deployment was
+`dpl_DagmYasUx7kqBpoRF3L6MdsaumFu` at
+`6185967bd7883f23c8840ab2f1e9d888635f8e6b`. Its available signed-in Vercel
+dashboard window showed successful Phase 3Z-R2 mutations and no warning,
+error, fatal, or `5xx` event. Chrome rejected handoff to the real file input
+with `Not allowed`, so no upload request reached the application and the image
+lifecycle remains unverified. Previous-password denial and consumed-link
+reuse also remain unproven; the dependent editor cases were not rerun.
+
+Phase 3Z-R2 is therefore **NOT READY**. Do not execute the production runbook,
+enable production mutations, add `watapp.pk` to Appwrite, move aliases or DNS,
+merge to `main`, or retire Firebase. Explicit owner cutover approval remains a
+separate future gate after all blockers close.
