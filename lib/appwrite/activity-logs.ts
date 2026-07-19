@@ -68,7 +68,8 @@ const SAFE_METADATA_FIELDS = new Set([
 export type ActivityFixtureClassification =
   | "ordinary"
   | "phase3y_verification"
-  | "phase3z_staging_verification";
+  | "phase3z_staging_verification"
+  | "phase3zr_blocker_closure";
 
 export type PhysicalActivityEvent = {
   rowId: string;
@@ -326,7 +327,8 @@ export function mapLogicalActivityEvent(
     explicitFixture !== undefined &&
     explicitFixture !== "ordinary" &&
     explicitFixture !== "phase3y_verification" &&
-    explicitFixture !== "phase3z_staging_verification"
+    explicitFixture !== "phase3z_staging_verification" &&
+    explicitFixture !== "phase3zr_blocker_closure"
   ) {
     throw new MutationContractError(
       "VALIDATION_FAILED",
@@ -338,7 +340,8 @@ export function mapLogicalActivityEvent(
   if (
     environmentFixture !== undefined &&
     environmentFixture !== "" &&
-    environmentFixture !== "phase3z_staging_verification"
+    environmentFixture !== "phase3z_staging_verification" &&
+    environmentFixture !== "phase3zr_blocker_closure"
   ) {
     throw new MutationContractError(
       "VALIDATION_FAILED",
@@ -353,6 +356,9 @@ export function mapLogicalActivityEvent(
       : explicitFixture === "phase3z_staging_verification" ||
           environmentFixture === "phase3z_staging_verification"
         ? "phase3z_staging_verification"
+        : explicitFixture === "phase3zr_blocker_closure" ||
+            environmentFixture === "phase3zr_blocker_closure"
+          ? "phase3zr_blocker_closure"
         : "ordinary";
   return {
     rowId: `evt_${createHash("sha256")
@@ -498,7 +504,8 @@ function mapActivityRow(row: ActivityRow): ActivityLogDto {
       row.result !== "compensation_failed") ||
     (row.fixtureClassification !== "ordinary" &&
       row.fixtureClassification !== "phase3y_verification" &&
-      row.fixtureClassification !== "phase3z_staging_verification")
+      row.fixtureClassification !== "phase3z_staging_verification" &&
+      row.fixtureClassification !== "phase3zr_blocker_closure")
   ) {
     throw new Error("Invalid activity row.");
   }

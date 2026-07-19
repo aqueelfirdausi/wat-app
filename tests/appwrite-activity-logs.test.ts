@@ -116,7 +116,7 @@ test("logical activity maps to bounded redacted physical fields", () => {
   });
 });
 
-test("Phase 3Z staging classification is server-controlled and fail-closed", () => {
+test("staging verification classifications are server-controlled and fail-closed", () => {
   delete process.env.WAT_ACTIVITY_FIXTURE_CLASSIFICATION;
   const ordinary = mapLogicalActivityEvent(
     logical({
@@ -151,13 +151,32 @@ test("Phase 3Z staging classification is server-controlled and fail-closed", () 
     "phase3z_staging_verification"
   );
 
+  process.env.WAT_ACTIVITY_FIXTURE_CLASSIFICATION =
+    "phase3zr_blocker_closure";
+  const blockerClosure = mapLogicalActivityEvent(
+    logical({
+      eventId: "owner:event:0003",
+      entityId: "owner_product_0003",
+      actor: {
+        userId: "permanent_owner",
+        displayName: "Permanent Owner",
+        role: "admin"
+      },
+      metadata: { operation: "update" }
+    })
+  );
+  assert.equal(
+    blockerClosure.fixtureClassification,
+    "phase3zr_blocker_closure"
+  );
+
   process.env.WAT_ACTIVITY_FIXTURE_CLASSIFICATION = "unexpected";
   assert.throws(
     () =>
       mapLogicalActivityEvent(
         logical({
-          eventId: "owner:event:0003",
-          entityId: "owner_product_0003"
+          eventId: "owner:event:0004",
+          entityId: "owner_product_0004"
         })
       ),
     (error) =>

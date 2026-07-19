@@ -115,7 +115,8 @@ export const APPWRITE_TABLE_BLUEPRINTS = {
         elements: [
           "ordinary",
           "phase3y_verification",
-          "phase3z_staging_verification"
+          "phase3z_staging_verification",
+          "phase3zr_blocker_closure"
         ],
         required: true
       }

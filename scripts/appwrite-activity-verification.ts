@@ -64,7 +64,8 @@ async function main() {
   }
   const allowedClassifications = new Set([
     "phase3y_verification",
-    "phase3z_staging_verification"
+    "phase3z_staging_verification",
+    "phase3zr_blocker_closure"
   ]);
   if (
     result.rows.some(
@@ -83,6 +84,9 @@ async function main() {
   );
   if (countsByClassification.phase3y_verification !== 15) {
     throw new Error("The 15 retained Phase 3Y verification rows changed unexpectedly.");
+  }
+  if (countsByClassification.phase3z_staging_verification !== 19) {
+    throw new Error("The 19 retained Phase 3Z verification rows changed unexpectedly.");
   }
 
   const admin = {
