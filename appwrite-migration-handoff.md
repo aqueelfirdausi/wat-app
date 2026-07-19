@@ -768,3 +768,80 @@ repeat the live editor matrix, and inspect Preview server runtime logs. Do not
 execute the production runbook, add `watapp.pk` to Appwrite, enable production
 mutations, move aliases/DNS, merge to `main`, or retire Firebase without a new
 explicit owner approval.
+
+## Phase 3Z-R blocker-closure reassessment
+
+Phase 3Z-R added the server-controlled
+`phase3zr_blocker_closure` classification to the application, verifier, tests,
+locked blueprint, and live `activity_logs` enum without altering the retained
+Phase 3Y or Phase 3Z classifications. Implementation commit
+`3ead35ae9d858449af3e71f918ff8ffae85da365` was pushed and deployed to the
+isolated Preview as `dpl_9tAD88rLZETtt4AmFFc36P7s3KyV`. The deployment reached
+Ready, retained the exact branch alias and sole Appwrite Web platform, and was
+not promoted. Production Firebase, `watapp.pk`, DNS, `main`, and the archive
+were not changed.
+
+The owner personally completed a fresh recovery and logged in on the retained
+Preview hostname. Malformed recovery completion failed closed. Direct
+previous-password denial and consumed-link reuse were not independently
+observed, so the recovery proof remains incomplete under the Phase 3Z-R
+standard.
+
+The owner and one disposable `product_editor` exercised the deployed catalogue
+UI. Editor login, protected catalogue access, category create/rename, product
+create/edit, merchandising independence, chosen select/clear, UI deletion
+denial, and activity denial passed. Chrome again denied actual file handoff, so
+the image upload/replacement/publication/direct-delivery/hide/privatize/removal
+workflow and the editor image subset did not run. Crafted product/category
+delete denial, destructive orphan denial, and logout protection also remain
+incomplete. The exact deployment's Vercel runtime-log API returned
+`403 Forbidden`, so no full server-log scan is claimed.
+
+Cleanup was not completed. The Codex approval service rejected the narrowly
+gated cleanup after reporting the account usage limit reached. The last
+directly observed state is products/categories/files `2/2/0` and
+users/memberships `2/2`; both products are hidden, image-free, and unchosen.
+The permanent owner retains exact `admin`, and the synthetic editor retains
+exact `product_editor`. These fixtures must be removed and the `0/0/0`,
+`1/1`, exact activity, and sensitive-scan baselines reverified before any
+further readiness reassessment.
+
+The Phase 3Z-R decision is **NOT READY**. See
+`APPWRITE-CUTOVER-BLOCKER-CLOSURE-PHASE-3Z-R.md`. Do not execute the production
+runbook, add `watapp.pk` to Appwrite, enable production mutations, move
+aliases/DNS, merge to `main`, or retire Firebase.
+
+## Phase 3Z-R2 emergency cleanup and recovery
+
+Phase 3Z-R2 recovered the incomplete Phase 3Z-R live state before resuming
+blocker work. Uncached reads identified only the two exact synthetic products
+and categories. Both products were hidden, feed-hidden, unchosen, image-free,
+and non-public. They were deleted through the deployed owner admin boundary.
+One category was deleted through the same boundary; after the UI did not
+settle for the final exact unreferenced category, a compare-before-delete
+privileged fallback removed only that row and uncached reads proved absence.
+
+Appwrite Console showed one synthetic editor with exactly `product_editor` and
+one active session. All sessions were revoked, then the membership and user
+were deleted. The permanent owner is again the sole user and sole `wat_staff`
+member with exactly `admin`. The four files under the exact local fixture
+directory were removed.
+
+The certified recovered baseline is products/categories/files `0/0/0`,
+users/memberships `1/1`, no chosen or disposable prefix, one exact Preview Web
+platform, and `51` immutable activity rows: `15` Phase 3Y, `19` Phase 3Z, and
+`17` Phase 3Z-R. `activity_logs` remains an exact schema match;
+`analytics_events`, `broadcasts`, and Appwrite `team_contacts` remain absent.
+Committed/default mutations remain disabled. Preview isolation, production
+Firebase, `watapp.pk`, DNS, aliases, `main`, and the archive are unchanged.
+
+A broad activity scan matched the benign fixture-description word
+`authorization` in six immutable fields; it did not identify
+credential-shaped authorization data. The scanner precision correction and
+rerun remain part of blocker closure.
+
+See `APPWRITE-EMERGENCY-CLEANUP-AND-RECOVERY-PHASE-3Z-R2.md`. Cleanup is
+certified, but Phase 3Z-R2 remains **NOT READY** while password reuse/denial,
+the deployed image lifecycle, the remaining editor matrix, runtime logs, and
+final activity verification remain incomplete. No production cutover is
+authorized.

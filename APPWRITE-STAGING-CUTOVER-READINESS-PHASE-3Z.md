@@ -5,6 +5,38 @@ Decision: **NOT READY**
 Phase 3Z stopped without a production cutover. Production Firebase, `watapp.pk`,
 DNS, `main`, and the archive reference were not changed.
 
+## Phase 3Z-R reassessment
+
+Phase 3Z-R remains **NOT READY**. The corrected recovery configuration was
+redeployed to Preview deployment `dpl_9tAD88rLZETtt4AmFFc36P7s3KyV` at commit
+`3ead35ae9d858449af3e71f918ff8ffae85da365`, and the owner personally completed
+a fresh password reset and logged in on the exact retained branch hostname.
+Malformed completion failed closed. Previous-password denial and consumed-link
+reuse were not independently observed.
+
+The actual image chooser still denied file handoff, so the required deployed
+upload/replacement/publication/direct-delivery/hide/privatize/removal sequence
+did not run. A disposable editor passed the non-image create/update,
+merchandising/chosen, UI-delete-denial, and activity-denial subset, but the
+image, publication/hiding, crafted delete/orphan, and logout cases remain
+incomplete. Exact-version Vercel runtime-log retrieval returned `403 Forbidden`.
+
+Cleanup execution was then rejected by the Codex approval service after the
+account usage limit was reached. The last directly observed live state is
+products/categories/files `2/2/0` and users/memberships `2/2`; both products
+are hidden, image-free, and unchosen. This state is not cutover-ready. See
+`APPWRITE-CUTOVER-BLOCKER-CLOSURE-PHASE-3Z-R.md` for the complete evidence and
+remaining closure requirements.
+
+Phase 3Z-R2 subsequently recovered and certified the safe baseline:
+products/categories/files are `0/0/0`, users/memberships are `1/1`, the sole
+retained membership is the permanent owner's exact `admin`, the exact
+synthetic prefixes and local fixture directory are absent, and activity rows
+total `51` (`15` Phase 3Y, `19` Phase 3Z, `17` Phase 3Z-R). This cleanup does
+not change the **NOT READY** decision because the remaining blocker proofs are
+still required. See
+`APPWRITE-EMERGENCY-CLEANUP-AND-RECOVERY-PHASE-3Z-R2.md`.
+
 ## 1. Starting state
 
 - `appwrite-migration` started at `d10ce9d4da2d21cf15d0735e20425704f936de97`,
