@@ -3,7 +3,8 @@ import { test } from "node:test";
 import {
   handleAppwriteLogin,
   handleRecoveryCompletion,
-  handleRecoveryRequest
+  handleRecoveryRequest,
+  type RecoveryDiagnosticEvent
 } from "@/lib/appwrite/auth/handlers";
 import type {
   AppwriteAuthenticationService,
@@ -190,6 +191,101 @@ test("recovery request has the same response when delivery succeeds or fails", a
     status: 202,
     body: { ok: true, message: GENERIC_RECOVERY_MESSAGE }
   });
+});
+
+test("recovery request logs only the accepted classification on success", async () => {
+  const events: RecoveryDiagnosticEvent[] = [];
+  const service: AppwritePasswordRecoveryService = {
+    async requestPasswordRecovery() {},
+    async completePasswordRecovery() {}
+  };
+  const result = await handleRecoveryRequest(
+    request("/api/auth/recovery/request", { email: "owner@example.test" }),
+    "http://localhost:3000/admin/reset-password",
+    service,
+    (event) => events.push(event)
+  );
+
+  assert.deepEqual(result, {
+    status: 202,
+    body: { ok: true, message: GENERIC_RECOVERY_MESSAGE }
+  });
+  assert.deepEqual(events, [
+    {
+      event: "appwrite_password_recovery_diagnostic",
+      outcome: "success",
+      category: "appwrite_recovery_accepted"
+    }
+  ]);
+});
+
+test("recovery request classifies known Appwrite failures without changing its response", async () => {
+  const events: RecoveryDiagnosticEvent[] = [];
+  const service: AppwritePasswordRecoveryService = {
+    async requestPasswordRecovery() {
+      throw {
+        code: 429,
+        type: "general_rate_limit_exceeded",
+        message: "must not be logged"
+      };
+    },
+    async completePasswordRecovery() {}
+  };
+  const result = await handleRecoveryRequest(
+    request("/api/auth/recovery/request", { email: "owner@example.test" }),
+    "http://localhost:3000/admin/reset-password",
+    service,
+    (event) => events.push(event)
+  );
+
+  assert.equal(result.status, 202);
+  assert.deepEqual(events, [
+    {
+      event: "appwrite_password_recovery_diagnostic",
+      outcome: "failure",
+      category: "rate_limited",
+      appwriteCode: 429,
+      appwriteType: "general_rate_limit_exceeded"
+    }
+  ]);
+});
+
+test("recovery request sanitizes unknown failures and excludes sensitive values", async () => {
+  const email = "owner-sensitive@example.test";
+  const secret = "recovery-secret-sensitive";
+  const events: RecoveryDiagnosticEvent[] = [];
+  const service: AppwritePasswordRecoveryService = {
+    async requestPasswordRecovery() {
+      throw {
+        code: "not-a-number",
+        type: `${email}-${secret}`,
+        message: `${email}-${secret}`,
+        response: JSON.stringify({ email, secret })
+      };
+    },
+    async completePasswordRecovery() {}
+  };
+  const result = await handleRecoveryRequest(
+    request("/api/auth/recovery/request", { email }),
+    "http://localhost:3000/admin/reset-password",
+    service,
+    (event) => events.push(event)
+  );
+  const serializedEvents = JSON.stringify(events);
+
+  assert.deepEqual(result, {
+    status: 202,
+    body: { ok: true, message: GENERIC_RECOVERY_MESSAGE }
+  });
+  assert.deepEqual(events, [
+    {
+      event: "appwrite_password_recovery_diagnostic",
+      outcome: "failure",
+      category: "unknown_sanitized_failure"
+    }
+  ]);
+  assert.doesNotMatch(serializedEvents, /owner-sensitive@example\.test/);
+  assert.doesNotMatch(serializedEvents, /recovery-secret-sensitive/);
 });
 
 test("recovery completion requires matching bounded passwords", async () => {

@@ -21,6 +21,102 @@ export type LoginHandlerResult = {
   session?: AppwriteSessionResult;
 };
 
+export type RecoveryDiagnosticCategory =
+  | "appwrite_recovery_accepted"
+  | "invalid_recovery_url"
+  | "unauthorized_runtime"
+  | "user_not_eligible"
+  | "rate_limited"
+  | "appwrite_service_failure"
+  | "network_failure"
+  | "unknown_sanitized_failure";
+
+export type RecoveryDiagnosticEvent = {
+  event: "appwrite_password_recovery_diagnostic";
+  outcome: "success" | "failure";
+  category: RecoveryDiagnosticCategory;
+  appwriteStatus?: number;
+  appwriteCode?: number;
+  appwriteType?: string;
+};
+
+export type RecoveryDiagnosticLogger = (event: RecoveryDiagnosticEvent) => void;
+
+const SAFE_APPWRITE_TYPES = new Set([
+  "general_argument_invalid",
+  "general_unauthorized",
+  "general_unauthorized_scope",
+  "user_not_found",
+  "user_blocked",
+  "general_rate_limit_exceeded",
+  "general_server_error",
+  "general_service_unavailable"
+]);
+
+function safeHttpCode(value: unknown) {
+  return Number.isInteger(value) && Number(value) >= 100 && Number(value) <= 599
+    ? Number(value)
+    : undefined;
+}
+
+function classifyRecoveryFailure(error: unknown): RecoveryDiagnosticEvent {
+  const record =
+    typeof error === "object" && error !== null
+      ? (error as Record<string, unknown>)
+      : undefined;
+  const appwriteStatus = safeHttpCode(record?.status);
+  const appwriteCode = safeHttpCode(record?.code);
+  const appwriteType =
+    typeof record?.type === "string" && SAFE_APPWRITE_TYPES.has(record.type)
+      ? record.type
+      : undefined;
+  const effectiveCode = appwriteStatus ?? appwriteCode;
+
+  let category: RecoveryDiagnosticCategory = "unknown_sanitized_failure";
+  if (error instanceof TypeError) {
+    category = "network_failure";
+  } else if (appwriteType === "general_argument_invalid" || effectiveCode === 400) {
+    category = "invalid_recovery_url";
+  } else if (
+    appwriteType === "general_unauthorized" ||
+    appwriteType === "general_unauthorized_scope" ||
+    effectiveCode === 401 ||
+    effectiveCode === 403
+  ) {
+    category = "unauthorized_runtime";
+  } else if (
+    appwriteType === "user_not_found" ||
+    appwriteType === "user_blocked" ||
+    effectiveCode === 404
+  ) {
+    category = "user_not_eligible";
+  } else if (
+    appwriteType === "general_rate_limit_exceeded" ||
+    effectiveCode === 429
+  ) {
+    category = "rate_limited";
+  } else if (
+    appwriteType === "general_server_error" ||
+    appwriteType === "general_service_unavailable" ||
+    (effectiveCode !== undefined && effectiveCode >= 500)
+  ) {
+    category = "appwrite_service_failure";
+  }
+
+  return {
+    event: "appwrite_password_recovery_diagnostic",
+    outcome: "failure",
+    category,
+    ...(appwriteStatus === undefined ? {} : { appwriteStatus }),
+    ...(appwriteCode === undefined ? {} : { appwriteCode }),
+    ...(appwriteType === undefined ? {} : { appwriteType })
+  };
+}
+
+function logRecoveryDiagnostic(event: RecoveryDiagnosticEvent) {
+  console.info(JSON.stringify(event));
+}
+
 export async function handleAppwriteLogin(
   request: Request,
   service: AppwriteAuthenticationService
@@ -83,7 +179,8 @@ export async function handleAppwriteLogin(
 export async function handleRecoveryRequest(
   request: Request,
   recoveryUrl: string,
-  service: AppwritePasswordRecoveryService
+  service: AppwritePasswordRecoveryService,
+  logger: RecoveryDiagnosticLogger = logRecoveryDiagnostic
 ) {
   if (!isSameOriginRequest(request)) {
     return { status: 403, body: { ok: false, message: GENERIC_RECOVERY_MESSAGE } };
@@ -105,8 +202,14 @@ export async function handleRecoveryRequest(
 
   try {
     await service.requestPasswordRecovery(validated.value.email, recoveryUrl);
-  } catch {
+    logger({
+      event: "appwrite_password_recovery_diagnostic",
+      outcome: "success",
+      category: "appwrite_recovery_accepted"
+    });
+  } catch (error) {
     // Deliberately suppress account existence and mail-delivery details.
+    logger(classifyRecoveryFailure(error));
   }
   return { status: 202, body: { ok: true, message: GENERIC_RECOVERY_MESSAGE } };
 }
