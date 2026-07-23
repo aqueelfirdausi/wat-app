@@ -10,6 +10,7 @@ type ServerConfiguration = {
 
 let dataServices: ReturnType<typeof createDataServices> | null = null;
 let authAdminAccount: Account | null = null;
+let publicAccount: Account | null = null;
 
 function getBaseConfiguration(): ServerConfiguration {
   if (parseBackendMode(process.env.WAT_BACKEND) !== "appwrite") {
@@ -27,18 +28,22 @@ function getBaseConfiguration(): ServerConfiguration {
   };
 }
 
-function createKeyClient(keyName: "APPWRITE_DATA_API_KEY" | "APPWRITE_AUTH_API_KEY") {
+function createProjectClient() {
   const configuration = getBaseConfiguration();
+
+  return new Client()
+    .setEndpoint(configuration.endpoint)
+    .setProject(configuration.projectId);
+}
+
+function createKeyClient(keyName: "APPWRITE_DATA_API_KEY" | "APPWRITE_AUTH_API_KEY") {
   const key = process.env[keyName];
 
   if (!key) {
     throw new BackendConfigurationError(`Selected backend configuration is missing ${keyName}.`);
   }
 
-  return new Client()
-    .setEndpoint(configuration.endpoint)
-    .setProject(configuration.projectId)
-    .setKey(key);
+  return createProjectClient().setKey(key);
 }
 
 function createDataServices() {
@@ -58,6 +63,11 @@ export function getAppwriteDataServices() {
 export function getAppwriteAuthAdminAccount() {
   authAdminAccount ??= new Account(createKeyClient("APPWRITE_AUTH_API_KEY"));
   return authAdminAccount;
+}
+
+export function getAppwritePublicAccount() {
+  publicAccount ??= new Account(createProjectClient());
+  return publicAccount;
 }
 
 export function createAppwriteSessionServices(sessionSecret: string) {

@@ -12,7 +12,8 @@ import type {
 } from "@/lib/appwrite/auth/services";
 import {
   createAppwriteSessionServices,
-  getAppwriteAuthAdminAccount
+  getAppwriteAuthAdminAccount,
+  getAppwritePublicAccount
 } from "@/lib/appwrite/server";
 import { APPWRITE_DEFAULT_RESOURCE_IDS } from "@/lib/appwrite/resources";
 
@@ -94,11 +95,11 @@ export function createAppwriteAuthenticationService(): AppwriteAuthenticationSer
     },
 
     async requestPasswordRecovery(email, recoveryUrl) {
-      await getAppwriteAuthAdminAccount().createRecovery({ email, url: recoveryUrl });
+      await getAppwritePublicAccount().createRecovery({ email, url: recoveryUrl });
     },
 
     async completePasswordRecovery(userId, secret, password) {
-      await getAppwriteAuthAdminAccount().updateRecovery({ userId, secret, password });
+      await getAppwritePublicAccount().updateRecovery({ userId, secret, password });
     }
   };
 }

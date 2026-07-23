@@ -35,6 +35,32 @@ test("session and authentication runtime remain server-only", async () => {
   }
 });
 
+test("password recovery uses a project-bound public Account client without an API key", async () => {
+  const runtime = await readFile("lib/appwrite/auth/runtime.ts", "utf8");
+  const server = await readFile("lib/appwrite/server.ts", "utf8");
+
+  assert.match(
+    runtime,
+    /getAppwritePublicAccount\(\)\.createRecovery\(\{ email, url: recoveryUrl \}\)/
+  );
+  assert.match(
+    runtime,
+    /getAppwritePublicAccount\(\)\.updateRecovery\(\{ userId, secret, password \}\)/
+  );
+  assert.match(
+    server,
+    /function createProjectClient\(\)[\s\S]*?\.setEndpoint\(configuration\.endpoint\)[\s\S]*?\.setProject\(configuration\.projectId\)/
+  );
+  assert.match(
+    server,
+    /getAppwritePublicAccount\(\)[\s\S]*?new Account\(createProjectClient\(\)\)/
+  );
+  assert.doesNotMatch(
+    runtime,
+    /getAppwriteAuthAdminAccount\(\)\.(?:createRecovery|updateRecovery)/
+  );
+});
+
 test("live identity apply requires numeric zero baselines including platforms", async () => {
   const source = await readFile("scripts/appwrite-auth-verification.ts", "utf8");
   assert.match(source, /typeof startingState\.users !== "number"/);
