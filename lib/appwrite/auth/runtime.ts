@@ -46,12 +46,20 @@ export function createAppwriteAuthenticationService(): AppwriteAuthenticationSer
       };
     },
 
-    async authorizeSession(sessionSecret) {
+    async authorizeSession(sessionSecret, reportDiagnosticFailure) {
       const services = createAppwriteSessionServices(sessionSecret);
       let account;
       try {
         account = await services.account.get();
       } catch (error) {
+        reportDiagnosticFailure?.({
+          stage: "current_user_resolution",
+          category:
+            error instanceof AppwriteException && error.code === 401
+              ? "session_resolution_failure"
+              : "user_resolution_failure",
+          error
+        });
         return sessionFailure(error);
       }
 
@@ -69,7 +77,12 @@ export function createAppwriteAuthenticationService(): AppwriteAuthenticationSer
           return denyAuthorization("malformed_membership");
         }
         membership = memberships.memberships[0];
-      } catch {
+      } catch (error) {
+        reportDiagnosticFailure?.({
+          stage: "staff_membership_resolution",
+          category: "appwrite_service_failure",
+          error
+        });
         return denyAuthorization("no_team_membership");
       }
 

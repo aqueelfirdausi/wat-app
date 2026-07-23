@@ -61,6 +61,34 @@ test("password recovery uses a project-bound public Account client without an AP
   );
 });
 
+test("SSR credential login uses the sessions.write admin client and session-bound follow-up", async () => {
+  const runtime = await readFile("lib/appwrite/auth/runtime.ts", "utf8");
+  const server = await readFile("lib/appwrite/server.ts", "utf8");
+  const route = await readFile("app/api/auth/login/route.ts", "utf8");
+
+  assert.match(
+    runtime,
+    /getAppwriteAuthAdminAccount\(\)\.createEmailPasswordSession\(\{[\s\S]*?email,[\s\S]*?password/
+  );
+  assert.doesNotMatch(
+    runtime,
+    /getAppwritePublicAccount\(\)\.createEmailPasswordSession/
+  );
+  assert.match(
+    server,
+    /getAppwriteAuthAdminAccount\(\)[\s\S]*?createKeyClient\("APPWRITE_AUTH_API_KEY"\)/
+  );
+  assert.match(
+    server,
+    /createAppwriteSessionServices\(sessionSecret: string\)[\s\S]*?\.setSession\(sessionSecret\)/
+  );
+  assert.match(runtime, /services\.account\.get\(\)/);
+  assert.match(runtime, /services\.teams\.listMemberships\(/);
+  assert.match(route, /writeAppwriteSessionCookie\([\s\S]*?sessionSecret/);
+  assert.match(route, /deleteCurrentSession\(result\.session\.sessionSecret\)/);
+  assert.doesNotMatch(route, /console\.(?:log|info|error)\([^)]*sessionSecret/);
+});
+
 test("live identity apply requires numeric zero baselines including platforms", async () => {
   const source = await readFile("scripts/appwrite-auth-verification.ts", "utf8");
   assert.match(source, /typeof startingState\.users !== "number"/);

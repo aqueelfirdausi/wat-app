@@ -6,9 +6,25 @@ export type AppwriteSessionResult = {
   expiresAt: string;
 };
 
+export type AppwriteAuthorizationDiagnosticFailure = {
+  stage: "current_user_resolution" | "staff_membership_resolution";
+  category:
+    | "user_resolution_failure"
+    | "session_resolution_failure"
+    | "appwrite_service_failure";
+  error: unknown;
+};
+
+export type AppwriteAuthorizationDiagnosticReporter = (
+  failure: AppwriteAuthorizationDiagnosticFailure
+) => void;
+
 export interface AppwriteAuthenticationService {
   createEmailPasswordSession(email: string, password: string): Promise<AppwriteSessionResult>;
-  authorizeSession(sessionSecret: string): Promise<StaffAuthorizationResult>;
+  authorizeSession(
+    sessionSecret: string,
+    reportDiagnosticFailure?: AppwriteAuthorizationDiagnosticReporter
+  ): Promise<StaffAuthorizationResult>;
   deleteCurrentSession(sessionSecret: string): Promise<void>;
 }
 

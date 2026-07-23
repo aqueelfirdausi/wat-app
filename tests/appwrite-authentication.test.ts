@@ -4,6 +4,7 @@ import {
   handleAppwriteLogin,
   handleRecoveryCompletion,
   handleRecoveryRequest,
+  type LoginDiagnosticEvent,
   type RecoveryDiagnosticEvent
 } from "@/lib/appwrite/auth/handlers";
 import type {
@@ -111,6 +112,117 @@ test("unauthorized login revokes the newly created session and stays generic", a
     status: 401,
     body: { ok: false, error: GENERIC_LOGIN_ERROR }
   });
+});
+
+test("login diagnostics identify invalid credentials without exposing sensitive input", async () => {
+  const email = "owner-sensitive@example.test";
+  const password = "password-sensitive-value";
+  const sessionSecret = "session-sensitive-value";
+  const events: LoginDiagnosticEvent[] = [];
+  const result = await handleAppwriteLogin(
+    request("/api/auth/login", { email, password }),
+    authService({
+      async createEmailPasswordSession() {
+        throw {
+          code: 401,
+          type: "user_invalid_credentials",
+          message: `${email}-${password}-${sessionSecret}`,
+          response: { email, password, sessionSecret }
+        };
+      }
+    }),
+    (event) => events.push(event)
+  );
+  const serializedEvents = JSON.stringify(events);
+
+  assert.deepEqual(result, {
+    status: 401,
+    body: { ok: false, error: GENERIC_LOGIN_ERROR }
+  });
+  assert.deepEqual(events, [
+    {
+      event: "appwrite_admin_login_diagnostic",
+      stage: "credential_session_creation",
+      outcome: "failure",
+      category: "invalid_credentials",
+      appwriteCode: 401,
+      appwriteType: "user_invalid_credentials"
+    }
+  ]);
+  assert.doesNotMatch(serializedEvents, /owner-sensitive@example\.test/);
+  assert.doesNotMatch(serializedEvents, /password-sensitive-value/);
+  assert.doesNotMatch(serializedEvents, /session-sensitive-value/);
+});
+
+test("login diagnostics identify missing SSR session secrets and stay generic", async () => {
+  const events: LoginDiagnosticEvent[] = [];
+  const result = await handleAppwriteLogin(
+    request("/api/auth/login", {
+      email: "staff@example.test",
+      password: "strong-password"
+    }),
+    authService({
+      async createEmailPasswordSession() {
+        return {
+          sessionId: "session-id",
+          sessionSecret: "",
+          expiresAt: "2030-01-01T00:00:00.000Z"
+        };
+      }
+    }),
+    (event) => events.push(event)
+  );
+
+  assert.deepEqual(result, {
+    status: 401,
+    body: { ok: false, error: GENERIC_LOGIN_ERROR }
+  });
+  assert.deepEqual(events, [
+    {
+      event: "appwrite_admin_login_diagnostic",
+      stage: "session_secret_extraction",
+      outcome: "failure",
+      category: "missing_session_secret"
+    }
+  ]);
+});
+
+test("login diagnostics preserve the exact sanitized authorization stage", async () => {
+  const events: LoginDiagnosticEvent[] = [];
+  const result = await handleAppwriteLogin(
+    request("/api/auth/login", {
+      email: "staff@example.test",
+      password: "strong-password"
+    }),
+    authService({
+      async authorizeSession(_secret, reportDiagnosticFailure) {
+        reportDiagnosticFailure?.({
+          stage: "staff_membership_resolution",
+          category: "appwrite_service_failure",
+          error: {
+            status: 401,
+            type: "general_unauthorized_scope",
+            message: "must not be logged"
+          }
+        });
+        return { ok: false, code: "no_team_membership" };
+      }
+    }),
+    (event) => events.push(event)
+  );
+
+  assert.equal(result.status, 401);
+  assert.equal(result.body.error, GENERIC_LOGIN_ERROR);
+  assert.deepEqual(events, [
+    {
+      event: "appwrite_admin_login_diagnostic",
+      stage: "staff_membership_resolution",
+      outcome: "failure",
+      category: "unauthorized_runtime",
+      appwriteStatus: 401,
+      appwriteType: "general_unauthorized_scope"
+    }
+  ]);
 });
 
 for (const body of [
